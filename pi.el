@@ -77,7 +77,6 @@
   :type '(repeat string)
   :group 'pi)
 
-
 (defmacro pi-def-permanent-buffer-local (name &optional init-value)
   "Declare NAME as buffer local variable."
   `(progn
@@ -113,6 +112,25 @@
 
 ;;; Helpers
 
+(defun pi-json-read-object ()
+  (json-parse-buffer :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
+
+(defun pi-json-encode (obj)
+  "Encode OBJ into a JSON string. JSON arrays must be represented with vectors."
+  (json-serialize obj :null-object 'json-null :false-object 'json-false))
+
+(defun pi-format-number-short (n)
+  "Format number N into a short human-readable string with K/M/B suffixes."
+  (cond
+   ((>= n 1000000000)
+    (format "%.1fB" (/ n 1000000000.0)))
+   ((>= n 1000000)
+    (format "%.1fM" (/ n 1000000.0)))
+   ((>= n 1000)
+    (format "%.1fk" (/ n 1000.0)))
+   (t
+    (number-to-string n))))
+
 (defmacro pi-widget-save-excursion (&rest body)
   "Insert content before PROMPT-WIDGET and restore focus afterward."
   (declare (indent 0) (debug t))
@@ -132,14 +150,6 @@
          (with-current-buffer buffer
            (progn ,@body))
        (error "Chat doesn't exist, start a new chat using M-x pi-chat"))))
-
-
-(defun pi-json-read-object ()
-  (json-parse-buffer :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
-
-(defun pi-json-encode (obj)
-  "Encode OBJ into a JSON string. JSON arrays must be represented with vectors."
-  (json-serialize obj :null-object 'json-null :false-object 'json-false))
 
 ;;; Events
 
@@ -304,6 +314,7 @@ PRED is called with KEY VALUE."
 (pi-def-permanent-buffer-local pi-prompt-widget nil)
 (pi-def-permanent-buffer-local pi-message-widget nil)
 (pi-def-permanent-buffer-local pi-thinking-widget nil)
+(pi-def-permanent-buffer-local pi-header-line-state nil)
 
 (defun pi-message-role (message)
   (or (plist-get message :role) "unknown"))
@@ -402,6 +413,9 @@ For read/write/edit, the path is rendered as a file-link widget."
       (when (not (string-empty-p result-text))
         (widget-insert (format "%s\n" result-text))))))
 
+(defun pi-handle-header-line-update (_event)
+  (pi-update-header-line))
+
 
 (defun pi-register-event-listeners ()
   (pi-set-event-listener "message_start" #'pi-handle-noop)
@@ -409,10 +423,10 @@ For read/write/edit, the path is rendered as a file-link widget."
   (pi-set-event-listener "message_end" #'pi-handle-message-update)
 
   (pi-set-event-listener "agent_start" #'pi-handle-noop)
-  (pi-set-event-listener "agent_end" #'pi-handle-noop)
+  (pi-set-event-listener "agent_end" #'pi-handle-header-line-update)
 
   (pi-set-event-listener "turn_start" #'pi-handle-noop)
-  (pi-set-event-listener "turn_end" #'pi-handle-noop)
+  (pi-set-event-listener "turn_end" #'pi-handle-header-line-update)
 
   (pi-set-event-listener "tool_execution_start" #'pi-handle-tool-execution-start)
   (pi-set-event-listener "tool_execution_update" #'pi-handle-noop)
@@ -427,6 +441,57 @@ For read/write/edit, the path is rendered as a file-link widget."
   (forward-char 6)
   (widget-end-of-line))
 
+(defun pi-format-header ()
+  "Format the header line from `pi-header-line-state'."
+  (let* ((model (plist-get pi-header-line-state :model))
+         (provider (plist-get model :provider))
+         (model-id (plist-get model :id))
+         (thinking-level (plist-get pi-header-line-state :thinkingLevel))
+         (auto-compact (plist-get pi-header-line-state :autoCompactionEnabled))
+         (session-stats (plist-get pi-header-line-state :sessionStats))
+         (context-usage (plist-get session-stats :contextUsage))
+         (ctx-tokens (plist-get context-usage :tokens))
+         (ctx-window-usage (plist-get context-usage :contextWindow))
+         (ctx-str (if ctx-window-usage
+                      (pi-format-number-short ctx-window-usage)
+                    "?"))
+         (usage-str (if ctx-tokens
+                        (pi-format-number-short ctx-tokens)
+                      "?")))
+    (let ((left (format "%s/%s (%s)"
+                       usage-str ctx-str
+                       (if auto-compact "auto" "manual")))
+          (right (format "(%s) %s • %s"
+                        (or provider "?")
+                        (or model-id "?")
+                        (or thinking-level "?"))))
+      (format "%s%s%s"
+              left
+              (make-string (max 1 (- (window-width) (length left) (length right))) ?\s)
+              right))))
+
+(defun pi-update-header-line ()
+  (let* ((state-result nil)
+         (stats-result nil)
+         (try-update
+          (lambda ()
+            (when (and state-result stats-result)
+              (setq pi-header-line-state
+                    (plist-put state-result :sessionStats stats-result))
+              (force-mode-line-update)))))
+    (pi-send-command
+     "get_state" '()
+     (lambda (resp)
+       (when (plist-get resp :success)
+         (setq state-result (plist-get resp :data))
+         (funcall try-update))))
+    (pi-send-command
+     "get_session_stats" '()
+     (lambda (resp)
+       (when (plist-get resp :success)
+         (setq stats-result (plist-get resp :data))
+         (funcall try-update))))))
+
 (define-derived-mode pi-chat-mode nil "pi-chat"
   "Major mode for pi chat.
 
@@ -435,7 +500,7 @@ For read/write/edit, the path is rendered as a file-link widget."
   (let ((inhibit-read-only t))
     (erase-buffer))
   (remove-overlays)
-  (widget-insert "Pi Agent\n\n")
+  (setq header-line-format '(:eval (pi-format-header)))
   (setq pi-prompt-widget
         (widget-create 'editable-field
                        :help-echo ""
@@ -447,7 +512,8 @@ For read/write/edit, the path is rendered as a file-link widget."
   (widget-setup)
   (pi-focus-prompt)
   (add-hook 'kill-buffer-hook 'pi-cleanup-chat-buffer nil t)
-  (pi-register-event-listeners))
+  (pi-register-event-listeners)
+  (pi-update-header-line))
 
 (defvar pi-chat-mode-map
   (let ((map (make-sparse-keymap)))
@@ -456,6 +522,8 @@ For read/write/edit, the path is rendered as a file-link widget."
 (defun pi-chat ()
   "Start a chat window"
   (interactive)
+  (unless (pi-current-agent)
+    (pi-start-agent))
   (let ((chat-buffer (or (pi-current-chat)
                          (progn
                            (let ((buffer (generate-new-buffer pi-chat-buffer-name))
@@ -465,9 +533,7 @@ For read/write/edit, the path is rendered as a file-link widget."
                                (setq-local default-directory root))
                              (puthash (pi-project-name) buffer pi-chats)
                              buffer)))))
-    (pop-to-buffer chat-buffer))
-  (unless (pi-current-agent)
-    (pi-start-agent)))
+    (pop-to-buffer chat-buffer)))
 
 
 (defun pi-restart-chat ()
