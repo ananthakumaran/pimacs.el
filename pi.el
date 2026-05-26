@@ -116,7 +116,8 @@
      ,@body
      (widget-setup)
      (pi-focus-prompt)
-     (recenter -4)))
+     ;; (recenter -4)
+     ))
 
 (defmacro pi-with-chat-buffer (&rest body)
   "Execute the body in the current chat buffer"
@@ -344,7 +345,7 @@ Example:
 (pi-def-permanent-buffer-local pi-thinking-widget nil)
 
 (defun pi-message-role (message)
-  (capitalize (or (plist-get message :role) "unknown")))
+  (or (plist-get message :role) "unknown"))
 
 (defun pi-message-text (message)
   (mapconcat
@@ -369,38 +370,41 @@ Example:
 (defun pi-handle-message-start (event)
   (let* ((message (plist-get event :message))
          (role (pi-message-role message)))
-    (pi-widget-save-excursion
-      (widget-insert
-       (propertize
-        (format "%s\n" role)
-        'face 'pi-chat-role-face)))))
+    (when (member role '("assistant" "user"))
+      (pi-widget-save-excursion
+        (widget-insert
+         (propertize
+          (format "%s> " role)
+          'face 'pi-chat-role-face))))))
 
 (defun pi-handle-message-update (event)
   (let* ((message (plist-get event :message))
+         (role (pi-message-role message))
          (type (plist-get event :type))
          (thinking-text (pi-message-thinking-text message))
          (text (pi-message-text message)))
-    (unless (string-empty-p thinking-text)
-      (pi-widget-save-excursion
-        (unless pi-thinking-widget
-          (setq pi-thinking-widget (widget-create 'item
-                                                  :format "%[%v%]\n\n"
-                                                  :button-face 'pi-thinking-face
+    (when (member role '("assistant" "user"))
+     (unless (string-empty-p thinking-text)
+       (pi-widget-save-excursion
+         (unless pi-thinking-widget
+           (setq pi-thinking-widget (widget-create 'item
+                                                   :format "%[%v%]\n\n"
+                                                   :button-face 'pi-thinking-face
+                                                   "")))
+         (widget-value-set pi-thinking-widget thinking-text)))
+
+     (unless (string-empty-p text)
+       (pi-widget-save-excursion
+         (unless pi-message-widget
+           (setq pi-message-widget (widget-create 'item
+                                                  :format "%v\n\n"
                                                   "")))
-        (widget-value-set pi-thinking-widget thinking-text)))
+         (widget-value-set pi-message-widget text)))
 
-    (unless (string-empty-p text)
-      (pi-widget-save-excursion
-        (unless pi-message-widget
-          (setq pi-message-widget (widget-create 'item
-                                                 :format "%v\n\n"
-                                                 "")))
-        (widget-value-set pi-message-widget text)))
-
-    (when (equal type "message_end")
-      ;; Cleanup tracking state
-      (setq pi-thinking-widget nil
-            pi-message-widget nil))))
+     (when (equal type "message_end")
+       ;; Cleanup tracking state
+       (setq pi-thinking-widget nil
+             pi-message-widget nil)))))
 
 
 (defun pi-register-event-listeners ()
@@ -435,7 +439,7 @@ Example:
   (setq pi-prompt-widget
         (widget-create 'editable-field
                        :help-echo ""
-                       :format ">> %v"
+                       :format "user> %v"
                        :action (lambda (widget &optional _event)
                                  (pi-send-prompt (widget-value widget)))))
   (use-local-map widget-keymap)
