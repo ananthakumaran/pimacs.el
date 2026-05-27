@@ -435,6 +435,26 @@ For read/write/edit, the path is rendered as a file-link widget."
       (when (not (string-empty-p result-text))
         (widget-insert (format "%s\n" result-text))))))
 
+(defun pi-handle-auto-retry-start (event)
+  (let ((attempt (plist-get event :attempt))
+        (max-attempts (plist-get event :maxAttempts))
+        (delay-ms (plist-get event :delayMs))
+        (error-message (plist-get event :errorMessage)))
+    (when (and error-message (not (string-empty-p error-message)))
+      (pi-widget-save-excursion
+        (pi-insert-error (format "Error: %s\n\n" error-message))
+        (widget-insert
+         (propertize (format "Retrying %d/%d (waiting %ds)…\n\n" attempt max-attempts (/ delay-ms 1000))
+                     'face 'pi-thinking-face))))))
+
+(defun pi-handle-auto-retry-end (event)
+  (let ((attempt (plist-get event :attempt))
+        (final-error (plist-get event :finalError)))
+    (unless (pi-response-success-p event)
+      (pi-widget-save-excursion
+        (pi-insert-error
+         (format "Error: Retry failed after %d attempts: %s\n\n" attempt final-error))))))
+
 (defun pi-handle-header-line-update (_event)
   (pi-update-header-line))
 
@@ -452,7 +472,10 @@ For read/write/edit, the path is rendered as a file-link widget."
 
   (pi-set-event-listener "tool_execution_start" #'pi-handle-tool-execution-start)
   (pi-set-event-listener "tool_execution_update" #'pi-handle-noop)
-  (pi-set-event-listener "tool_execution_end" #'pi-handle-tool-execution-end))
+  (pi-set-event-listener "tool_execution_end" #'pi-handle-tool-execution-end)
+
+  (pi-set-event-listener "auto_retry_start" #'pi-handle-auto-retry-start)
+  (pi-set-event-listener "auto_retry_end" #'pi-handle-auto-retry-end))
 
 (defun pi-focus-prompt ()
   (goto-char (widget-get pi-prompt-widget :from))
