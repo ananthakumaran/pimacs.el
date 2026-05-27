@@ -121,6 +121,32 @@ PRED is called with KEY VALUE."
        (remhash k table)))
    table))
 
+(defun pi-response-success-p (response)
+  (and response
+       (plist-get response :success)
+       (not (eq (plist-get response :success) 'json-false))))
+
+(defmacro pi-on-response-success (response &rest body)
+  (declare (indent 1))
+  (let ((resp-sym (gensym "resp")))
+    `(let ((,resp-sym ,response))
+       (if (pi-response-success-p ,resp-sym)
+           (progn ,@body)
+         (let ((err (plist-get ,resp-sym :error)))
+           (when err
+             (pi-widget-save-excursion
+               (widget-insert
+                (propertize
+                 (format "%s\n\n" err)
+                 'face 'pi-widget-error-face))))
+           nil)))))
+
+(defmacro pi-on-response-success-callback (response &rest body)
+  (declare (indent 1))
+  `(lambda (,response)
+     (pi-on-response-success ,response
+       ,@body)))
+
 ;;; State management
 
 (pi-def-permanent-buffer-local pi-project-root nil)
@@ -473,16 +499,14 @@ For read/write/edit, the path is rendered as a file-link widget."
               (force-mode-line-update)))))
     (pi-send-command
      "get_state" '()
-     (lambda (resp)
-       (when (plist-get resp :success)
-         (setq state-result (plist-get resp :data))
-         (funcall try-update))))
+     (pi-on-response-success-callback resp
+       (setq state-result (plist-get resp :data))
+       (funcall try-update)))
     (pi-send-command
      "get_session_stats" '()
-     (lambda (resp)
-       (when (plist-get resp :success)
-         (setq stats-result (plist-get resp :data))
-         (funcall try-update))))))
+     (pi-on-response-success-callback resp
+       (setq stats-result (plist-get resp :data))
+       (funcall try-update)))))
 
 (defun pi-cleanup-chat-buffer ()
   (let ((project-name (pi-project-name)))
@@ -549,16 +573,9 @@ For read/write/edit, the path is rendered as a file-link widget."
   (interactive "sPrompt: ")
   (pi-with-chat-buffer
     (pi-send-command
-     "prompt"
-     (list :message prompt)
-     (lambda (resp)
-       (if (equal (plist-get resp :success) 'json-false)
-         (pi-widget-save-excursion
-           (widget-insert
-            (propertize
-             (format "%s\n\n" (plist-get resp :error))
-             'face 'pi-widget-error-face)))
-         (widget-value-set pi-prompt-widget ""))))))
+     "prompt" (list :message prompt)
+     (pi-on-response-success-callback resp
+       (widget-value-set pi-prompt-widget "")))))
 
 (defun pi-insert-stats-section (header plist fields)
   "Insert a stats section with HEADER (bold), extracting integers from PLIST.
@@ -571,9 +588,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
   (interactive)
   (pi-with-chat-buffer
     (pi-send-command
-     "get_session_stats"
-     '()
-     (lambda (resp)
+     "get_session_stats" '()
+     (pi-on-response-success-callback resp
        (let* ((data (plist-get resp :data))
               (tokens (plist-get data :tokens))
               (cost (plist-get data :cost)))
@@ -625,31 +641,27 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
   (interactive)
   (pi-with-chat-buffer
     (pi-send-command
-     "get_available_models"
-     '()
-     (lambda (resp)
-       (when (plist-get resp :success)
-         (let* ((models (plist-get (plist-get resp :data) :models))
-                (items
-                 (mapcar
-                  (lambda (m)
-                    (cons (format "[%s] %s" (plist-get m :provider) (plist-get m :id))
-                          m))
-                  models)))
-           (if (null items)
-               (message "No models available.")
-             (let* ((selected (completing-read "Select model: " items nil t))
-                    (model (alist-get selected items nil nil #'equal))
-                    (provider (plist-get model :provider))
-                    (model-id (plist-get model :id)))
-               (pi-send-command
-                "set_model"
-                (list :provider provider :modelId model-id)
-                (lambda (resp)
-                  (when (plist-get resp :success)
-                    (pi-update-header-line)
-                    (pi-widget-save-excursion
-                      (widget-insert (format "Switched to model: [%s] %s\n\n" provider model-id))))))))))))))
+     "get_available_models" '()
+     (pi-on-response-success-callback resp
+       (let* ((models (plist-get (plist-get resp :data) :models))
+              (items
+               (mapcar
+                (lambda (m)
+                  (cons (format "[%s] %s" (plist-get m :provider) (plist-get m :id))
+                        m))
+                models)))
+         (if (null items)
+             (message "No models available.")
+           (let* ((selected (completing-read "Select model: " items nil t))
+                  (model (alist-get selected items nil nil #'equal))
+                  (provider (plist-get model :provider))
+                  (model-id (plist-get model :id)))
+             (pi-send-command
+              "set_model" (list :provider provider :modelId model-id)
+              (pi-on-response-success-callback resp
+                (pi-update-header-line)
+                (pi-widget-save-excursion
+                  (widget-insert (format "Switched to model: [%s] %s\n\n" provider model-id))))))))))))
 
 (provide 'pi)
 
