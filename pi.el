@@ -6,7 +6,7 @@
 ;; URL: http://github.com/ananthakumaran/pi.el
 ;; Version: 0.1
 ;; Keywords: pi agent
-;; Package-Requires: ((emacs "28.1"))
+;; Package-Requires: ((emacs "28.1") (markdown-mode "2.8"))
 
 ;; This program is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 (require 'project)
 (require 'widget)
 (require 'wid-edit)
+(require 'markdown-mode)
 
 (defgroup pi nil
   "Emacs UI for Pi."
@@ -146,6 +147,22 @@ PRED is called with KEY VALUE."
   `(lambda (,response)
      (pi-on-response-success ,response
        ,@body)))
+
+(defun pi-render-markdown (text)
+  (with-temp-buffer
+    (insert text)
+    (delay-mode-hooks
+      (markdown-view-mode))
+    (font-lock-ensure)
+    (buffer-string)))
+
+(defun pi-widget-replace-with-markdown (widget text)
+  (let ((inhibit-read-only t))
+    (save-excursion
+      (goto-char (widget-get widget :from))
+      (widget-delete widget)
+      (widget-insert (pi-render-markdown text))
+      (widget-insert "\n\n"))))
 
 ;;; State management
 
@@ -390,6 +407,9 @@ PRED is called with KEY VALUE."
                                                   "")))
          (widget-value-set pi-message-widget text))))
     (when (equal type "message_end")
+      (pi-widget-save-excursion
+        (when (and (equal role "assistant") (not (string-empty-p text)))
+          (pi-widget-replace-with-markdown pi-message-widget text)))
       ;; Cleanup tracking state
       (setq pi-thinking-widget nil
             pi-message-widget nil))))
@@ -662,10 +682,6 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
   "Major mode for pi chat.
 
 \\{pi-chat-mode-map}"
-  ;; (kill-all-local-variables)
-  (let ((inhibit-read-only t))
-    (erase-buffer))
-  (remove-overlays)
   (setq header-line-format '(:eval (pi-format-header)))
   (setq pi-prompt-widget
         (widget-create 'editable-field
@@ -676,7 +692,6 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                        :action (lambda (widget &optional _event)
                                  (pi-send-prompt (widget-value widget)))))
   (widget-setup)
-  ;; (use-local-map (make-composed-keymap pi-chat-mode-map widget-keymap))
   (pi-focus-prompt)
   (add-hook 'kill-buffer-hook 'pi-cleanup-chat-buffer nil t)
   (pi-register-event-listeners)
