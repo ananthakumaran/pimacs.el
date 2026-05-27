@@ -77,40 +77,7 @@
   :type '(repeat string)
   :group 'pi)
 
-(defmacro pi-def-permanent-buffer-local (name &optional init-value)
-  "Declare NAME as buffer local variable."
-  `(progn
-     (defvar ,name ,init-value)
-     (make-variable-buffer-local ',name)
-     (put ',name 'permanent-local t)))
-
-(defun pi-join (list)
-  (mapconcat 'identity list ""))
-
-(pi-def-permanent-buffer-local pi-project-root nil)
-
-(defvar pi-agents (make-hash-table :test 'equal))
-(defvar pi-chats (make-hash-table :test 'equal))
-(defvar pi-response-callbacks (make-hash-table :test 'equal))
-
-(defun pi-project-root ()
-  (or
-   pi-project-root
-   (let ((project (project-current))
-         (path default-directory))
-     (if project
-         (setq path (project-root project))
-       (message (pi-join (list "Couldn't find project root folder. Using '" default-directory "' as project root."))))
-     (let ((full-path (expand-file-name path)))
-       (setq pi-project-root full-path)
-       full-path))))
-
-(defun pi-project-name ()
-  (let ((full-path (directory-file-name (pi-project-root))))
-    (concat (file-name-nondirectory full-path) "-" (substring (md5 full-path) 0 10))))
-
-
-;;; Helpers
+;;; Utilities
 
 (defun pi-json-read-object ()
   (json-parse-buffer :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
@@ -130,6 +97,66 @@
     (format "%.1fk" (/ n 1000.0)))
    (t
     (number-to-string n))))
+
+(defmacro pi-def-permanent-buffer-local (name &optional init-value)
+  "Declare NAME as buffer local variable."
+  `(progn
+     (defvar ,name ,init-value)
+     (make-variable-buffer-local ',name)
+     (put ',name 'permanent-local t)))
+
+(defun pi-join (list)
+  (mapconcat 'identity list ""))
+
+(defun pi-seconds-elapsed-since (time)
+  (time-to-seconds (time-subtract (current-time) time)))
+
+(defun pi-hash-remove-if (pred table)
+  "Remove entries from TABLE for which PRED returns non-nil.
+
+PRED is called with KEY VALUE."
+  (maphash
+   (lambda (k v)
+     (when (funcall pred k v)
+       (remhash k table)))
+   table))
+
+;;; State management
+
+(pi-def-permanent-buffer-local pi-project-root nil)
+
+(defvar pi-agents (make-hash-table :test 'equal))
+(defvar pi-chats (make-hash-table :test 'equal))
+(defvar pi-response-callbacks (make-hash-table :test 'equal))
+
+(pi-def-permanent-buffer-local pi-prompt-widget nil)
+(pi-def-permanent-buffer-local pi-message-widget nil)
+(pi-def-permanent-buffer-local pi-thinking-widget nil)
+(pi-def-permanent-buffer-local pi-header-line-state nil)
+
+(defvar pi-event-listeners (make-hash-table :test 'equal))
+
+(defvar pi-agent-buffer-name "*pi-agent*")
+(defvar pi-chat-buffer-name "*pi-chat*")
+(defvar pi-request-counter 0)
+
+;;; Core
+
+(defun pi-project-root ()
+  (or
+   pi-project-root
+   (let ((project (project-current))
+         (path default-directory))
+     (if project
+         (setq path (project-root project))
+       (message (pi-join (list "Couldn't find project root folder. Using '" default-directory "' as project root."))))
+     (let ((full-path (expand-file-name path)))
+       (setq pi-project-root full-path)
+       full-path))))
+
+(defun pi-project-name ()
+  (let ((full-path (directory-file-name (pi-project-root))))
+    (concat (file-name-nondirectory full-path) "-" (substring (md5 full-path) 0 10))))
 
 (defmacro pi-widget-save-excursion (&rest body)
   "Insert content before PROMPT-WIDGET and restore focus afterward."
@@ -151,25 +178,16 @@
            (progn ,@body))
        (error "Chat doesn't exist, start a new chat using M-x pi-chat"))))
 
-;;; Events
-
-(defvar pi-event-listeners (make-hash-table :test 'equal))
-
-(defun pi-set-event-listener (name listener)
-  (puthash (cons (pi-project-name) name) (cons (current-buffer) listener) pi-event-listeners))
-
-;;; Agent
-
-(defvar pi-agent-buffer-name "*pi-agent*")
-(defvar pi-chat-buffer-name "*pi-chat*")
-(defvar pi-agents (make-hash-table :test 'equal))
-(defvar pi-request-counter 0)
-
 (defun pi-current-agent ()
   (gethash (pi-project-name) pi-agents))
 
+(defun pi-current-chat ()
+  (gethash (pi-project-name) pi-chats))
+
 (defun pi-next-request-id ()
   (number-to-string (cl-incf pi-request-counter)))
+
+;;; Agent
 
 (defun pi-dispatch-response (response)
   (let* ((request-id (plist-get response :id))
@@ -187,6 +205,9 @@
       (apply (cdr listener) (list event)))
     (message "Unhandled event %S" event)))
 
+(defun pi-set-event-listener (name listener)
+  (puthash (cons (pi-project-name) name) (cons (current-buffer) listener) pi-event-listeners))
+
 (defun pi-dispatch (response)
   (cl-case (intern (plist-get response :type))
     ((response) (pi-dispatch-response response))
@@ -203,9 +224,6 @@
     (process-send-string (pi-current-agent) payload)
     (when callback
       (puthash request-id (cons (current-buffer) callback) pi-response-callbacks))))
-
-(defun pi-seconds-elapsed-since (time)
-  (time-to-seconds (time-subtract (current-time) time)))
 
 (defun pi-send-command-sync (name args)
   (let* ((start-time (current-time))
@@ -277,23 +295,6 @@
 (defun pi-cleanup-agent (project-name)
   (remhash project-name pi-agents))
 
-(defun pi-hash-remove-if (pred table)
-  "Remove entries from TABLE for which PRED returns non-nil.
-
-PRED is called with KEY VALUE."
-  (maphash
-   (lambda (k v)
-     (when (funcall pred k v)
-       (remhash k table)))
-   table))
-
-(defun pi-cleanup-chat-buffer ()
-  (let ((project-name (pi-project-name)))
-    (ignore-errors
-      (pi-kill-agent))
-    (remhash project-name pi-chats)
-    (pi-hash-remove-if (lambda (k _v) (equal (car k) project-name)) pi-event-listeners)))
-
 ;;; Utility commands
 
 (defun pi-kill-agent ()
@@ -310,11 +311,6 @@ PRED is called with KEY VALUE."
 
 
 ;;; Chat
-
-(pi-def-permanent-buffer-local pi-prompt-widget nil)
-(pi-def-permanent-buffer-local pi-message-widget nil)
-(pi-def-permanent-buffer-local pi-thinking-widget nil)
-(pi-def-permanent-buffer-local pi-header-line-state nil)
 
 (defun pi-message-role (message)
   (or (plist-get message :role) "unknown"))
@@ -432,10 +428,6 @@ For read/write/edit, the path is rendered as a file-link widget."
   (pi-set-event-listener "tool_execution_update" #'pi-handle-noop)
   (pi-set-event-listener "tool_execution_end" #'pi-handle-tool-execution-end))
 
-(defun pi-current-chat ()
-  (gethash (pi-project-name) pi-chats))
-
-
 (defun pi-focus-prompt ()
   (goto-char (widget-get pi-prompt-widget :from))
   (forward-char 6)
@@ -491,6 +483,13 @@ For read/write/edit, the path is rendered as a file-link widget."
        (when (plist-get resp :success)
          (setq stats-result (plist-get resp :data))
          (funcall try-update))))))
+
+(defun pi-cleanup-chat-buffer ()
+  (let ((project-name (pi-project-name)))
+    (ignore-errors
+      (pi-kill-agent))
+    (remhash project-name pi-chats)
+    (pi-hash-remove-if (lambda (k _v) (equal (car k) project-name)) pi-event-listeners)))
 
 (define-derived-mode pi-chat-mode nil "pi-chat"
   "Major mode for pi chat.
