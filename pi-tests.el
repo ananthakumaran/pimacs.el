@@ -1,4 +1,4 @@
-;;; pi-tests --- This file contains automated tests for pi.el
+;;; pi-tests --- This file contains automated tests for pi.el -*- lexical-binding: t; -*-
 
 ;;; Code:
 

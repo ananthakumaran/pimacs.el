@@ -240,13 +240,10 @@ PRED is called with KEY VALUE."
 (defmacro pi-widget-save-excursion (&rest body)
   "Insert content before PROMPT-WIDGET and restore focus afterward."
   (declare (indent 0) (debug t))
-  `(progn
+  `(save-excursion
      (goto-char (widget-get pi-prompt-widget :from))
      ,@body
-     (widget-setup)
-     (pi-focus-prompt)
-     ;; (recenter -4)
-     ))
+     (widget-setup)))
 
 (defmacro pi-with-chat-buffer (&rest body)
   "Execute the body in the current chat buffer"
@@ -575,6 +572,7 @@ PRED is called with KEY VALUE."
   (pi-set-event-listener "auto_retry_end" #'pi-handle-auto-retry-end))
 
 (defun pi-focus-prompt ()
+  (interactive)
   (goto-char (widget-get pi-prompt-widget :from))
   (forward-char 6)
   (widget-end-of-line))
