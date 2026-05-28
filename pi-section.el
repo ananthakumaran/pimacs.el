@@ -59,8 +59,22 @@
   (let ((s (make-symbol "*section*")))
     `(let* ((,s ,section))
        (goto-char (pi-section-end ,s))
-       (pi-update-section-end ,s (pi-advance-pointer-maker (pi-section-end ,s)))
        ,@body
+       (pi-update-section-end ,s (point-marker))
+       (pi-propertize-section ,s)
+       ,s)))
+
+(defmacro pi-replace-section (section &rest body)
+  (declare (indent 1)
+           (debug (symbolp body)))
+  (let ((s (make-symbol "*section*")))
+    `(let* ((,s ,section))
+       (delete-region (pi-section-beginning ,s) (pi-section-end ,s))
+       (setf (pi-section-children ,s) nil)
+       (goto-char (pi-section-beginning ,s))
+       (setf (pi-section-beginning ,s) (point-marker))
+       ,@body
+       (setf (pi-section-beginning ,s) (pi-advance-pointer-maker (pi-section-beginning ,s)))
        (pi-update-section-end ,s (point-marker))
        (pi-propertize-section ,s)
        ,s)))
@@ -260,7 +274,16 @@
         (pi-append-section server-log
           (insert "      Connected client #43\n")
           (insert "      Connected client #44\n")
-          (insert "      Connected client #45\n")))
+          (insert "      Connected client #45\n"))
+        (pi-replace-section worker-log
+          (insert "  [-] Worker\n")
+          (insert "      Restarted\n")
+          (insert "      Processing queue...\n")
+          (insert "      Queue drained\n"))
+        (pi-append-section server-log
+          (insert "      Connected client #46\n")
+          (insert "      Connected client #47\n")
+          (insert "      Connected client #48\n")))
 
       (setq buffer-read-only t)
       (goto-char (point-min)))

@@ -161,6 +161,71 @@
       (should (eq (get-text-property (1- (point)) 'pi-section) log)))))
 
 
+;; ─── pi-replace-section ────────────────────────────────────────────────
+
+(ert-deftest pi-section-replace-content ()
+  (pi-section-tests-with-demo-buffer
+    (goto-char (point-min))
+    (forward-line 18)
+    (let* ((worker (pi-current-section))
+           (old-end (marker-position (pi-section-end worker))))
+      (pi-replace-section worker
+        (insert "  [-] Worker\n")
+        (insert "      Restarted\n"))
+      (should (equal (pi-section-title worker) "Worker"))
+      (should (< (marker-position (pi-section-end worker)) old-end))
+      (goto-char (pi-section-beginning worker))
+      (should (looking-at "  \\[-\\] Worker\n"))
+      (forward-line 1)
+      (should (looking-at "      Restarted\n"))
+      (should (not (search-forward "Job started" nil t))))))
+
+(ert-deftest pi-section-replace-clear-children ()
+  (pi-section-tests-with-demo-buffer
+    (goto-char 1)
+    (let* ((build (pi-current-section))
+           (old-children (pi-section-children build)))
+      (should old-children)
+      (pi-replace-section build
+        (insert "[-] Build\n"))
+      (should (null (pi-section-children build))))))
+
+(ert-deftest pi-section-replace-propertizes-text ()
+  (pi-section-tests-with-demo-buffer
+    (goto-char (point-min))
+    (forward-line 12)
+    (let ((worker (pi-current-section)))
+      (pi-replace-section worker
+        (insert "  [-] Worker\n")
+        (insert "      Restarted\n"))
+      (goto-char (pi-section-beginning worker))
+      (should (eq (get-text-property (point) 'pi-section) worker))
+      (goto-char (1- (pi-section-end worker)))
+      (should (eq (get-text-property (point) 'pi-section) worker)))))
+
+(ert-deftest pi-section-replace-updates-parent-end ()
+  (pi-section-tests-with-demo-buffer
+    (goto-char (point-min))
+    (forward-line 10)
+    (let* ((logs (pi-current-section))
+           (worker (pi-find-section '("Logs" "Worker") pi-root-section))
+           (server (pi-find-section '("Logs" "Server") pi-root-section)))
+      (should worker)
+      (pi-replace-section worker
+        (insert "  [-] Worker\n"))
+      ;; parent end should still cover the remaining server-log content
+      (should (>= (pi-section-end logs) (pi-section-end server))))))
+
+(ert-deftest pi-section-replace-clear-multiple-children ()
+  (pi-section-tests-with-demo-buffer
+    (goto-char 1)
+    (let ((tests (pi-find-section '("Build" "Tests") pi-root-section)))
+      (should (pi-section-children tests))
+      (pi-replace-section tests
+        (insert "  [-] Tests\n"))
+      (should (null (pi-section-children tests))))))
+
+
 ;; ─── pi-current-section / pi-section-at ────────────────────────────────
 
 (ert-deftest pi-section-at-returns-correct-section ()
