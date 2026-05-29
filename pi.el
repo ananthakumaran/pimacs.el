@@ -507,10 +507,7 @@ PRED is called with KEY VALUE."
          (tool-name (plist-get event :toolName)))
     (when pi-current-tool-section
       (pi-widget-save-excursion
-       (pi-replace-section pi-current-tool-section
-         (insert
-          (propertize (format "%s " tool-name) 'face 'pi-tool-name-face))
-         (pi-format-tool-args tool-name (plist-get event :args))
+       (pi-append-section pi-current-tool-section
          (cond
           ((eq is-error t)
            (when (not (string-empty-p result-text))
