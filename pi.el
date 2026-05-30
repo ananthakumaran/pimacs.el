@@ -89,7 +89,7 @@
 
 (defun pi-maybe-log-rpc (json)
   (when pi-log-rpc
-    (write-region (concat json "\n") nil pi-log-rpc-file t)))
+    (write-region (concat json "\n") nil pi-log-rpc-file t 'inhibit-message)))
 
 ;;; Utilities
 
