@@ -237,8 +237,11 @@ PRED is called with KEY VALUE."
 
 (defvar pi-event-listeners (make-hash-table :test 'equal))
 
-(defvar pi-agent-buffer-name "*pi-agent*")
-(defvar pi-chat-buffer-name "*pi-chat*")
+(defun pi-agent-buffer-name ()
+  (format "*pi-agent:%s*" (pi-project-name)))
+
+(defun pi-chat-buffer-name ()
+  (format "*pi-chat:%s*" (pi-project-name)))
 (defvar pi-request-counter 0)
 
 ;;; History
@@ -293,8 +296,11 @@ PRED is called with KEY VALUE."
        full-path))))
 
 (defun pi-project-name ()
-  (let ((full-path (directory-file-name (pi-project-root))))
-    (concat (file-name-nondirectory full-path) "-" (substring (md5 full-path) 0 10))))
+  (file-name-nondirectory (directory-file-name (pi-project-root))))
+
+(defun pi-project-key ()
+  "Unique key for the current project, used for internal hash tables."
+  (md5 (pi-project-root)))
 
 (defmacro pi-widget-save-excursion (&rest body)
   "Insert content before PROMPT-WIDGET and restore focus afterward."
@@ -314,10 +320,10 @@ PRED is called with KEY VALUE."
        (error "Chat doesn't exist, start a new chat using M-x pi-chat"))))
 
 (defun pi-current-agent ()
-  (gethash (pi-project-name) pi-agents))
+  (gethash (pi-project-key) pi-agents))
 
 (defun pi-current-chat ()
-  (gethash (pi-project-name) pi-chats))
+  (gethash (pi-project-key) pi-chats))
 
 (defun pi-next-request-id ()
   (number-to-string (cl-incf pi-request-counter)))
@@ -335,16 +341,17 @@ PRED is called with KEY VALUE."
       (remhash request-id pi-response-callbacks))))
 
 (defun pi-dispatch-event (event)
-  (when-let (all-listener (gethash (cons (pi-project-name) t) pi-event-listeners))
-    (with-current-buffer (car all-listener)
-      (apply (cdr all-listener) (list event))))
-  (when-let (listener (gethash (cons (pi-project-name) (plist-get event :type)) pi-event-listeners))
-    (with-current-buffer (car listener)
-      (apply (cdr listener) (list event)))))
+  (let ((key (pi-project-key)))
+    (when-let (all-listener (gethash (cons key t) pi-event-listeners))
+      (with-current-buffer (car all-listener)
+        (apply (cdr all-listener) (list event))))
+    (when-let (listener (gethash (cons key (plist-get event :type)) pi-event-listeners))
+      (with-current-buffer (car listener)
+        (apply (cdr listener) (list event))))))
 
 (defun pi-set-event-listener (name listener)
   "Set `name' to t to receive all events"
-  (puthash (cons (pi-project-name) name) (cons (current-buffer) listener) pi-event-listeners))
+  (puthash (cons (pi-project-key) name) (cons (current-buffer) listener) pi-event-listeners))
 
 (defun pi-dispatch (response)
   (cl-case (intern (plist-get response :type))
@@ -379,7 +386,7 @@ PRED is called with KEY VALUE."
     (message "(%s) pi exits: %s." project-name (string-trim message))
     (ignore-errors
       (kill-buffer (process-buffer process)))
-    (pi-cleanup-agent project-name)))
+    (pi-cleanup-agent process)))
 
 (defun pi-net-filter (process data)
   (with-current-buffer (process-buffer process)
@@ -415,7 +422,7 @@ PRED is called with KEY VALUE."
   (message "(%s) Starting pi..." (pi-project-name))
   (let* ((default-directory (pi-project-root))
          (process-environment (append pi-process-environment process-environment))
-         (buf (generate-new-buffer pi-agent-buffer-name))
+         (buf (generate-new-buffer (pi-agent-buffer-name)))
          ;; Use a pipe to communicate with the subprocess. This fixes a hang
          ;; when a >1k message is sent on macOS.
          (process-connection-type nil)
@@ -428,14 +435,19 @@ PRED is called with KEY VALUE."
     (set-process-query-on-exit-flag process nil)
     (with-current-buffer (process-buffer process)
       (buffer-disable-undo))
-    (process-put process 'project-name (pi-project-name))
+    (process-put process 'project-key (pi-project-key))
     (process-put process 'project-root default-directory)
-    (puthash (pi-project-name) process pi-agents)
+    (process-put process 'project-name (pi-project-name))
+    (puthash (pi-project-key) process pi-agents)
     (message "(%s) pi agent started successfully." (pi-project-name))))
 
 
-(defun pi-cleanup-agent (project-name)
-  (remhash project-name pi-agents))
+(defun pi-cleanup-agent (process)
+  (let ((project-key (process-get process 'project-key)))
+    (when project-key
+      (remhash project-key pi-agents)
+      (when-let (buffer (gethash project-key pi-chats))
+        (kill-buffer buffer)))))
 
 ;;; Utility commands
 
@@ -798,11 +810,11 @@ PRED is called with KEY VALUE."
     (auto_retry_end (setq pi-agent-state 'thinking))))
 
 (defun pi-cleanup-chat-buffer ()
-  (let ((project-name (pi-project-name)))
+  (let ((project-key (pi-project-key)))
+    (remhash project-key pi-chats)
+    (pi-hash-remove-if (lambda (k _v) (equal (car k) project-key)) pi-event-listeners)
     (ignore-errors
-      (pi-kill-agent))
-    (remhash project-name pi-chats)
-    (pi-hash-remove-if (lambda (k _v) (equal (car k) project-name)) pi-event-listeners)))
+      (pi-kill-agent))))
 
 
 ;;; Commands
@@ -1036,7 +1048,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
   "M-n" #'pi-goto-next-section
   "p" #'pi-goto-previous-section
   "M-p" #'pi-goto-previous-section
-  "i" #'pi-focus-prompt)
+  "i" #'pi-focus-prompt
+  "q" #'pi-quit-chat)
 
 (defvar pi-chat-widget-field-keymap
   (let ((map (make-composed-keymap nil widget-field-keymap)))
@@ -1050,6 +1063,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
   "Major mode for pi chat.
 
 \\{pi-chat-mode-map}"
+  (setq scroll-up-aggressively 0.2)
+  (buffer-disable-undo)
   (setq header-line-format '(:eval (pi-format-header)))
   (pi-create-root-section)
   (setq pi-prompt-history (make-ring pi-prompt-history-max-size))
@@ -1075,18 +1090,24 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (pi-start-agent))
   (let ((chat-buffer (or (pi-current-chat)
                          (progn
-                           (let ((buffer (generate-new-buffer pi-chat-buffer-name))
+                           (let ((buffer (generate-new-buffer (pi-chat-buffer-name)))
                                  (root (pi-project-root)))
                              (with-current-buffer buffer
                                (pi-chat-mode)
                                (setq-local default-directory root))
-                             (puthash (pi-project-name) buffer pi-chats)
+                             (puthash (pi-project-key) buffer pi-chats)
                              buffer)))))
     (pop-to-buffer chat-buffer)))
 
 
+(defun pi-quit-chat ()
+  "Quit the current chat window."
+  (interactive)
+  (when-let (buffer (pi-current-chat))
+    (kill-buffer buffer)))
+
 (defun pi-restart-chat ()
-  "Exist the current chat and restart"
+  "Exit the current chat and restart"
   (interactive)
   (when-let (buffer (pi-current-chat))
     (kill-buffer buffer))
