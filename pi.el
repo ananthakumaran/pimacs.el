@@ -249,6 +249,7 @@ PRED is called with KEY VALUE."
 (pi-def-permanent-buffer-local pi-current-tool-read-filename nil)
 (pi-def-permanent-buffer-local pi-current-tool-section nil)
 (pi-def-permanent-buffer-local pi-agent-state nil)
+(pi-def-permanent-buffer-local pi-bash-in-progress nil)
 
 (defvar pi-event-listeners (make-hash-table :test 'equal))
 
@@ -917,7 +918,7 @@ PRED is called with KEY VALUE."
   (interactive)
   (pi-with-chat-buffer
     (pi-send-command
-     "abort" '()
+     (if pi-bash-in-progress "abort_bash" "abort") '()
      (pi-on-response-success-callback resp
        (pi-widget-save-excursion
          (pi-create-section "error" 'error pi-root-section
@@ -1209,26 +1210,32 @@ summarization."
   (interactive "sBash command: ")
   (unless (string-empty-p (string-trim command))
     (pi-with-chat-buffer
-      (pi-send-command
-       "bash" (list :command command)
-       (pi-on-response-success-callback resp
-         (let* ((data (plist-get resp :data))
-                (exit-code (plist-get data :exitCode))
-                (cancelled (plist-get data :cancelled))
-                (is-error (or (and exit-code
-                                   (not (eq exit-code 'json-null))
-                                   (not (zerop exit-code)))
-                              (and cancelled
-                                   (not (eq cancelled 'json-false))))))
-           (pi-widget-save-excursion
-             (pi-create-section "bash" 'tool pi-root-section
-               (pi-insert-tool-name "bash")
-               (insert (format "%s\n" command))
-               (pi-insert-tool-result
-                "bash"
-                (plist-get data :output)
-                is-error
-                data)))))))))
+      (setq pi-bash-in-progress t)
+      (let ((section (pi-new-section "bash" 'tool pi-root-section)))
+        (pi-widget-save-excursion
+          (pi-insert-section section
+            (pi-insert-tool-name "bash")
+            (insert (format "%s\n" command))))
+        (pi-send-command
+         "bash" (list :command command)
+         (lambda (resp)
+           (pi-on-response-success resp
+             (let* ((data (plist-get resp :data))
+                    (exit-code (plist-get data :exitCode))
+                    (cancelled (plist-get data :cancelled))
+                    (is-error (or (and exit-code
+                                       (not (eq exit-code 'json-null))
+                                       (not (zerop exit-code)))
+                                  (and cancelled
+                                       (not (eq cancelled 'json-false))))))
+               (pi-widget-save-excursion
+                 (pi-append-section section
+                   (pi-insert-tool-result
+                    "bash"
+                    (plist-get data :output)
+                    is-error
+                    data)))))
+           (setq pi-bash-in-progress nil)))))))
 
 ;;; Chat mode
 
