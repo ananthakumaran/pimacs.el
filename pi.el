@@ -960,6 +960,10 @@ PRED is called with KEY VALUE."
             (error "Slash command \"/%s\" does not accept arguments" name))
           (cons cmd args))))))
 
+(defun pi-parse-bang-command (prompt)
+  (when (string-match "^[ \t]*!\\(.+\\)$" prompt)
+    (match-string-no-properties 1 prompt)))
+
 (defun pi-clear-prompt (prompt)
   (widget-value-set pi-prompt-widget "")
   (unless (and (> (ring-length pi-prompt-history) 0)
@@ -971,22 +975,27 @@ PRED is called with KEY VALUE."
   (interactive "sPrompt: ")
   (if (or (null prompt) (string-empty-p prompt))
       (message "No prompt to send")
-    (let ((slash (pi-parse-slash-command prompt)))
-      (if slash
-          (progn
-            (let ((cmd (car slash))
-                  (args (cdr slash)))
-              (if (null args)
-                  (call-interactively cmd)
-                (apply cmd (list args))))
-            (pi-clear-prompt prompt))
+    (let ((slash (pi-parse-slash-command prompt))
+          (bang (pi-parse-bang-command prompt)))
+      (cond
+       (slash
+        (let ((cmd (car slash))
+              (args (cdr slash)))
+          (if (null args)
+              (call-interactively cmd)
+            (apply cmd (list args))))
+        (pi-clear-prompt prompt))
+       (bang
+        (pi-bash bang)
+        (pi-clear-prompt prompt))
+       (t
         (pi-with-chat-buffer
           (pi-send-command
            "prompt" (list :message prompt
                           :streamingBehavior (when-let (behavior (or streaming-behavior pi-prompt-streaming-behavior))
                                                (symbol-name behavior)))
            (pi-on-response-success-callback resp
-             (pi-clear-prompt prompt))))))))
+             (pi-clear-prompt prompt)))))))))
 
 
 (defun pi-send-prompt-alternate (&optional prompt)
