@@ -538,15 +538,16 @@ PRED is called with KEY VALUE."
                     (pi-project-file-completions prefix)
                   (pi-native-file-completions prefix))))
           (when completions
-            (list start end completions :category 'file)))))))
+            (list start end completions :category 'file :company-prefix-length t)))))))
 
 (defun pi-completion-at-point-slash ()
   (let ((end (point)))
     (save-excursion
       (when (re-search-backward "\\([ \t]*\\)/\\([-a-zA-Z0-9]*\\)" (line-beginning-position) t)
-        (let ((start (match-beginning 2))
-              (names (mapcar #'car pi-slash-commands)))
-          (list start end names))))))
+        (let ((match-start (match-beginning 0))
+              (cmd-start (match-beginning 2)))
+          (when (string-match "^user>[ \t]*$" (buffer-substring-no-properties (widget-get pi-prompt-widget :from) match-start))
+            (list cmd-start end (mapcar #'car pi-slash-commands) :company-prefix-length t)))))))
 
 ;;; Chat
 
