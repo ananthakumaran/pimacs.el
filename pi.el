@@ -224,6 +224,15 @@ PRED is called with KEY VALUE."
      (pi-on-response-success ,response
        ,@body)))
 
+(defmacro pi-unless-cancelled (resp operation &rest body)
+  (declare (indent 2))
+  `(let ((cancelled (plist-get (plist-get ,resp :data) :cancelled)))
+     (if (eq cancelled t)
+         (pi-widget-save-excursion
+           (pi-create-section "error" 'error pi-root-section
+             (pi-insert-error (format "%s cancelled.\n\n" ,operation))))
+       ,@body)))
+
 (defun pi-render-markdown (text)
   (with-temp-buffer
     (insert text)
@@ -1295,12 +1304,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                (pi-send-command
                 "switch_session" (list :sessionPath session-path)
                 (pi-on-response-success-callback resp
-                  (let ((cancelled (plist-get (plist-get resp :data) :cancelled)))
-                    (if (eq cancelled t)
-                        (pi-widget-save-excursion
-                          (pi-create-section "error" 'error pi-root-section
-                            (pi-insert-error "Session switch cancelled.\n\n")))
-                      (pi-refresh-session)))))))))))))
+                  (pi-unless-cancelled resp "Session switch"
+                    (pi-refresh-session))))))))))))
 
 (defun pi-clear-sections ()
   (dolist (child (copy-sequence (pi-section-children pi-root-section)))
@@ -1328,15 +1333,11 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (pi-send-command
      "clone" '()
      (pi-on-response-success-callback resp
-       (let ((cancelled (plist-get (plist-get resp :data) :cancelled)))
-         (if (eq cancelled t)
-             (pi-widget-save-excursion
-               (pi-create-section "error" 'error pi-root-section
-                 (pi-insert-error "Clone cancelled.\n\n")))
-           (pi-refresh-session)
-           (pi-widget-save-excursion
-             (pi-create-section "info" 'info pi-root-section
-               (insert "Session cloned.\n\n")))))))))
+       (pi-unless-cancelled resp "Clone"
+         (pi-refresh-session)
+         (pi-widget-save-excursion
+           (pi-create-section "info" 'info pi-root-section
+             (insert "Session cloned.\n\n"))))))))
 
 (defun pi-new-session ()
   (interactive)
@@ -1344,13 +1345,9 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (pi-send-command
      "new_session" '()
      (pi-on-response-success-callback resp
-       (let ((cancelled (plist-get (plist-get resp :data) :cancelled)))
-         (if (eq cancelled t)
-             (pi-widget-save-excursion
-               (pi-create-section "error" 'error pi-root-section
-                 (pi-insert-error "New session cancelled.\n\n")))
-           (pi-widget-save-excursion
-             (pi-clear-sections))))))))
+       (pi-unless-cancelled resp "New session"
+         (pi-widget-save-excursion
+           (pi-clear-sections)))))))
 
 (defun pi-set-session-name (name)
   (interactive "sSession name: ")
@@ -1386,13 +1383,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
              (pi-send-command
               "fork" (list :entryId entry-id)
               (pi-on-response-success-callback resp
-                (let* ((data (plist-get resp :data))
-                       (text (plist-get data :text))
-                       (cancelled (plist-get data :cancelled)))
-                  (if (eq cancelled t)
-                      (pi-widget-save-excursion
-                        (pi-create-section "error" 'error pi-root-section
-                          (pi-insert-error "Fork cancelled.\n\n")))
+                (pi-unless-cancelled resp "Fork"
+                  (let ((text (plist-get (plist-get resp :data) :text)))
                     (pi-refresh-session)
                     (pi-widget-save-excursion
                       (pi-create-section "fork" 'fork pi-root-section
