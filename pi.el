@@ -131,6 +131,7 @@ when agent stops."
     ("fork" pi-fork 0)
     ("clone" pi-clone 0)
     ("copy" pi-copy 0)
+    ("export" pi-export 1)
     ("quit" pi-quit-chat 0)
     ("exit" pi-quit-chat 0))
   "Alist mapping slash command names to command specs.
@@ -184,6 +185,12 @@ arguments the command accepts.")
 (defun pi-insert-error (text)
   "Insert TEXT with `pi-error-face'."
   (insert (propertize text 'face 'pi-error-face)))
+
+(defun pi-insert-file-link (path &optional suffix)
+  (widget-create 'file-link
+                 :button-prefix ""
+                 :button-suffix (or suffix "")
+                 path))
 
 (defun pi-keyword-name (keyword)
   "Return the name of KEYWORD as a string without the leading colon."
@@ -635,11 +642,8 @@ PRED is called with KEY VALUE."
         (pi-insert-error (format "Command exited with code %d\n\n" exit-code)))
       (when full-output-path
         (insert "Output truncated. See full output at: ")
-        (widget-create 'file-link
-                       :button-prefix ""
-                       :button-suffix ""
-                       full-output-path)
-        (insert "\n\n"))))
+        (pi-insert-file-link full-output-path)
+        (pi-insert-message-tail))))
    ((eq is-error t)
     (when (not (string-empty-p result-text))
       (pi-insert-error (format "%s\n" result-text))))
@@ -768,28 +772,19 @@ PRED is called with KEY VALUE."
                        ((null limit) (format ":%d" start-line))
                        (t (let ((end-line (+ start-line limit -1)))
                             (format ":%d-%d" start-line end-line))))))
-         (widget-create 'file-link
-                        :button-prefix ""
-                        :button-suffix suffix
-                        (expand-file-name path (pi-project-root)))
+         (pi-insert-file-link (expand-file-name path (pi-project-root)) suffix)
          (insert "\n"))))
     ("write"
      (when-let ((path (plist-get args :path))
                 (content (plist-get args :content)))
-       (widget-create 'file-link
-                      :button-prefix ""
-                      :button-suffix ""
-                      (expand-file-name path (pi-project-root)))
+       (pi-insert-file-link (expand-file-name path (pi-project-root)))
        (when (not (string-empty-p content))
          (insert "\n")
          (insert (pi-render-content path content)))
        (insert "\n")))
     ("edit"
      (when-let ((path (plist-get args :path)))
-       (widget-create 'file-link
-                      :button-prefix ""
-                      :button-suffix ""
-                      (expand-file-name path (pi-project-root)))
+       (pi-insert-file-link (expand-file-name path (pi-project-root)))
        (insert "\n")))
     ("bash"
      (when-let ((command (plist-get args :command)))
@@ -1088,10 +1083,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
               (propertize "Session Info\n" 'face 'bold))
 
              (insert " File: ")
-             (widget-create 'file-link
-                            :button-prefix ""
-                            :button-suffix ""
-                            (plist-get data :sessionFile))
+             (pi-insert-file-link (plist-get data :sessionFile))
              (insert "\n")
 
              (insert
@@ -1363,6 +1355,25 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
              (pi-create-section "info" 'info pi-root-section
                (insert (format "Session renamed to: %s\n\n" trimmed))))))))))
 
+
+(defun pi-export (&optional output-path)
+  (interactive
+   (list (when current-prefix-arg
+           (expand-file-name
+            (read-file-name "Export to file: ")))))
+  (pi-with-chat-buffer
+    (let ((args (if (and output-path (not (string-empty-p output-path)))
+                    (list :outputPath (expand-file-name output-path))
+                  '())))
+      (pi-send-command
+       "export_html" args
+       (pi-on-response-success-callback resp
+         (let ((path (plist-get (plist-get resp :data) :path)))
+           (pi-widget-save-excursion
+             (pi-create-section "export" 'info pi-root-section
+               (insert "Session exported to: ")
+               (pi-insert-file-link path)
+               (pi-insert-message-tail)))))))))
 
 (defun pi-copy ()
   "Copy the last assistant message to the clipboard."
