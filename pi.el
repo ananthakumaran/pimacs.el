@@ -625,6 +625,12 @@ PRED is called with KEY VALUE."
 (defun pi-insert-tool-name (tool-name)
   (insert (propertize (format "%s " tool-name) 'face 'pi-tool-name-face)))
 
+(defun pi-extract-truncation-notice (result-text)
+  (if (string-match "\n\\(\\[[^]]* Use offset=[^]]* to [Cc]ontinue\\.\\]\\)$" result-text)
+      (cons (replace-match "" nil nil result-text)
+            (match-string 1 result-text))
+    (cons result-text nil)))
+
 (defun pi-insert-tool-result (tool-name result-text is-error &optional details args)
   (cond
    ((string= tool-name "bash")
@@ -648,12 +654,10 @@ PRED is called with KEY VALUE."
    ((string= tool-name "read")
     (when-let ((path (plist-get args :path)))
       (when (not (string-empty-p result-text))
-        (let ((truncated-line nil))
-          (when (string-match "\n\\(\\[.*more lines.*continue.\\]\\)$" result-text)
-            (setq truncated-line (match-string 1 result-text)
-                  result-text (replace-match "" nil nil result-text)))
-          (insert (pi-render-content (expand-file-name path (pi-project-root)) result-text))
-          (insert (format "%s" (or truncated-line "")))))))
+        (pcase-let ((`(,clean-text . ,truncated-line) (pi-extract-truncation-notice result-text)))
+          (insert (pi-render-content (expand-file-name path (pi-project-root)) clean-text))
+          (when truncated-line
+            (insert truncated-line))))))
    ((string= tool-name "edit")
     (when-let ((diff (plist-get details :diff)))
       (insert (pi-render-diff diff)))

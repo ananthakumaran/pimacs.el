@@ -57,5 +57,23 @@
   (should (null (pi-parse-double-bang-command "not-a-bang !!ls")))
   (should (null (pi-parse-double-bang-command ""))))
 
+(ert-deftest pi-extract-truncation-notice-more-lines ()
+  (should (equal (pi-extract-truncation-notice
+                  "line1\nline2\n[40 more lines in file. Use offset=61 to continue.]")
+                 '("line1\nline2" . "[40 more lines in file. Use offset=61 to continue.]"))))
+
+(ert-deftest pi--extract-truncation-notice-showing-lines ()
+  (should (equal (pi-extract-truncation-notice
+                  "line1\nline2\n[Showing lines 1-1648 of 6218 (50.0KB limit). Use offset=1649 to continue.]")
+                 '("line1\nline2" . "[Showing lines 1-1648 of 6218 (50.0KB limit). Use offset=1649 to continue.]"))))
+
+(ert-deftest pi--extract-truncation-notice-no-notice ()
+  (should (equal (pi-extract-truncation-notice "line1\nline2\nline3")
+                 '("line1\nline2\nline3" . nil))))
+
+(ert-deftest pi--extract-truncation-notice-empty ()
+  (should (equal (pi-extract-truncation-notice "")
+                 '("" . nil))))
+
 ;;; pi-tests.el ends here
 
