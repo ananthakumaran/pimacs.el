@@ -299,6 +299,7 @@ PRED is called with KEY VALUE."
 (pi-def-permanent-buffer-local pi-current-tool-section nil)
 (pi-def-permanent-buffer-local pi-agent-state nil)
 (pi-def-permanent-buffer-local pi-bash-in-progress nil)
+(pi-def-permanent-buffer-local pi-retry-in-progress nil)
 
 (defvar pi-event-listeners (make-hash-table :test 'equal))
 
@@ -817,6 +818,7 @@ PRED is called with KEY VALUE."
           pi-current-tool-section nil)))
 
 (defun pi-handle-auto-retry-start (event)
+  (setq pi-retry-in-progress t)
   (let ((attempt (plist-get event :attempt))
         (max-attempts (plist-get event :maxAttempts))
         (delay-ms (plist-get event :delayMs))
@@ -830,6 +832,7 @@ PRED is called with KEY VALUE."
                        'face 'pi-thinking-face)))))))
 
 (defun pi-handle-auto-retry-end (event)
+  (setq pi-retry-in-progress nil)
   (let ((attempt (plist-get event :attempt))
         (final-error (plist-get event :finalError)))
     (unless (pi-response-success-p event)
@@ -1054,7 +1057,11 @@ If `pi-prompt-streaming-behavior' is `followUp', use `steer' and vice versa."
   (interactive)
   (pi-with-chat-buffer
     (pi-send-command
-     (if pi-bash-in-progress "abort_bash" "abort") '()
+     (cond
+      (pi-retry-in-progress "abort_retry")
+      (pi-bash-in-progress "abort_bash")
+      (t "abort"))
+     '()
      (pi-on-response-success-callback resp
        (pi-widget-save-excursion
          (pi-create-section "error" 'error pi-root-section

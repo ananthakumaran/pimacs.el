@@ -10,10 +10,6 @@
 ;; These sections are used for navigation and for hiding parts of the
 ;; buffer.
 ;;
-;; Most sections also represent the objects that Monky works with,
-;; such as files, diffs, hunks, commits, etc.  The 'type' of a section
-;; identifies what kind of object it represents (if any), and the
-;; parent and grand-parent, etc provide the context.
 
 (cl-defstruct pi-section
   parent children beginning end type title hidden info)
