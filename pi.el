@@ -343,6 +343,7 @@ PRED is called with KEY VALUE."
 (pi-def-permanent-buffer-local pi-spinner nil)
 (pi-def-permanent-buffer-local pi-bash-in-progress nil)
 (pi-def-permanent-buffer-local pi-retry-in-progress nil)
+(pi-def-permanent-buffer-local pi-commands nil)
 
 (defvar pi-event-listeners (make-hash-table :test 'equal))
 
@@ -628,10 +629,22 @@ PRED is called with KEY VALUE."
   (let ((end (point)))
     (save-excursion
       (when (re-search-backward "\\([ \t]*\\)/\\([-a-zA-Z0-9]*\\)" (line-beginning-position) t)
-        (let ((match-start (match-beginning 0))
-              (cmd-start (match-beginning 2)))
+        (let* ((match-start (match-beginning 0))
+               (cmd-start (match-beginning 2))
+               (slash-names (mapcar #'car pi-slash-commands))
+               (command-names (mapcar #'car pi-commands))
+               (all-names (append slash-names command-names)))
           (when (string-match "^user>[ \t]*$" (buffer-substring-no-properties (widget-get pi-prompt-widget :from) match-start))
-            (list cmd-start end (mapcar #'car pi-slash-commands) :company-prefix-length t)))))))
+            (list cmd-start end all-names
+                  :company-prefix-length t
+                  :annotation-function
+                  (lambda (c)
+                    (cond
+                     ((member c slash-names) "(emacs)")
+                     (pi-commands
+                      (when-let ((cmd (assoc c pi-commands #'string=))
+                                 (desc (plist-get (cdr cmd) :description)))
+                        (format "(%s)" (plist-get (cdr cmd) :source)))))))))))))
 
 ;;; Chat
 
@@ -1191,7 +1204,7 @@ PRED is called with KEY VALUE."
            (raw (and (match-beginning 2)
                      (string-trim-left (match-string-no-properties 2 prompt))))
            (args (and (not (string-empty-p raw)) raw))
-           (cell (assoc name pi-slash-commands #'string-equal)))
+           (cell (assoc name pi-slash-commands #'string=)))
       (when cell
         (let ((cmd (cadr cell))
               (max-args (nth 2 cell)))
@@ -1667,6 +1680,14 @@ summarization."
 
 ;;; Chat mode
 
+(defun pi-fetch-commands ()
+  (pi-send-command
+   "get_commands" '()
+   (pi-on-response-success-callback resp
+     (setq pi-commands
+           (mapcar (lambda (c) (cons (plist-get c :name) c))
+                   (plist-get (plist-get resp :data) :commands))))))
+
 (defvar-keymap pi-chat-mode-map
   :doc "Keymap for `pi-chat-mode'."
   :parent special-mode-map
@@ -1717,7 +1738,8 @@ summarization."
   (pi-focus-prompt)
   (add-hook 'kill-buffer-hook 'pi-cleanup-chat-buffer nil t)
   (pi-register-event-listeners)
-  (pi-update-header-line))
+  (pi-update-header-line)
+  (pi-fetch-commands))
 
 ;;;###autoload
 (defun pi-chat ()
