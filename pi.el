@@ -152,7 +152,8 @@ arguments the command accepts.")
     ("edit" . pi-insert-edit-args)
     ("bash" . pi-insert-bash-args)
     ("grep" . pi-insert-grep-args)
-    ("find" . pi-insert-find-args))
+    ("find" . pi-insert-find-args)
+    ("ls" . pi-insert-ls-args))
   "Alist mapping tool names to inserter functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
@@ -164,7 +165,8 @@ with ARGS plist to insert formatted tool call arguments.")
     ("write" . pi-insert-write-result)
     ("edit" . pi-insert-edit-result)
     ("grep" . pi-insert-grep-result)
-    ("find" . pi-insert-find-result))
+    ("find" . pi-insert-find-result)
+    ("ls" . pi-insert-ls-result))
   "Alist mapping tool names to result inserter functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
@@ -928,6 +930,17 @@ PRED is called with KEY VALUE."
       (insert (format " limit %d" limit)))))
 
 (defun pi-insert-find-result (result-text _details _args)
+  (when (not (string-empty-p result-text))
+    (insert result-text)))
+
+;; ls
+(defun pi-insert-ls-args (args)
+  (when-let ((path (plist-get args :path)))
+    (insert path))
+  (when-let ((limit (plist-get args :limit)))
+    (insert (format " limit %d" limit))))
+
+(defun pi-insert-ls-result (result-text _details _args)
   (when (not (string-empty-p result-text))
     (insert result-text)))
 
