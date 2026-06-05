@@ -1,6 +1,15 @@
 ;;; pi-section.el --- Section support -*- lexical-binding: t; -*-
 
+
+;;; Commentary:
+
+;; A buffer in pi-mode is organized into hierarchical sections.
+;; These sections are used for navigation and for hiding parts of the
+;; buffer.
+
 (require 'cl-lib)
+
+;;; Code:
 
 (defcustom pi-section-padding "\n\n"
   "String inserted between sections to control the visual gap.
@@ -11,11 +20,6 @@ Increase or decrease this value to adjust spacing between sections."
 (defvar pi-section-hidden-default nil)
 (defvar-local pi-root-section nil)
 
-
-;; A buffer in pi-mode is organized into hierarchical sections.
-;; These sections are used for navigation and for hiding parts of the
-;; buffer.
-;;
 
 (cl-defstruct pi-section
   parent children beginning end type hidden info padding)
@@ -42,7 +46,7 @@ Increase or decrease this value to adjust spacing between sections."
 
 (defun pi-create-root-section ()
   (when pi-root-section
-    (error "Root section already exists."))
+    (error "Root section already exists"))
   (let ((root (pi-new-section 'root nil)))
     (setf (pi-section-beginning root) (point-min))
     (setf (pi-section-end root) (point-min-marker))
@@ -383,3 +387,5 @@ Does not recurse into the parent."
           (pi-describe-section child (1+ indent)))))))
 
 (provide 'pi-section)
+
+;;; pi-section.el ends here

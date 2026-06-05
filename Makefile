@@ -30,3 +30,18 @@ format:
 	        (indent-region (point-min) (point-max)) \
 	        (save-buffer))))" \
           pi.el pi-section.el pi-tests.el pi-section-tests.el
+
+
+.PHONY: sandbox
+sandbox:
+	rm -rf sandbox
+	mkdir sandbox
+	emacs -Q --init-directory=./sandbox --debug \
+	        --eval '(setq user-emacs-directory (file-truename "sandbox"))' \
+	        -l package \
+	        --eval "(add-to-list 'package-archives '(\"gnu\" . \"http://elpa.gnu.org/packages/\") t)" \
+	        --eval "(add-to-list 'package-archives '(\"melpa\" . \"https://melpa.org/packages/\") t)" \
+	        --eval "(package-refresh-contents)" \
+	        --eval "(package-initialize)" \
+	        --eval "(use-package pi :ensure t :vc (:url \"git@github.com:ananthakumaran/pi.el.git\" :rev :newest) :commands (pi-chat))" \
+                --eval "(when (eq system-type 'darwin) (setq mac-option-key-is-meta nil mac-command-key-is-meta t mac-command-modifier 'meta mac-option-modifier 'none))"

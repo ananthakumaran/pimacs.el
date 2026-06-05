@@ -13,11 +13,13 @@ npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 pi
 ```
 
-### Installing `pi.el`
+### Install `pi.el`
 
 ```elisp
 (use-package pi
-  :vc (:url "git@github.com:ananthakumaran/pi.el.git")
+  :ensure t
+  :vc (:url "git@github.com:ananthakumaran/pi.el.git"
+       :rev :newest)
   :commands (pi-chat))
 ```
 

@@ -6,7 +6,7 @@
 ;; URL: http://github.com/ananthakumaran/pi.el
 ;; Version: 0.1
 ;; Keywords: pi agent
-;; Package-Requires: ((emacs "28.1") (compat  "31.0") (markdown-mode "2.8") (timeout "2.1.7"))
+;; Package-Requires: ((emacs "28.1") (compat "31.0") (markdown-mode "2.8") (timeout "2.1.7"))
 
 ;; This program is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -436,7 +436,7 @@ PRED is called with KEY VALUE."
 
 (defun pi-send-command (type args &optional callback)
   (unless (pi-current-agent)
-    (error "Agent does not exist. Run M-x pi-restart-chat to start it again"))
+    (error "Agent does not exist.  Run M-x pi-restart-chat to start it again"))
 
   (let* ((request-id (pi-next-request-id))
          (command (append (list :id request-id :type type) args))
@@ -642,7 +642,7 @@ PRED is called with KEY VALUE."
         (when (not (string-empty-p result-text))
           (insert (format "%s" result-text)))))
       (when (eq cancelled t)
-        (pi-insert-error "Cancelled."))
+        (pi-insert-error "Cancelled"))
       (when (and (numberp exit-code) (not (zerop exit-code)))
         (pi-insert-error (format "Command exited with code %d" exit-code)))
       (when full-output-path
@@ -1119,7 +1119,7 @@ If `pi-prompt-streaming-behavior' is `followUp', use `steer' and vice versa."
      (pi-on-response-success-callback resp
        (pi-widget-save-excursion
          (pi-create-section 'error pi-root-section
-           (pi-insert-error "Aborted."))))))
+           (pi-insert-error "Aborted"))))))
   (keyboard-quit))
 
 (defun pi-insert-stats-section (header plist fields)
