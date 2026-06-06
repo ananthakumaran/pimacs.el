@@ -85,5 +85,14 @@
                   "line1\nline2\n[Line 1 is 100KB, exceeds 50.0KB limit. Use bash: sed -n '1p' main.go | head -c 51200]")
                  '("line1\nline2" . "[Line 1 is 100KB, exceeds 50.0KB limit. Use bash: sed -n '1p' main.go | head -c 51200]"))))
 
+(ert-deftest pi-join-test ()
+  (should (equal (pi-join nil) ""))
+  (should (equal (pi-join '()) ""))
+  (should (equal (pi-join "hello") "hello"))
+  (should (equal (pi-join '("a" "b" "c")) "a\nb\nc"))
+  (should (equal (pi-join '("key" . "value")) "value"))
+  (should (equal (pi-join '(("k1" . "v1") ("k2" . "v2"))) "v1\nv2"))
+  (should (equal (pi-join '(("k1" . "a\nb") ("k2" . "c"))) "a\nb\nc")))
+
 ;;; pi-tests.el ends here
 

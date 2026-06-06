@@ -87,6 +87,16 @@
   "Face used for error notification messages."
   :group 'pi)
 
+(defface pi-widget-face
+  '((t :inherit shadow))
+  "Face used for extension widgets."
+  :group 'pi)
+
+(defface pi-status-face
+  '((t :inherit shadow))
+  "Face used for extension status."
+  :group 'pi)
+
 (defcustom pi-sync-request-timeout 2
   "The number of seconds to wait for a sync response."
   :type 'integer
@@ -207,6 +217,23 @@ with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result."
   (when pi-log-rpc
     (write-region (concat json "\n") nil pi-log-rpc-file t 'inhibit-message)))
 
+;;; Widget
+
+(defconst pi-empty-widget-text "\u200B")
+
+(defun pi-widget-value-create (widget)
+  (widget-default-create widget)
+  (let ((inhibit-read-only t))
+    (add-face-text-property
+     (widget-get widget :from)
+     (widget-get widget :to)
+     (widget-get widget :face))))
+
+(define-widget 'pi-item 'item
+  "Item widget with font face support."
+  :create #'pi-widget-value-create
+  :format "%v")
+
 ;;; Utilities
 
 (defun pi-json-read-object ()
@@ -236,8 +263,12 @@ with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result."
      (make-variable-buffer-local ',name)
      (put ',name 'permanent-local t)))
 
-(defun pi-join (list)
-  (mapconcat 'identity list ""))
+(defun pi-join (x)
+  (cond
+   ((stringp x) x)
+   ((proper-list-p x) (mapconcat #'pi-join x "\n"))
+   ((consp x) (pi-join (cdr x)))
+   (t "")))
 
 (defun pi-insert-error (text)
   "Insert TEXT with `pi-error-face'."
@@ -351,6 +382,11 @@ PRED is called with KEY VALUE."
 
 (pi-def-permanent-buffer-local pi-project-root nil)
 (pi-def-permanent-buffer-local pi-prompt-widget nil)
+(pi-def-permanent-buffer-local pi-prompt-before-widget nil)
+(pi-def-permanent-buffer-local pi-prompt-after-widget nil)
+(pi-def-permanent-buffer-local pi-prompt-widget-lines nil)
+(pi-def-permanent-buffer-local pi-status-widget nil)
+(pi-def-permanent-buffer-local pi-status-widget-lines nil)
 (pi-def-permanent-buffer-local pi-text-section nil)
 (pi-def-permanent-buffer-local pi-thinking-section nil)
 (pi-def-permanent-buffer-local pi-header-line-state nil)
@@ -411,7 +447,7 @@ PRED is called with KEY VALUE."
          (path default-directory))
      (if project
          (setq path (project-root project))
-       (message (pi-join (list "Couldn't find project root folder. Using '" default-directory "' as project root."))))
+       (message "Couldn't find project root folder. Using '%s' as project root." default-directory))
      (let ((full-path (expand-file-name path)))
        (setq pi-project-root full-path)
        full-path))))
@@ -443,7 +479,7 @@ PRED is called with KEY VALUE."
        ,@body)
      (when follow-p
        (with-selected-window window
-         (recenter (- -1 scroll-margin))))))
+         (recenter (- -1 scroll-margin (pi-extra-widget-lines)))))))
 
 (defmacro pi-with-chat-buffer (&rest body)
   "Execute the body in the current chat buffer"
@@ -1122,6 +1158,74 @@ PRED is called with KEY VALUE."
       (pi-create-section 'notify pi-root-section
         (insert (propertize message 'face face))))))
 
+(defun pi-sort-entries-by-key (entries)
+  (sort entries (lambda (a b) (string< (car a) (car b)))))
+
+(defun pi-widget-lines (widget)
+  (let ((text (widget-value widget)))
+    (if (or (string-empty-p text)
+            (equal text pi-empty-widget-text))
+        0
+      (cl-count ?\n text))))
+
+(defun pi-extra-widget-lines ()
+  (+ (pi-widget-lines pi-prompt-after-widget)
+     (pi-widget-lines pi-status-widget)))
+
+(defun pi-widget-ensure-trailing-newline (text)
+  (if (string-empty-p text)
+      pi-empty-widget-text
+    (if (= (aref text (1- (length text))) ?\n)
+        text
+      (concat text "\n"))))
+
+(defun pi-update-widget-by-entries (widget entries)
+  (widget-value-set widget
+                    (pi-widget-ensure-trailing-newline (pi-join (pi-sort-entries-by-key entries)))))
+
+(defun pi-update-prompt-widgets ()
+  (let ((above '())
+        (below '()))
+    (when pi-prompt-widget-lines
+      (maphash (lambda (key val)
+                 (let ((lines (pi-join (car val)))
+                       (placement (cdr val)))
+                   (pcase placement
+                     ("aboveEditor"
+                      (push (cons key lines) above))
+                     ("belowEditor"
+                      (push (cons key lines) below)))))
+               pi-prompt-widget-lines))
+    (pi-update-widget-by-entries pi-prompt-before-widget above)
+    (pi-update-widget-by-entries pi-prompt-after-widget below)))
+
+(defun pi-handle-set-widget (event)
+  (let* ((widget-key (plist-get event :widgetKey))
+         (widget-lines (plist-get event :widgetLines))
+         (widget-placement (or (plist-get event :widgetPlacement) "aboveEditor")))
+    (if (or (not widget-lines)
+            (null widget-lines))
+        (remhash widget-key pi-prompt-widget-lines)
+      (puthash widget-key (cons widget-lines widget-placement) pi-prompt-widget-lines))
+    (pi-update-prompt-widgets)))
+
+(defun pi-update-status-widget ()
+  (let (entries)
+    (when pi-status-widget-lines
+      (maphash (lambda (key text)
+                 (push (cons key text) entries))
+               pi-status-widget-lines))
+    (widget-value-set pi-status-widget
+                      (pi-widget-ensure-trailing-newline (pi-join (pi-sort-entries-by-key entries))))))
+
+(defun pi-handle-set-status (event)
+  (let* ((status-key (plist-get event :statusKey))
+         (status-text (plist-get event :statusText)))
+    (if (or (not status-text) (string-empty-p status-text))
+        (remhash status-key pi-status-widget-lines)
+      (puthash status-key status-text pi-status-widget-lines))
+    (pi-update-status-widget)))
+
 (defun pi-handle-set-editor-text (event)
   (let ((text (plist-get event :text))
         (current (widget-value pi-prompt-widget)))
@@ -1215,7 +1319,9 @@ PRED is called with KEY VALUE."
     ("confirm" (pi-handle-confirm event))
     ("input" (pi-handle-input event))
     ("editor" (pi-handle-editor event))
-    ("set_editor_text" (pi-handle-set-editor-text event))))
+    ("set_editor_text" (pi-handle-set-editor-text event))
+    ("setWidget" (pi-handle-set-widget event))
+    ("setStatus" (pi-handle-set-status event))))
 
 (defun pi-register-event-listeners ()
   (pi-set-event-listener "message_update" #'pi-handle-message-update)
@@ -1858,6 +1964,7 @@ summarization."
               (append (list #'pi-completion-at-point-slash
                             #'pi-completion-at-point-file)
                       completion-at-point-functions))
+  (setq pi-prompt-before-widget (widget-create 'pi-item :face 'pi-widget-face pi-empty-widget-text))
   (setq pi-prompt-widget
         (widget-create 'editable-field
                        :keymap pi-chat-widget-field-keymap
@@ -1866,6 +1973,10 @@ summarization."
                        :button-face 'pi-chat-role-face
                        :action (lambda (widget &optional _event)
                                  (pi-send-prompt (widget-value widget)))))
+  (setq pi-prompt-after-widget (widget-create 'pi-item :face 'pi-widget-face pi-empty-widget-text))
+  (setq pi-prompt-widget-lines (make-hash-table :test 'equal))
+  (setq pi-status-widget (widget-create 'pi-item :face 'pi-status-face pi-empty-widget-text))
+  (setq pi-status-widget-lines (make-hash-table :test 'equal))
   (widget-setup)
   (pi-focus-prompt)
   (add-hook 'kill-buffer-hook 'pi-cleanup-chat-buffer nil t)
