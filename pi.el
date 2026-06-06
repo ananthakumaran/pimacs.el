@@ -165,7 +165,8 @@ when agent stops."
     ("compact" pi-compact 1)
     ("session" pi-session-stats 0)
     ("name" pi-set-session-name 1)
-    ("thinking-level" pi-set-thinking-level 0)
+    ("set-thinking-level" pi-set-thinking-level 0)
+    ("cycle-model" pi-cycle-model 0)
     ("fork" pi-fork 0)
     ("clone" pi-clone 0)
     ("copy" pi-copy 0)
@@ -1670,6 +1671,27 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                 (pi-widget-save-excursion
                   (pi-create-section 'thinking pi-root-section
                     (insert (format "Thinking level set to: %s" selected-str)))))))))))))
+
+(defun pi-cycle-model ()
+  (interactive)
+  (pi-with-chat-buffer
+    (pi-send-command
+     "cycle_model" '()
+     (pi-on-response-success-callback resp
+       (let ((data (plist-get resp :data)))
+         (if (null data)
+             (message "No more models to cycle through.")
+           (let ((model (plist-get data :model))
+                 (thinking-level (plist-get data :thinkingLevel))
+                 (is-scoped (plist-get data :isScoped)))
+             (pi-update-header-line)
+             (pi-widget-save-excursion
+               (pi-create-section 'model pi-root-section
+                 (insert (format "Cycled to model: (%s) %s · thinking level: %s%s"
+                                 (plist-get model :provider)
+                                 (plist-get model :id)
+                                 (or thinking-level "?")
+                                 (if (eq is-scoped t) " (scoped)" ""))))))))))))
 
 (cl-defstruct pi-session-choice
   id message timestamp cwd path parent-id)
