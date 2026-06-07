@@ -68,15 +68,16 @@ because they are not currently exposed through the RPC API.
 
 ### Chat Buffer Keybindings
 
-| Key          | Command                    | Description                               |
-|--------------|----------------------------|-------------------------------------------|
-| `C-g`        | `pi-abort`                 | Abort the current operation               |
-| `TAB`, `C-i` | `pi-toggle-section`        | Toggle visibility of the section at point |
-| `n`, `M-n`   | `pi-goto-next-section`     | Move to the next section                  |
-| `p`, `M-p`   | `pi-goto-previous-section` | Move to the previous section              |
-| `l`, `M-g l` | `pi-goto-last-section`     | Jump to the most recent section           |
-| `i`          | `pi-focus-prompt`          | Focus the prompt input field              |
-| `q`          | `pi-quit-chat`             | Quit the chat buffer                      |
+| Key          | Command                    | Description                                                                          |
+|--------------|----------------------------|--------------------------------------------------------------------------------------|
+| `RET`        | `pi-visit-item`            | Jump to the source location at point; with a prefix argument, open in another window |
+| `C-g`        | `pi-abort`                 | Abort the current operation                                                          |
+| `TAB`, `C-i` | `pi-toggle-section`        | Toggle visibility of the section at point                                            |
+| `n`, `M-n`   | `pi-goto-next-section`     | Move to the next section                                                             |
+| `p`, `M-p`   | `pi-goto-previous-section` | Move to the previous section                                                         |
+| `l`, `M-g l` | `pi-goto-last-section`     | Jump to the most recent section                                                      |
+| `i`          | `pi-focus-prompt`          | Focus the prompt input field                                                         |
+| `q`          | `pi-quit-chat`             | Quit the chat buffer                                                                 |
 
 ### Prompt Input Keybindings
 
@@ -205,4 +206,36 @@ Alist mapping tool names to result inserter functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
 with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result.
+
+#### pi-visit-tool-result-functions
+
+<details><summary>Default Value</summary>
+
+```elisp
+(("read" . pi-visit-read-result) ("write" . pi-visit-write-result)
+ ("edit" . pi-visit-edit-result) ("grep" . pi-visit-grep-result))
+```
+
+</details>
+
+Alist mapping tool names to result visitor functions.
+
+Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
+with (DETAILS ARGS) to visit the relevant location of the tool result.
+
+#### pi-visit-tool-call-functions
+
+<details><summary>Default Value</summary>
+
+```elisp
+(("read" . pi-visit-read-call) ("write" . pi-visit-write-call)
+ ("edit" . pi-visit-edit-call))
+```
+
+</details>
+
+Alist mapping tool names to call visitor functions.
+
+Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
+with (ARGS) to visit the relevant location of the tool call.
 

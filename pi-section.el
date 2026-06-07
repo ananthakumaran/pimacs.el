@@ -35,11 +35,26 @@ Increase or decrease this value to adjust spacing between sections."
 (defvar pi-section-hidden-default nil)
 (defvar-local pi-root-section nil)
 
+(defun pi-prefix-p (prefix list)
+  "Return non-nil if PREFIX is a prefix of LIST.
+PREFIX and LIST should both be lists.
+
+If the car of PREFIX is the symbol '*, then return non-nil if the cdr of PREFIX
+is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
+  (or (null prefix)
+      (if (eq (car prefix) '*)
+          (or (pi-prefix-p (cdr prefix) list)
+              (and (not (null list))
+                   (pi-prefix-p prefix (cdr list))))
+        (and (not (null list))
+             (equal (car prefix) (car list))
+             (pi-prefix-p (cdr prefix) (cdr list))))))
+
 
 (cl-defstruct pi-section
   parent children beginning end type hidden info padding)
 
-(defun pi-set-section-info (info &optional section)
+(defun pi-set-section-info (section info)
   (setf (pi-section-info section) info))
 
 (defun pi-advance-pointer-maker (marker)
@@ -166,7 +181,7 @@ Increase or decrease this value to adjust spacing between sections."
 
 (defun pi-section-path (section)
   "Return the path of SECTION."
-  (if (not (pi-section-parent section))
+  (if (or (not section) (not (pi-section-parent section)))
       '()
     (append (pi-section-path (pi-section-parent section))
             (list (pi-section-type section)))))
@@ -319,6 +334,33 @@ Increase or decrease this value to adjust spacing between sections."
       (forward-line 1))))
 
 
+(defmacro pi-section-case (&rest clauses)
+  "Make different action depending of current section.
+
+CLAUSES is a list of CLAUSE, each clause is (SECTION-TYPE &BODY)
+where SECTION-TYPE describe section where BODY will be run.
+
+This returns non-nil if some section matches.  If the
+corresponding body return a non-nil value, it is returned,
+otherwise it return t."
+
+  (declare (indent 1)
+           (debug (form &rest (sexp body))))
+  (let ((section (make-symbol "*section*"))
+        (path (make-symbol "*path*")))
+    `(let* ((,section (pi-current-section))
+            (,path (pi-section-path ,section)))
+       (cond ,@(mapcar (lambda (clause)
+                         (let ((prefix (car clause))
+                               (body (cdr clause)))
+                           `(,(if (eq prefix t)
+                                  `t
+                                `(pi-prefix-p ',(reverse prefix) (reverse ,path)))
+                             (or (progn ,@body)
+                                 t))))
+                       clauses)))))
+
+
 (defun pi-demo ()
   "Create a demo buffer with nested pi sections."
   (interactive)
@@ -409,6 +451,14 @@ Does not recurse into the parent."
         (princ (format "%s  Children:\n" prefix))
         (dolist (child children)
           (pi-describe-section child (1+ indent)))))))
+
+(defun pi-section-line ()
+  "Return the 0-based line number of point within the current section.
+Returns 0 if point is on the first line of the section or if there is
+no current section."
+  (if-let ((section (pi-current-section)))
+      (count-lines (pi-section-beginning section) (point))
+    0))
 
 (provide 'pi-section)
 

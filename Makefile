@@ -73,4 +73,4 @@ export ESCRIPT
 
 
 readme:
-	ruby -e 'puts IO.read("README.md").split("### Custom Variables")[0] + "### Custom Variables\n\n" + `emacs --batch --eval "$$ESCRIPT"`' | sponge README.md
+	ruby -e 'puts IO.read("README.md").split("## Custom Variables")[0] + "## Custom Variables\n\n" + `emacs --batch --eval "$$ESCRIPT"`' | sponge README.md

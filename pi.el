@@ -41,6 +41,8 @@
 (require 'timeout)
 (require 'spinner)
 (require 'pcre2el)
+(require 'thingatpt)
+(require 'ffap)
 
 (defgroup pi nil
   "Emacs client for Pi."
@@ -217,6 +219,29 @@ with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result."
   :type '(alist :key-type string :value-type function)
   :group 'pi)
 
+(defcustom pi-visit-tool-result-functions
+  '(("read" . pi-visit-read-result)
+    ("write" . pi-visit-write-result)
+    ("edit" . pi-visit-edit-result)
+    ("grep" . pi-visit-grep-result))
+  "Alist mapping tool names to result visitor functions.
+
+Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
+with (DETAILS ARGS) to visit the relevant location of the tool result."
+  :type '(alist :key-type string :value-type function)
+  :group 'pi)
+
+(defcustom pi-visit-tool-call-functions
+  '(("read" . pi-visit-read-call)
+    ("write" . pi-visit-write-call)
+    ("edit" . pi-visit-edit-call))
+  "Alist mapping tool names to call visitor functions.
+
+Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
+with (ARGS) to visit the relevant location of the tool call."
+  :type '(alist :key-type string :value-type function)
+  :group 'pi)
+
 (defvar-local pi-project-file-cache nil)
 
 (defun pi-maybe-log-rpc (json)
@@ -246,7 +271,7 @@ with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result."
   (json-parse-buffer :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
 
 (defun pi-json-encode (obj)
-  "Encode OBJ into a JSON string. JSON arrays must be represented with vectors."
+  "Encode OBJ into a JSON string.  JSON arrays must be represented with vectors."
   (json-serialize obj :null-object 'json-null :false-object 'json-false))
 
 (defun pi-format-number-short (n)
@@ -294,7 +319,7 @@ with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result."
   (time-to-seconds (time-subtract (current-time) time)))
 
 (defun pi-hash-remove-if (pred table)
-  "Remove entries from TABLE for which PRED returns non-nil.
+  "Remove entries from TABLE for which PRED return non-nil.
 
 PRED is called with KEY VALUE."
   (maphash
@@ -302,6 +327,12 @@ PRED is called with KEY VALUE."
      (when (funcall pred k v)
        (remhash k table)))
    table))
+
+(defun pi-file-at-point ()
+  (let ((ffap-url-regexp nil))
+    (when-let ((file (ffap-file-at-point)))
+      (when (file-exists-p file)
+        file))))
 
 (defun pi-response-success-p (response)
   (and response
@@ -493,7 +524,7 @@ PRED is called with KEY VALUE."
          (recenter (- -1 scroll-margin (pi-extra-widget-lines)))))))
 
 (defmacro pi-with-chat-buffer (&rest body)
-  "Execute the body in the current chat buffer"
+  "Execute the body in the current chat buffer."
   (declare (indent 0) (debug t))
   `(let ((buffer (pi-current-chat)))
      (if buffer
@@ -532,7 +563,7 @@ PRED is called with KEY VALUE."
         (apply (cdr listener) (list event))))))
 
 (defun pi-set-event-listener (name listener)
-  "Set `name' to t to receive all events"
+  "Set `name' to t to receive all events."
   (puthash (cons (pi-project-key) name) (cons (current-buffer) listener) pi-event-listeners))
 
 (defun pi-dispatch (response)
@@ -790,6 +821,7 @@ PRED is called with KEY VALUE."
                (pi-insert-section call-section
                  (pi-insert-tool-name tool-name)
                  (pi-format-tool-args tool-name args))
+               (pi-set-section-info call-section (list tool-name args))
                (let ((result-section (pi-new-section 'tool-result call-section)))
                  (pi-insert-section result-section)
                  (puthash tool-call-id
@@ -807,21 +839,27 @@ PRED is called with KEY VALUE."
            (is-error (plist-get message :isError))
            (details (plist-get message :details)))
        (when-let ((entry (gethash tool-call-id pi-tool-calls)))
-         (pi-widget-save-excursion
-           (pi-replace-section (pi-tool-call-result-section entry)
-             (pi-insert-tool-result tool-name result-text is-error details (pi-tool-call-args entry))))
+         (let ((result-section (pi-tool-call-result-section entry))
+               (args (pi-tool-call-args entry)))
+           (pi-widget-save-excursion
+             (pi-replace-section result-section
+               (pi-insert-tool-result tool-name result-text is-error details args))
+             (pi-set-section-info result-section (list tool-name details args))))
          (remhash tool-call-id pi-tool-calls))))
 
     ("bashExecution"
-     (let* ((command (plist-get message :command))
+     (let* ((args (list :command (plist-get message :command)))
             (output (plist-get message :output)))
        (pi-widget-save-excursion
-         (let ((call-section (pi-new-section 'tool-call pi-root-section :padding "\n")))
+         (let* ((call-section (pi-new-section 'tool-call pi-root-section :padding "\n"))
+                (result-section (pi-new-section 'tool-result call-section)))
            (pi-insert-section call-section
              (pi-insert-tool-name "bash")
-             (pi-format-tool-args "bash" (list :command command)))
-           (pi-create-section 'tool-result call-section
-             (pi-insert-tool-result "bash" output nil message))))))))
+             (pi-format-tool-args "bash" args))
+           (pi-set-section-info call-section (list "bash" args))
+           (pi-insert-section result-section
+             (pi-insert-tool-result "bash" output nil message))
+           (pi-set-section-info result-section (list "bash" nil args))))))))
 
 (defun pi-handle-message-update (event)
   (let* ((assistant-message-event (plist-get event :assistantMessageEvent))
@@ -861,6 +899,7 @@ PRED is called with KEY VALUE."
                (pi-insert-section call-section
                  (pi-insert-tool-name tool-name)
                  (pi-format-tool-args tool-name args))
+               (pi-set-section-info call-section (list tool-name args))
                (let ((result-section (pi-new-section 'tool-result call-section)))
                  (pi-insert-section result-section)
                  (puthash tool-call-id
@@ -920,6 +959,17 @@ PRED is called with KEY VALUE."
         (when truncated-line
           (insert truncated-line))))))
 
+(defun pi-visit-read-result (_details args)
+  (when-let ((path (plist-get args :path)))
+    (let ((file (expand-file-name path (pi-project-root)))
+          (line (+ (or (plist-get args :offset) 1) (pi-section-line))))
+      (list :file file :line line))))
+
+(defun pi-visit-read-call (args)
+  (when-let ((path (plist-get args :path)))
+    (list :file (expand-file-name path (pi-project-root))
+          :line (or (plist-get args :offset) 1))))
+
 ;; write
 (defun pi-insert-write-args (args)
   (when-let ((path (plist-get args :path))
@@ -933,6 +983,15 @@ PRED is called with KEY VALUE."
   (when (not (string-empty-p result-text))
     (insert (format "%s" result-text))))
 
+(defun pi-visit-write-result (_details args)
+  (when-let ((path (plist-get args :path)))
+    (list :file (expand-file-name path (pi-project-root)))))
+
+(defun pi-visit-write-call (args)
+  (when-let ((path (plist-get args :path)))
+    (list :file (expand-file-name path (pi-project-root))
+          :line (max 1 (pi-section-line)))))
+
 ;; edit
 (defun pi-insert-edit-args (args)
   (when-let ((path (plist-get args :path)))
@@ -942,7 +1001,29 @@ PRED is called with KEY VALUE."
   (when-let ((diff (plist-get details :diff)))
     (insert (pi-render-diff diff)))
   (when (not (string-empty-p result-text))
-    (insert (format "%s" result-text))))
+    (insert (format "\n\n%s" result-text))))
+
+(defun pi-visit-edit-call (args)
+  (when-let ((path (plist-get args :path)))
+    (list :file (expand-file-name path (pi-project-root)) :line 1)))
+
+(defun pi-visit-edit-result (_details args)
+  (when-let ((path (plist-get args :path)))
+    (let* ((section (pi-current-section))
+           (beg (pi-section-beginning section))
+           (end (pi-section-end section))
+           (re "^[+ ]\\([0-9]+\\)")
+           (line
+            (or
+             (save-excursion
+               (end-of-line)
+               (when (re-search-backward re beg t)
+                 (string-to-number (match-string 1))))
+             (save-excursion
+               (when (re-search-forward re end t)
+                 (string-to-number (match-string 1)))))))
+      (list :file (expand-file-name path (pi-project-root))
+            :line (or line 1)))))
 
 ;; bash
 (defun pi-insert-bash-args (args)
@@ -1001,6 +1082,9 @@ PRED is called with KEY VALUE."
                  (propertize match 'face 'pi-grep-match-face))
                text)))))
 
+(defconst pi-grep-line-regexp "^\\(.*\\):\\([0-9]+\\): \\(.*\\)$")
+(defconst pi-grep-line-alt-regexp "^\\(.*\\)\\([-:]\\)\\([0-9]+\\)\\([-:]\\)\\(.*\\)$")
+
 (defun pi-insert-grep-result (result-text _details args)
   (if (string-empty-p result-text)
       (insert result-text)
@@ -1012,12 +1096,12 @@ PRED is called with KEY VALUE."
         (let ((lines (split-string result-text "\n")))
           (dolist (line lines)
             (cond
-             ((string-match "^\\(.*\\):\\([0-9]+\\): \\(.*\\)$" line)
+             ((string-match pi-grep-line-regexp line)
               (insert (propertize (match-string 1 line) 'face 'compilation-info) ":")
               (insert (propertize (match-string 2 line) 'face 'compilation-line-number))
               (insert ": ")
               (pi-insert-grep-highlighted (match-string 3 line) pattern ignore-case literal))
-             ((string-match "^\\(.*\\)\\([-:]\\)\\([0-9]+\\)\\([-:]\\)\\(.*\\)$" line)
+             ((string-match pi-grep-line-alt-regexp line)
               (insert (propertize (match-string 1 line) 'face 'compilation-info))
               (insert (match-string 2 line))
               (insert (propertize (match-string 3 line) 'face 'compilation-line-number))
@@ -1027,6 +1111,18 @@ PRED is called with KEY VALUE."
               (insert line)))
             (insert "\n"))
           (delete-char -1))))))
+
+(defun pi-visit-grep-result (_details _args)
+  (save-excursion
+    (beginning-of-line)
+    (when-let ((line (thing-at-point 'line t)))
+      (cond
+       ((string-match pi-grep-line-regexp line)
+        (list :file (match-string 1 line)
+              :line (string-to-number (match-string 2 line))))
+       ((string-match pi-grep-line-alt-regexp line)
+        (list :file (match-string 1 line)
+              :line (string-to-number (match-string 3 line))))))))
 
 ;; find
 (defun pi-insert-find-args (args)
@@ -1095,12 +1191,15 @@ PRED is called with KEY VALUE."
          (tool-name (plist-get event :toolName))
          (entry (gethash tool-call-id pi-tool-calls)))
     (when entry
-      (let ((result-section (pi-tool-call-result-section entry)))
+      (let ((result-section (pi-tool-call-result-section entry))
+            (details (plist-get result :details))
+            (args (pi-tool-call-args entry)))
         (pi-widget-save-excursion
           (pi-replace-section result-section
             (pi-insert-tool-result tool-name result-text is-error
-                                   (plist-get result :details)
-                                   (pi-tool-call-args entry)))))
+                                   details
+                                   args)))
+        (pi-set-section-info result-section (list tool-name details args)))
       (remhash tool-call-id pi-tool-calls))))
 
 (defun pi-handle-auto-retry-start (event)
@@ -2039,7 +2138,8 @@ summarization."
         (pi-widget-save-excursion
           (pi-insert-section call-section
             (pi-insert-tool-name "bash")
-            (pi-format-tool-args "bash" (list :command command))))
+            (pi-format-tool-args "bash" (list :command command)))
+          (pi-set-section-info call-section (list "bash" args)))
         (pi-send-command
          "bash" args
          (lambda (resp)
@@ -2061,10 +2161,49 @@ summarization."
            (mapcar (lambda (c) (cons (plist-get c :name) c))
                    (plist-get (plist-get resp :data) :commands))))))
 
+
+(defun pi-visit-file (result &optional other-window)
+  (let ((file (plist-get result :file))
+        (line (plist-get result :line))
+        (find-file-func (if other-window #'find-file-other-window #'find-file)))
+    (when file
+      (funcall find-file-func file)
+      (when line
+        (goto-char (point-min))
+        (forward-line (1- line))))))
+
+(defun pi-visit-file-at-point (other-window)
+  (when-let (file (pi-file-at-point))
+    (pi-visit-file (list :file file) other-window)))
+
+(defun pi-visit-item (&optional other-window)
+  "Visit current item.
+With a prefix argument, visit in other window."
+  (interactive (list current-prefix-arg))
+  (pi-section-case
+      ((tool-result)
+       (if-let* ((info (pi-section-info (pi-current-section)))
+                 (tool-name (nth 0 info))
+                 (visitor (alist-get tool-name pi-visit-tool-result-functions nil nil #'equal)))
+           (let* ((details (nth 1 info))
+                  (args (nth 2 info)))
+             (pi-visit-file (funcall visitor details args) other-window))
+         (pi-visit-file-at-point other-window)))
+    ((tool-call)
+     (if-let* ((info (pi-section-info (pi-current-section)))
+               (tool-name (nth 0 info))
+               (visitor (alist-get tool-name pi-visit-tool-call-functions nil nil #'equal)))
+         (let ((args (nth 1 info)))
+           (pi-visit-file (funcall visitor args) other-window))
+       (pi-visit-file-at-point other-window)))
+    (t
+     (pi-visit-file-at-point other-window))))
+
 (defvar-keymap pi-chat-mode-map
   :doc "Keymap for `pi-chat-mode'."
   :parent special-mode-map
   "C-g" #'pi-abort
+  "RET" #'pi-visit-item
   "TAB" #'pi-toggle-section
   "C-i" #'pi-toggle-section
   "n" #'pi-goto-next-section
@@ -2124,7 +2263,7 @@ summarization."
 
 ;;;###autoload
 (defun pi-chat (&optional name)
-  "Start a chat window"
+  "Start a chat window."
   (interactive
    (list (when current-prefix-arg
            (read-string "Session name: "))))
@@ -2157,7 +2296,7 @@ summarization."
   (pi-kill-agent))
 
 (defun pi-restart-chat ()
-  "Exit the current chat and restart"
+  "Exit the current chat and restart."
   (interactive)
   (let ((root default-directory))
     (pi-quit-chat)
