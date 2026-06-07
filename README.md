@@ -94,6 +94,10 @@ because they are not currently exposed through the RPC API.
 
 ## Custom Variables
 
+#### pi-use-ansi-colors `t`
+
+Whether to render ANSI colors in widget and status output.
+
 #### pi-sync-request-timeout `2`
 
 The number of seconds to wait for a sync response.

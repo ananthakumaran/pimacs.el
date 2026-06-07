@@ -43,6 +43,7 @@
 (require 'pcre2el)
 (require 'thingatpt)
 (require 'ffap)
+(require 'ansi-color)
 
 (defgroup pi nil
   "Emacs client for Pi."
@@ -97,6 +98,11 @@
 (defface pi-status-face
   '((t :inherit shadow))
   "Face used for extension status."
+  :group 'pi)
+
+(defcustom pi-use-ansi-colors t
+  "Whether to render ANSI colors in widget and status output."
+  :type 'boolean
   :group 'pi)
 
 (defcustom pi-sync-request-timeout 2
@@ -252,17 +258,17 @@ with (ARGS) to visit the relevant location of the tool call."
 
 (defconst pi-empty-widget-text "\u200B")
 
-(defun pi-widget-value-create (widget)
-  (widget-default-create widget)
-  (let ((inhibit-read-only t))
-    (add-face-text-property
-     (widget-get widget :from)
-     (widget-get widget :to)
-     (widget-get widget :face))))
+(defun pi-widget-item-value-create (widget)
+  (let ((value (widget-get widget :value)))
+    (if pi-use-ansi-colors
+        (insert (ansi-color-apply value))
+      (insert (propertize (ansi-color-filter-apply value)
+                          'face
+                          (widget-get widget :face))))))
 
 (define-widget 'pi-item 'item
   "Item widget with font face support."
-  :create #'pi-widget-value-create
+  :value-create #'pi-widget-item-value-create
   :format "%v")
 
 ;;; Utilities
