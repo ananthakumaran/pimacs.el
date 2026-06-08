@@ -14,6 +14,8 @@ jobs:
       matrix:
         emacs_version:
           - 28.1
+          - 29.4
+          - 30.2
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-node@v6
@@ -26,3 +28,9 @@ jobs:
 
     - name: Run tests
       run: make test
+
+    - name: Run integration tests
+      run: |
+        npm install -g --ignore-scripts @earendil-works/pi-coding-agent
+        cd integration/fixture && npm install && cd ../..
+        make integration

@@ -1,0 +1,6 @@
+.elpaignore
+.github
+integration
+Makefile
+pi-section-tests.el
+pi-tests.el

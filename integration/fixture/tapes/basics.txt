@@ -29,8 +29,7 @@ user> grep for sample
 
 assistant> The user wants to grep for the text "sample" in the files. I'll use the grep function to search for this pattern in the files in the current directory.
 
-grep /sample/
-config.json:2:   "name": "sample-project",
+grep /sample project/
 README.md:3: This is a sample project used for integration testing.
 
 assistant> The grep search found two matches containing "sample" in the config.json and README.md files. Let me present this information clearly to the user.
@@ -48,7 +47,7 @@ user> create a new filed name test.txt
 
 assistant> The user wants me to create a new file named test.txt. I'll use the write function to create this file. Since they didn't specify content, I'll create an empty file or add a basic content to it.
 
-write /home/ananthakumaran/work/repos/pi.el/integration/project/test.txt
+write PROJECT_DIR/test.txt
 # Test file created
 Successfully wrote 19 bytes to test.txt
 
@@ -92,7 +91,7 @@ user> read utils.py file
 
 assistant> The user wants to read the contents of the utils.py file that was listed in the initial directory listing. I'll use the read function to get its contents.
 
-read /home/ananthakumaran/work/repos/pi.el/integration/project/utils.py
+read PROJECT_DIR/utils.py
 def greet(name):
     return f"Hello, {name}!"
 
@@ -145,7 +144,7 @@ user> create test.txt with some text
 
 assistant> The user wants me to create a new file named test.txt with some text content. I'll use the write function to create this file.
 
-write /home/ananthakumaran/work/repos/pi.el/integration/project/test.txt
+write PROJECT_DIR/test.txt
 This is a test file.
 
 It was just created with some text content.
@@ -195,7 +194,7 @@ The user wants to remove the 3rd line, which would be "It was just created with 
 
 I need to use the edit tool to make this replacement. I need to match the old text and replace it.
 
-edit /home/ananthakumaran/work/repos/pi.el/integration/project/test.txt
+edit PROJECT_DIR/test.txt
  1 This is a test file.
  2 
 -3 It was just created with some text content.

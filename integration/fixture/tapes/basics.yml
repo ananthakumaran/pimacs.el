@@ -1380,7 +1380,7 @@ http_interactions:
 
 
           data:
-          {"id":"chatcmpl-663","object":"chat.completion.chunk","created":1780917769,"model":"qwen3.5:4b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_3jjj4vk6","index":0,"type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},"finish_reason":null}]}
+          {"id":"chatcmpl-663","object":"chat.completion.chunk","created":1780917769,"model":"qwen3.5:4b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_3jjj4vk6","index":0,"type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},"finish_reason":null}]}
 
 
           data:
@@ -1477,7 +1477,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"}],"stream":true,"stream_options":{"include_usage":true},"store":false,"tools":[{"type":"function","function":{"name":"read","description":"Read
@@ -2141,7 +2141,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -2563,7 +2563,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -2908,7 +2908,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -3242,7 +3242,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -3625,7 +3625,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -3978,7 +3978,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -4528,7 +4528,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -4921,7 +4921,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -5906,7 +5906,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -6306,7 +6306,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -6981,7 +6981,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -8310,7 +8310,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -9245,7 +9245,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -10524,7 +10524,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found
@@ -11051,7 +11051,7 @@ http_interactions:
           sample"}]},{"role":"assistant","content":null,"reasoning":"The user
           wants to grep for the text \"sample\" in the files. I'll use the grep
           function to search for this pattern in the files in the current
-          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample\"}"}}]},{"role":"tool","content":"config.json:2:  
+          directory.","tool_calls":[{"id":"call_3jjj4vk6","type":"function","function":{"name":"grep","arguments":"{\"pattern\":\"sample project\"}"}}]},{"role":"tool","content":"config.json:2:  
           \"name\": \"sample-project\",\nREADME.md:3: This is a sample project
           used for integration
           testing.","tool_call_id":"call_3jjj4vk6"},{"role":"assistant","content":"Found

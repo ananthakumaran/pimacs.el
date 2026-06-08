@@ -43,11 +43,11 @@
      (pi-drain-process-output)
      (pi-with-chat-buffer
        (let* ((tape-file (expand-file-name (concat ,scenario ".txt") pi-tape-directory))
-              (current-text (buffer-substring (point-min) (point-max))))
+              (current-text (pi-normalize-buffer-text (buffer-substring (point-min) (point-max)))))
          (if (file-exists-p tape-file)
-             (let ((expected (with-temp-buffer
+             (let ((expected (pi-normalize-buffer-text (with-temp-buffer
                                (insert-file-contents tape-file)
-                               (buffer-string))))
+                               (buffer-string)))))
                (unless (string= current-text expected)
                  (let ((temp-file (make-temp-file "pi-tape-")))
                    (unwind-protect
@@ -70,7 +70,11 @@
       (with-current-buffer buffer
         (while (and pi-agent-state
                     (< (time-to-seconds (time-subtract (current-time) start)) timeout))
-          (accept-process-output nil 0.05))))))
+          (accept-process-output nil 0.05))))
+    (sleep-for 0.1)))
+
+(defun pi-normalize-buffer-text (text)
+  (replace-regexp-in-string (regexp-quote pi-project-directory) "PROJECT_DIR" text))
 
 (defun pi-send-prompt-and-wait (prompt)
   (pi-send-prompt prompt)

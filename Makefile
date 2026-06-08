@@ -16,11 +16,11 @@ compile: cask
 
 .PHONY: test
 test: compile
-	cask emacs --batch -L . -L test -l pi-tests.el -l pi-section-tests.el -f ert-run-tests-batch
+	cask emacs --batch -L . -L test -l pi-tests.el -l pi-section-tests.el -f ert-run-tests-batch-and-exit
 
 .PHONY: integration
 integration: compile
-	cask emacs --batch -L . -L test -l integration/pi-integration-tests.el -f ert-run-tests-batch
+	cask emacs --batch -L . -L test -l integration/pi-integration-tests.el -f ert-run-tests-batch-and-exit
 
 .PHONY: format
 format:
