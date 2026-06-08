@@ -1778,6 +1778,14 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
   '((:one-at-a-time . "One at a time")
     (:all . "All")))
 
+(defun pi-completing-read (prompt collection)
+  (completing-read prompt
+                   (lambda (string pred action)
+                     (if (eq action 'metadata)
+                         '(metadata (display-sort-function . identity))
+                       (complete-with-action action collection string pred)))
+                   nil t))
+
 (defun pi-read-option (options current prompt)
   (let* ((items (mapcar (lambda (opt)
                           (cons (cdr opt) (car opt)))
@@ -2000,12 +2008,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                                         (if short-parent (format " (parent: %s)" short-parent) ""))
                                 s)))
                       sessions))
-                    (selected (completing-read "Resume session: "
-                                               (lambda (string pred action)
-                                                 (if (eq action 'metadata)
-                                                     '(metadata (display-sort-function . identity))
-                                                   (complete-with-action action candidates string pred)))
-                                               nil t))
+                    (selected (pi-completing-read "Resume session: " candidates))
                     (choice (alist-get selected candidates nil nil #'equal))
                     (session-path (pi-session-choice-path choice)))
                (pi-send-command
@@ -2115,7 +2118,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                 messages)))
          (if (null items)
              (message "No fork points available.")
-           (let* ((selected (completing-read "Fork at message: " items nil t))
+           (let* ((selected (pi-completing-read "Fork at message: " (reverse items)))
                   (message (alist-get selected items nil nil #'equal))
                   (entry-id (plist-get message :entryId)))
              (pi-send-command
