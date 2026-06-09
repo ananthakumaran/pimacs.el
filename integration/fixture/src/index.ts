@@ -14,6 +14,7 @@ const mode = process.env.FIXTURE_MODE || "replay";
 const scenario = process.env.FIXTURE_SCENARIO || "default";
 
 const binPath = path.join(__dirname, "../node_modules/.bin/proxay");
+const logFile = "/tmp/proxay.log";
 
 function initialize() {
   const proxay = spawn(binPath, [
@@ -29,8 +30,6 @@ function initialize() {
     "5544",
   ]);
 
-  const logFile = "/tmp/proxay.log";
-
   proxay.stdout.on("data", (data) => {
     appendFileSync(logFile, `[stdout] ${data.toString()}`);
   });
@@ -42,10 +41,27 @@ function initialize() {
   proxay.on("exit", (code) => {
     appendFileSync(logFile, `[exit] code=${code}\n`);
   });
+
+  return proxay;
 }
 
 export default function (pi: ExtensionAPI) {
-  initialize();
+  const proxay = initialize();
+
+  [
+    "exit",
+    "SIGINT",
+    "SIGUSR1",
+    "SIGUSR2",
+    "uncaughtException",
+    "SIGTERM",
+  ].forEach((eventType) => {
+    process.on(eventType, () => {
+      appendFileSync(logFile, `[pi](${eventType}) stopping proxay\n`);
+      proxay.kill();
+    });
+  });
+
   pi.registerProvider("fixture", {
     api: "openai-completions",
     baseUrl: "http://127.0.0.1:5544/v1",
