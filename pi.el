@@ -950,6 +950,7 @@ PRED is called with KEY VALUE."
 
 (defun pi-handle-message-end (event)
   (let* ((message (plist-get event :message))
+         (error-message (plist-get message :errorMessage))
          (role (pi-message-role message))
          (thinking-text (pi-content-thinking message))
          (text (pi-content-text message)))
@@ -972,6 +973,10 @@ PRED is called with KEY VALUE."
           (insert (pi-render-markdown text)))))
     (when (equal role "custom")
       (pi-insert-custom-message message))
+    (when (and error-message (not (string-empty-p error-message)))
+      (pi-widget-save-excursion
+        (pi-create-section 'error pi-root-section
+          (pi-insert-error error-message))))
     ;; Cleanup tracking state
     (setq pi-text-section nil
           pi-thinking-section nil)))
