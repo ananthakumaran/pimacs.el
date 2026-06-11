@@ -1,0 +1,67 @@
+user> h1
+
+assistant> The user just sent "h1" which seems incomplete or unclear. Could be a typo, an abbreviation, or a request for something not clear. Let me ask for clarification about what they're looking for.
+
+assistant> I see you've sent "h1" - this appears incomplete. Could you please provide more details about what you're looking for? For example:
+
+- A specific file, directory, or code structure?
+- An abbreviation or acronym you'd like me to explain?
+- Something related to HTML (h1 header tags) or mathematics?
+
+Please clarify so I can assist you better!
+
+user> h2
+
+assistant> The user sent "h2" which seems to be a continuation or possibly incomplete. This could mean:
+1. Something related to HTML h2 (heading 2 tags)
+2. A second part of their original query (h1 -> h2)
+3. A typo or something else
+
+Since they previously sent "h1" and now "h2", I should ask for clarification rather than making assumptions. They may be asking about HTML heading tags (h1, h2, h3, etc.) or something else entirely.
+
+assistant> It looks like you may be continuing from "h1" with "h2". 
+
+Could you please provide more context? Are you asking about:
+
+* **HTML heading tags (h2)** - the second-level heading element?
+* Something else, and you need additional help?
+
+Let me know how I can assist!
+
+user> h3
+
+assistant> The user is continuing what appears to be a sequence - "h1", "h2", "h3". This could be:
+1. HTML heading tags (h1 through h6 are standard HTML heading levels)
+2. A reference to something else
+3. They might be testing my responses to see if I can handle this pattern
+
+Since there's no clear question, I should provide a helpful response about HTML heading tags while acknowledging the pattern. I'll provide information about all heading levels (h1-h6) since they're building a sequence this way.
+
+assistant> I notice you are sending a sequence: h1, h2, h3. This looks like you might be asking about HTML heading tags!
+
+## HTML Heading Tags (h1-h6)
+
+| Tag | Priority | Description |
+|-----|----------|-------------|
+| **h1** | 1 | Highest priority - main title |
+| **h2** | 2 | Secondary headings |
+| **h3** | 3 | Tertiary headings |
+| **h4** | 4 | Lower secondary headings |
+| **h5** | 5 | Secondary headings |
+| **h6** | 6 | Lowest priority - micro headings |
+
+### Best Practices:
+- **Use h1** for your page's main title (one per page)
+- Use **h2** and **h3** for section and subsection headings respectively
+- Ensure heading hierarchy is **logical** (h1 → h2 → h3, etc.)
+- Avoid skipping levels unless intentional
+
+Would you like me to:
+- **Explain more** about heading usage or accessibility guidelines?
+- **Provide code examples** of heading hierarchies?
+- Help with something **specific** related to these headings?
+
+Just let me know what you need! 😊
+
+​user> 
+​​

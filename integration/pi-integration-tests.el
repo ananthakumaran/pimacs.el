@@ -110,6 +110,7 @@
 (defmacro pi-with-minibuffer-input (input &rest body)
   (declare (indent 1))
   `(let ((executing-kbd-macro t)
+         (completion-styles '(flex))
          (unread-command-events
           (append (listify-key-sequence ,input)
                   unread-command-events)))
@@ -167,5 +168,24 @@
     (pi-send-prompt-and-wait "/session")
     (pi-send-prompt-and-wait "/clone")
     (pi-send-prompt-and-wait "cloned")))
+
+(ert-deftest pi-fork ()
+  (pi-with-integration-project "fork"
+    (pi-send-prompt-and-wait "hello")
+    (pi-send-prompt-and-wait "hello again")
+    (pi-with-minibuffer-input "hello again"
+      (pi-send-prompt-and-wait "/fork"))
+    (pi-send-prompt-and-wait "hello fork")))
+
+(ert-deftest pi-resume ()
+  (pi-with-integration-project "resume"
+    (pi-send-prompt-and-wait "/name sessionv1")
+    (pi-send-prompt-and-wait "h1")
+    (pi-send-prompt-and-wait "h2")
+    (pi-send-prompt-and-wait "/new")
+    (pi-send-prompt-and-wait "/name sessionv2")
+    (pi-with-minibuffer-input (kbd "sessionv1 TAB RET")
+      (pi-send-prompt-and-wait "/resume"))
+    (pi-send-prompt-and-wait "h3")))
 
 ;;; pi-tests.el ends here
