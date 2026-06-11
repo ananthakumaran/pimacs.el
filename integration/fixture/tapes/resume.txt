@@ -28,6 +28,14 @@ Could you please provide more context? Are you asking about:
 
 Let me know how I can assist!
 
+bash ls
+agent
+config.json
+notes.txt
+README.md
+utils.py
+
+
 user> h3
 
 assistant> The user is continuing what appears to be a sequence - "h1", "h2", "h3". This could be:

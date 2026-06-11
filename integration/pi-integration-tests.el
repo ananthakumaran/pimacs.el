@@ -82,7 +82,7 @@
 (defvar pi-poll-interval (if (getenv "CI") 0.5 0.05))
 
 (defun pi-drain-process-output (&optional timeout)
-  (let* ((timeout (or timeout 30))
+  (let* ((timeout (or timeout 120))
          (start (current-time))
          (buffer (pi-current-chat)))
     (sleep-for pi-settle-time)
@@ -182,10 +182,17 @@
     (pi-send-prompt-and-wait "/name sessionv1")
     (pi-send-prompt-and-wait "h1")
     (pi-send-prompt-and-wait "h2")
+    (pi-send-prompt-and-wait "!ls")
     (pi-send-prompt-and-wait "/new")
     (pi-send-prompt-and-wait "/name sessionv2")
     (pi-with-minibuffer-input (kbd "sessionv1 TAB RET")
       (pi-send-prompt-and-wait "/resume"))
     (pi-send-prompt-and-wait "h3")))
+
+(ert-deftest pi-compact ()
+  (pi-with-integration-project "compact"
+    (pi-send-prompt-and-wait "hello")
+    (pi-send-prompt-and-wait "/compact")
+    (pi-send-prompt-and-wait "hello again")))
 
 ;;; pi-tests.el ends here

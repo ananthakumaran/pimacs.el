@@ -1,0 +1,41 @@
+user> hello
+
+assistant> The user is greeting me with "hello". This is a simple greeting and doesn't require me to use any tools. I should respond with a friendly greeting and let them know I'm ready to help them with something.
+
+assistant> Hello! 👋 How can I help you today?
+
+assistant> **Compacted from 1.6k tokens**
+## Goal
+- [Awaiting initial input from user to define the objective and scope of the work.]
+
+## Constraints & Preferences
+- (none)
+
+## Progress
+### Done
+- (none)
+
+### In Progress
+- [ ] Initializing context checkpoint
+
+### Blocked
+- [None]
+
+## Key Decisions
+- **[Session State]**: Start fresh / No prior instructions available.
+
+## Next Steps
+1. User must provide the initial prompt, task, or context.
+2. LLM to adapt strategy based on new input.
+
+## Critical Context
+- (none)
+
+user> hello again
+
+assistant> The user is greeting me with "hello". This is a simple greeting and doesn't require me to use any tools. I should respond with a friendly greeting and let them know I'm ready to help them with something.
+
+assistant> Hello! 👋 How can I help you today?
+
+​user> 
+​​

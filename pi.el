@@ -1294,7 +1294,7 @@ PRED is called with KEY VALUE."
      (result
       (let* ((summary (plist-get result :summary))
              (tokens-before (plist-get result :tokensBefore))
-             (header (format "**Compacted from %s tokens**"
+             (header (format "**Compacted from %s tokens**\n"
                              (pi-format-number-short tokens-before))))
         (pi-widget-save-excursion
           (pi-create-section 'compact pi-root-section
