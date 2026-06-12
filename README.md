@@ -32,6 +32,9 @@ The chat buffer is read-only except for the prompt input area. Use
 `RET` to submit a prompt and `C-j` to insert a newline. Press `i` from
 anywhere in the chat buffer to move point to the prompt input area.
 
+Use `M-x pi-insert-region` from any buffer to append the selected
+region to the prompt input.
+
 ### Slash Commands
 
 [Slash commands](https://pi.dev/docs/latest/usage#slash-commands) support completion in the prompt buffer. Type `/`

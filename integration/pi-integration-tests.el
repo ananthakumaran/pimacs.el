@@ -211,4 +211,14 @@
     (pi-drain-process-output)
     (pi-send-prompt-and-wait "hello again")))
 
+(ert-deftest pi-insert-region ()
+  (pi-with-integration-project "insert-region"
+    (pi-send-prompt-and-wait "say hello")
+    (with-temp-buffer
+      (insert "hello again")
+      (let ((start (point-min))
+            (end (point-max)))
+        (pi-insert-region start end)))
+    (pi-send-prompt-and-wait (widget-value pi-prompt-widget))))
+
 ;;; pi-tests.el ends here

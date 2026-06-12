@@ -280,6 +280,14 @@ with the message plist to insert the custom message content."
   :value-create #'pi-widget-item-value-create
   :format "%v")
 
+(defun pi-widget-end-if-inside (widget)
+  "Move to end of text field if point is inside WIDGET."
+  (when (and (<= (widget-get widget :from) (point))
+             (<= (point) (widget-get widget :to)))
+    (goto-char (widget-field-text-end widget))
+    (when-let (window (get-buffer-window (current-buffer) t))
+      (set-window-point window (widget-field-text-end widget)))))
+
 ;;; Utilities
 
 (defun pi-json-read-object ()
@@ -1500,9 +1508,7 @@ PRED is called with KEY VALUE."
 
 (defun pi-focus-prompt ()
   (interactive)
-  (goto-char (widget-get pi-prompt-widget :from))
-  (forward-char 6)
-  (widget-end-of-line))
+  (goto-char (widget-field-text-end pi-prompt-widget)))
 
 (defun pi-format-state ()
   (if pi-agent-state
@@ -1672,6 +1678,20 @@ If `pi-prompt-streaming-behavior' is `followUp', use `steer' and vice versa."
          (prompt-text (or prompt (widget-value pi-prompt-widget))))
     (when (and prompt-text (not (string-empty-p prompt-text)))
       (pi-send-prompt prompt-text alt-behavior))))
+
+(defun pi-insert-region (start end)
+  "Append the region delimited by START and END to the pi prompt input."
+  (interactive "r")
+  (let ((string (buffer-substring-no-properties start end)))
+    (pi-with-chat-buffer
+      (let ((current-value (widget-value pi-prompt-widget)))
+        (pi-widget-save-excursion
+          (if (string-empty-p current-value)
+              (widget-value-set pi-prompt-widget string)
+            (widget-value-set pi-prompt-widget
+                              (concat current-value "\n" string))))
+        (pi-widget-end-if-inside pi-prompt-widget))))
+  (deactivate-mark))
 
 (defun pi-abort ()
   (interactive)
