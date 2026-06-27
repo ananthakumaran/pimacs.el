@@ -258,6 +258,11 @@ with the message plist to insert the custom message content."
   :type '(alist :key-type string :value-type function)
   :group 'pi)
 
+(defcustom pi-send-pop-to-chat t
+  "Whether to pop to the chat buffer after `pi-send-region' and `pi-send-filename'."
+  :type 'boolean
+  :group 'pi)
+
 (defvar-local pi-project-file-cache nil)
 
 (defun pi-clear-project-file-cache ()
@@ -1727,19 +1732,46 @@ If `pi-prompt-streaming-behavior' is `followUp', use `steer' and vice versa."
     (when (and prompt-text (not (string-empty-p prompt-text)))
       (pi-send-prompt prompt-text alt-behavior))))
 
-(defun pi-insert-region (start end)
+(defun pi-prompt-append (text)
+  (pi-with-chat-buffer
+    (let ((current-value (widget-value pi-prompt-widget)))
+      (pi-widget-save-excursion
+        (if (string-empty-p current-value)
+            (widget-value-set pi-prompt-widget text)
+          (widget-value-set pi-prompt-widget
+                            (concat current-value "\n" text))))
+      (pi-widget-end-if-inside pi-prompt-widget))))
+
+(defun pi-pop-to-chat ()
+  (when pi-send-pop-to-chat
+    (let ((buffer (pi-current-chat)))
+      (when buffer (pop-to-buffer buffer)))))
+
+(defun pi-send-region (start end)
   "Append the region delimited by START and END to the pi prompt input."
   (interactive "r")
-  (let ((string (buffer-substring-no-properties start end)))
-    (pi-with-chat-buffer
-      (let ((current-value (widget-value pi-prompt-widget)))
-        (pi-widget-save-excursion
-          (if (string-empty-p current-value)
-              (widget-value-set pi-prompt-widget string)
-            (widget-value-set pi-prompt-widget
-                              (concat current-value "\n" string))))
-        (pi-widget-end-if-inside pi-prompt-widget))))
-  (deactivate-mark))
+  (let* ((string (buffer-substring-no-properties start end))
+         (header (when buffer-file-name
+                   (let* ((root (pi-project-root))
+                          (relative (file-relative-name buffer-file-name root))
+                          (line-start (line-number-at-pos start))
+                          (line-end (line-number-at-pos end)))
+                     (format "@%s#L%d-%d\n" relative line-start line-end))))
+         (full-string (if header (concat header string) string)))
+    (pi-prompt-append full-string)
+    (deactivate-mark)
+    (pi-pop-to-chat)))
+
+;;;###autoload
+(defun pi-send-filename ()
+  "Append the current buffer's filename to the pi prompt input."
+  (interactive)
+  (when buffer-file-name
+    (let* ((root (pi-project-root))
+           (relative (file-relative-name buffer-file-name root))
+           (header (format "@%s" relative)))
+      (pi-prompt-append header)
+      (pi-pop-to-chat))))
 
 (defun pi-abort ()
   (interactive)

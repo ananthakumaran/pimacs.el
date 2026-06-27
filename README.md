@@ -32,7 +32,7 @@ The chat buffer is read-only except for the prompt input area. Use
 `RET` to submit a prompt and `C-j` to insert a newline. Press `i` from
 anywhere in the chat buffer to move point to the prompt input area.
 
-Use `M-x pi-insert-region` from any buffer to append the selected
+Use `M-x pi-send-region` from any buffer to append the selected
 region to the prompt input.
 
 ### Slash Commands
@@ -258,6 +258,10 @@ Alist mapping custom message types to inserter functions.
 
 Each entry is (CUSTOM-TYPE . FUNCTION) where FUNCTION is called
 with the message plist to insert the custom message content.
+
+#### pi-send-pop-to-chat `t`
+
+Whether to pop to the chat buffer after `pi-send-region` and `pi-send-filename`.
 
 #### pi-section-autohide-count `2`
 
