@@ -26,7 +26,8 @@ pi
 ## Usage
 
 Run `M-x pi-chat` from any file in your project to start a Pi chat
-session.
+session.  Use a prefix argument (`C-u M-x pi-chat`) to start multiple
+chats on the same project.
 
 The chat buffer is read-only except for the prompt input area. Use
 `RET` to submit a prompt and `C-j` to insert a newline. Press `i` from
