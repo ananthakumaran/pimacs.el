@@ -43,8 +43,17 @@ Increase or decrease this value to adjust spacing between sections."
   :type 'string
   :group 'pi)
 
-(defvar pi-section-hidden-default nil)
+(defvar pi-section-visibility-default :autoshow)
 (defvar-local pi-root-section nil)
+
+(defun pi-section-visible-p (section)
+  (memq (pi-section-visibility section) '(:autoshow :show)))
+
+(defun pi-section-hidden-p (section)
+  (memq (pi-section-visibility section) '(:autohide :hide)))
+
+(defun pi-section-user-toggled-p (section)
+  (memq (pi-section-visibility section) '(:show :hide)))
 
 (defun pi-prefix-p (prefix list)
   "Return non-nil if PREFIX is a prefix of LIST.
@@ -63,7 +72,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
 
 
 (cl-defstruct pi-section
-  parent children beginning end type hidden info padding)
+  parent children beginning end type visibility info padding)
 
 (defun pi-set-section-info (section info)
   (setf (pi-section-info section) info))
@@ -77,7 +86,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
   (let* ((padding (or (plist-get args :padding) pi-section-padding))
          (s (make-pi-section :parent parent
                              :type type
-                             :hidden pi-section-hidden-default
+                             :visibility pi-section-visibility-default
                              :padding padding)))
     (when parent
       (setf (pi-section-children parent)
@@ -146,8 +155,8 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
        (setf (pi-section-beginning ,s) (pi-advance-pointer-maker (pi-section-beginning ,s)))
        (pi-update-section-end ,s (point-marker))
        (pi-propertize-section ,s)
-       (when (pi-section-hidden ,s)
-         (pi-section-set-hidden ,s t))
+       (when (pi-section-hidden-p ,s)
+         (pi-section-set-visibility ,s (pi-section-visibility ,s)))
        ,s)))
 
 (defun pi-delete-section (section)
@@ -174,8 +183,8 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
                 (<= (marker-position current-end) (marker-position end)))
         (setf (pi-section-end section) end)
         ;; rebuild the overlay if the section is hidden
-        (when (pi-section-hidden section)
-          (pi-section-set-hidden section t))))
+        (when (pi-section-hidden-p section)
+          (pi-section-set-visibility section (pi-section-visibility section)))))
     (pi-update-section-end (pi-section-parent section) end)))
 
 (defun pi-propertize-section (section)
@@ -240,7 +249,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
   (interactive)
   (let* ((section (pi-current-section))
          (next (and section
-                    (or (and (not (pi-section-hidden section))
+                    (or (and (pi-section-visible-p section)
                              (pi-section-children section)
                              (pi-find-section-after (point)
                                                     (pi-section-children
@@ -258,7 +267,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
         (let ((prev (cadr (memq section
                                 (reverse (pi-section-children parent))))))
           (cond (prev
-                 (while (and (not (pi-section-hidden prev))
+                 (while (and (pi-section-visible-p prev)
                              (pi-section-children prev))
                    (setq prev (car (reverse (pi-section-children prev)))))
                  prev)
@@ -303,11 +312,17 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
     (while (and parent (not (eq parent pi-root-section)))
       (setq section (pi-section-parent section))
       (setq parent (pi-section-parent section)))
-    (pi-section-set-hidden section nil)))
+    (pi-section-set-visibility section :show)))
 
-(defun pi-section-set-hidden (section hidden)
-  "Hide SECTION if HIDDEN is not nil, show it otherwise."
-  (setf (pi-section-hidden section) hidden)
+(defun pi-section-set-visibility (section visibility)
+  "Set the visibility state of SECTION.
+
+VISIBILITY can be one of:
+- `:autoshow'  - visible, never toggled by user (initial state)
+- `:autohide'  - hidden, auto-managed
+- `:show'      - visible, user explicitly toggled
+- `:hide'      - hidden, user explicitly toggled"
+  (setf (pi-section-visibility section) visibility)
   (let ((inhibit-read-only t)
         (beg (save-excursion
                (goto-char (pi-section-beginning section))
@@ -318,7 +333,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
     ;; Remove any existing hide overlays.
     (remove-overlays beg end 'pi-section-hidden t)
 
-    (when (and hidden (< beg end))
+    (when (and (pi-section-hidden-p section) (< beg end))
       (let ((ov (make-overlay beg end)))
         (overlay-put ov 'pi-section-hidden t)
         (overlay-put ov 'evaporate t)
@@ -326,18 +341,20 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
         (overlay-put ov 'isearch-open-invisible
                      #'pi-section-isearch-open))))
 
-  (unless hidden
+  (when (pi-section-visible-p section)
     (dolist (child (pi-section-children section))
-      (pi-section-set-hidden child
-                             (pi-section-hidden child)))))
+      (pi-section-set-visibility child
+                                 (pi-section-visibility child)))))
 
 (defun pi-toggle-section ()
-  "Toggle hidden status of current section."
+  "Toggle visibility of current section."
   (interactive)
   (when-let (section (pi-current-section))
     (when (pi-section-parent section)
       (goto-char (pi-section-beginning section))
-      (pi-section-set-hidden section (not (pi-section-hidden section))))))
+      (if (pi-section-visible-p section)
+          (pi-section-set-visibility section :hide)
+        (pi-section-set-visibility section :show)))))
 
 (defun pi-section-autohide ()
   (interactive)
@@ -345,8 +362,8 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
               (children (pi-section-children pi-root-section)))
     (let ((hide-count (max 0 (- (length children) count))))
       (dolist (child (seq-take children hide-count))
-        (unless (pi-section-hidden child)
-          (pi-section-set-hidden child t))))))
+        (when (eq (pi-section-visibility child) :autoshow)
+          (pi-section-set-visibility child :autohide))))))
 
 (defun pi-section-show-level-1-all ()
   "Collapse all the sections in the pi status buffer."
@@ -355,7 +372,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
     (goto-char (point-min))
     (while (and (not (eobp)) (pi-current-section))
       (let ((section (pi-current-section)))
-	(pi-section-set-hidden section t))
+	(pi-section-set-visibility section :hide))
       (forward-line 1))))
 
 
@@ -466,8 +483,8 @@ Does not recurse into the parent."
     (princ (format "%s  beginning: %s, end: %s\n" prefix
                    (pi-section-beginning section)
                    (pi-section-end section)))
-    (princ (format "%s  hidden: %s\n" prefix
-                   (pi-section-hidden section)))
+    (princ (format "%s  visibility: %s\n" prefix
+                   (pi-section-visibility section)))
     (when (pi-section-info section)
       (princ (format "%s  info: %s\n" prefix
                      (pi-section-info section))))

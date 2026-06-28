@@ -99,11 +99,11 @@
       (should (eq (pi-section-parent build) pi-root-section))
       (should (memq build (pi-section-children pi-root-section))))))
 
-(ert-deftest pi-section-default-hidden ()
+(ert-deftest pi-section-default-visibility ()
   (pi-with-root-section
     (let ((child (pi-new-section 'child pi-root-section)))
-      (should (equal (pi-section-hidden child) pi-section-hidden-default))
-      (should (null (pi-section-hidden child))))))
+      (should (equal (pi-section-visibility child) pi-section-visibility-default))
+      (should (eq (pi-section-visibility child) :autoshow)))))
 
 
 ;; ─── pi-insert-section ─────────────────────────────────────────────────
@@ -452,33 +452,53 @@
         (should (= (pi-section-end child) 20))))))
 
 
-;; ─── pi-section-set-hidden / pi-toggle-section ─────────────────────────
+;; ─── pi-section-set-visibility / pi-toggle-section ─────────────────────
 
-(ert-deftest pi-section-set-hidden-makes-invisible ()
+(ert-deftest pi-section-set-visibility-hides ()
+  "Setting visibility to :hide or :autohide makes content invisible."
   (pi-section-tests-with-demo-buffer
     (goto-char 1)
     (let ((build (pi-current-section)))
-      (pi-section-set-hidden build t)
+      (pi-section-set-visibility build :hide)
       (goto-char (pi-section-beginning build))
       (forward-line 1)
+      (should (invisible-p (point)))
+      (pi-section-set-visibility build :autohide)
       (should (invisible-p (point))))))
 
-(ert-deftest pi-section-set-hidden-unhide ()
+(ert-deftest pi-section-set-visibility-shows ()
+  "Setting visibility to :show or :autoshow makes content visible."
   (pi-section-tests-with-demo-buffer
     (goto-char 1)
     (let ((build (pi-current-section)))
-      (pi-section-set-hidden build t)
-      (pi-section-set-hidden build nil)
+      (pi-section-set-visibility build :hide)
+      (pi-section-set-visibility build :show)
       (goto-char (pi-section-beginning build))
       (forward-line 1)
+      (should (not (invisible-p (point))))
+      (pi-section-set-visibility build :autoshow)
       (should (not (invisible-p (point)))))))
 
-(ert-deftest pi-toggle-section-toggles-hidden ()
+(ert-deftest pi-toggle-section-toggles-visibility ()
+  "Toggle transitions: :autoshow->:hide, :autohide->:show, :show->:hide, :hide->:show."
   (pi-section-tests-with-demo-buffer
     (goto-char 1)
     (let ((build (pi-current-section)))
-      (should (not (pi-section-hidden build)))
+      (should (eq (pi-section-visibility build) :autoshow))
+      ;; :autoshow -> :hide
       (pi-toggle-section)
-      (should (pi-section-hidden build))
+      (should (eq (pi-section-visibility build) :hide))
+      ;; :hide -> :show
       (pi-toggle-section)
-      (should (not (pi-section-hidden build))))))
+      (should (eq (pi-section-visibility build) :show))
+      ;; :show -> :hide
+      (pi-toggle-section)
+      (should (eq (pi-section-visibility build) :hide))
+      ;; :hide -> :show
+      (pi-toggle-section)
+      (should (eq (pi-section-visibility build) :show))
+      ;; :autohide -> :show
+      (pi-section-set-visibility build :autohide)
+      (should (eq (pi-section-visibility build) :autohide))
+      (pi-toggle-section)
+      (should (eq (pi-section-visibility build) :show)))))
