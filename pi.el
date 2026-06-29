@@ -1118,7 +1118,7 @@ PRED is called with KEY VALUE."
 ;; bash
 (defun pi-insert-bash-args (args)
   (when-let ((command (plist-get args :command)))
-    (insert (format "%s" command))))
+    (insert (pi-render-content "tmp.sh" command))))
 
 (defun pi-insert-bash-result (result-text details _args)
   (let* ((exit-code (plist-get details :exitCode))
