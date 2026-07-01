@@ -163,13 +163,11 @@ File: pi.info,  Node: How It Works,  Next: Keybindings,  Prev: Sandbox,  Up: Top
 5 How It Works
 **************
 
-Emacs starts Pi in RPC mode (documentation
-(https://pi.dev/docs/latest/rpc)).  In this setup, Pi handles the agent
-logic while Emacs provides the user interface.
-
-   Some features, such as ‘/login’ and ‘/logout’, are not supported
-(https://github.com/earendil-works/pi/issues/885) because they are not
-currently exposed through the RPC API.
+Emacs starts Pi in RPC mode (https://pi.dev/docs/latest/rpc).  In this
+setup, Pi handles the agent logic while Emacs provides the user
+interface.  Some features, such as ‘/login’ and ‘/logout’, are not
+supported (https://github.com/earendil-works/pi/issues/885) because they
+are not currently exposed through the RPC API.
 
 
 File: pi.info,  Node: Keybindings,  Next: Custom Variables,  Prev: How It Works,  Up: Top
@@ -372,8 +370,8 @@ Node: Bash3015
 Node: Sending Context3278
 Node: Sandbox4060
 Node: How It Works4422
-Node: Keybindings4887
-Node: Custom Variables6847
+Node: Keybindings4868
+Node: Custom Variables6828
 
 End Tag Table
 

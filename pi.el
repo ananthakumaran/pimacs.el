@@ -485,7 +485,6 @@ PRED is called with KEY VALUE."
 (pi--def-permanent-buffer-local pi--tool-calls nil)
 (pi--def-permanent-buffer-local pi--agent-state nil)
 (pi--def-permanent-buffer-local pi--spinner nil)
-(pi--def-permanent-buffer-local pi--bash-in-progress nil)
 (pi--def-permanent-buffer-local pi--retry-in-progress nil)
 (pi--def-permanent-buffer-local pi--commands nil)
 
@@ -1622,23 +1621,26 @@ Shows context usage and model info."
 
 (timeout-debounce 'pi--update-header-line 1)
 
-(defun pi--handle-agent-state (event)
-  (cl-case (intern (plist-get event :type))
-    (agent_start (setq pi--agent-state 'thinking))
-    (agent_end (setq pi--agent-state nil)
-               (pi-clear-project-file-cache))
-    (turn_start (setq pi--agent-state 'thinking))
-    (turn_end (setq pi--agent-state nil))
-    (tool_execution_start (setq pi--agent-state (cons 'tool (plist-get event :toolName))))
-    (tool_execution_end (setq pi--agent-state nil))
-    (compaction_start (setq pi--agent-state 'compacting))
-    (compaction_end (setq pi--agent-state nil))
-    (auto_retry_start (setq pi--agent-state 'retrying))
-    (auto_retry_end (setq pi--agent-state nil)))
+(defun pi--update-agent-state (state)
+  (setq pi--agent-state state)
   (if pi--agent-state
       (unless (spinner--active-p pi--spinner)
         (spinner-start pi--spinner))
-    (spinner-stop pi--spinner))
+    (spinner-stop pi--spinner)))
+
+(defun pi--handle-agent-state (event)
+  (cl-case (intern (plist-get event :type))
+    (agent_start (pi--update-agent-state 'thinking))
+    (agent_end (pi--update-agent-state nil)
+               (pi-clear-project-file-cache))
+    (turn_start (pi--update-agent-state 'thinking))
+    (turn_end (pi--update-agent-state nil))
+    (tool_execution_start (pi--update-agent-state (cons 'tool (plist-get event :toolName))))
+    (tool_execution_end (pi--update-agent-state nil))
+    (compaction_start (pi--update-agent-state 'compacting))
+    (compaction_end (pi--update-agent-state nil))
+    (auto_retry_start (pi--update-agent-state 'retrying))
+    (auto_retry_end (pi--update-agent-state nil)))
   (when (string-suffix-p "_end" (plist-get event :type))
     (pi--autohide-sections))
   (pi--update-header-line))
@@ -1826,11 +1828,11 @@ If `pi-prompt-streaming-behavior' is `followUp', use `steer' and vice versa."
   "Abort the current agent operation."
   (interactive)
   (pi--with-chat-buffer
-    (when (or pi--retry-in-progress pi--bash-in-progress pi--agent-state)
+    (when (or pi--retry-in-progress pi--agent-state)
       (pi--send-command
        (cond
         (pi--retry-in-progress "abort_retry")
-        (pi--bash-in-progress "abort_bash")
+        ((eq pi--agent-state 'bash) "abort_bash")
         (pi--agent-state "abort"))
        '()
        (pi--on-response-success-callback resp
@@ -2355,7 +2357,7 @@ summarization."
   (interactive "sBash command: ")
   (unless (string-empty-p (string-trim command))
     (pi--with-chat-buffer
-      (setq pi--bash-in-progress t)
+      (pi--update-agent-state 'bash)
       (let ((args (list :command command))
             (call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
         (when exclude-from-context
@@ -2375,7 +2377,7 @@ summarization."
                (pi--widget-save-excursion
                  (pi-section--create-section 'tool-result call-section
                    (pi--insert-tool-result "bash" output nil data)))))
-           (setq pi--bash-in-progress nil)))))))
+           (pi--update-agent-state nil)))))))
 
 ;;; Chat mode
 

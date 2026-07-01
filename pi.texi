@@ -178,12 +178,10 @@ To run Pi inside a sandbox, customize @code{pi-executable} and
 @node How It Works
 @chapter How It Works
 
-Emacs starts Pi in RPC mode
-(@uref{https://pi.dev/docs/latest/rpc, documentation}).  In this
-setup, Pi handles the agent logic while Emacs provides the user
-interface.
-
-Some features, such as @code{/login} and @code{/logout}, are not
+Emacs starts Pi in @uref{https://pi.dev/docs/latest/rpc, RPC mode}.
+In this setup, Pi handles the agent logic while Emacs provides the
+user interface. Some features, such as @code{/login} and
+@code{/logout}, are not
 @uref{https://github.com/earendil-works/pi/issues/885, supported}
 because they are not currently exposed through the RPC API.
 
