@@ -176,6 +176,7 @@ when agent stops."
 (defcustom pi-slash-commands
   '(("model" pi-select-model 0)
     ("new" pi-new-session 0)
+    ("reload" pi-reload 0)
     ("resume" pi-resume 0)
     ("compact" pi-compact 1)
     ("set-auto-compaction" pi-set-auto-compaction 0)
@@ -755,14 +756,18 @@ PRED is called with KEY VALUE."
   (let ((project-key (process-get process 'project-key)))
     (when project-key
       (remhash project-key pi--agents)
-      (when-let (buffer (gethash project-key pi--chats))
-        (kill-buffer buffer)))))
+      (unless (process-get process 'pi--preserve-chat)
+        (when-let (buffer (gethash project-key pi--chats))
+          (kill-buffer buffer))))))
 
 ;;; Utility commands
 
-(defun pi--kill-agent ()
-  "Kill the agent in the current buffer."
+(defun pi--kill-agent (&optional preserve-chat)
+  "Kill the agent process.
+When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
   (when-let (agent (pi--current-agent))
+    (when preserve-chat
+      (process-put agent 'pi--preserve-chat t))
     (delete-process agent)))
 
 ;;; Completion
@@ -1366,16 +1371,18 @@ PRED is called with KEY VALUE."
             (pi--insert-role-prefix "assistant")
             (insert (pi--render-markdown (concat header summary))))))))))
 
-(defun pi--handle-notify (event)
-  (let* ((message (plist-get event :message))
-         (notify-type (or (plist-get event :notifyType) "info"))
-         (face (pcase notify-type
-                 ("warning" 'pi-notify-warning-face)
-                 ("error" 'pi-notify-error-face)
-                 (_ 'pi-notify-info-face))))
+(defun pi--notify (message &optional notify-type)
+  (let ((face (pcase (or notify-type "info")
+                ("warning" 'pi-notify-warning-face)
+                ("error" 'pi-notify-error-face)
+                (_ 'pi-notify-info-face))))
     (pi--widget-save-excursion
       (pi-section--create-section 'notify pi-section--root-section
         (insert (propertize message 'face face))))))
+
+(defun pi--handle-notify (event)
+  (pi--notify (plist-get event :message)
+              (plist-get event :notifyType)))
 
 (defun pi--sort-entries-by-key (entries)
   (sort entries (lambda (a b) (string< (car a) (car b)))))
@@ -2187,12 +2194,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                     (selected (pi--completing-read "Resume session: " candidates))
                     (choice (alist-get selected candidates nil nil #'equal))
                     (session-path (pi-session-choice-path choice)))
-               (pi--send-command
-                "switch_session" (list :sessionPath session-path)
-                (pi--on-response-success-callback resp
-                  (pi--update-header-line)
-                  (pi--unless-cancelled resp "Session switch"
-                    (pi-refresh-session))))))))))))
+               (pi--switch-session session-path "Resumed session")))))))))
 
 (defun pi--clear-sections ()
   (dolist (child (copy-sequence (pi-section-children pi-section--root-section)))
@@ -2201,8 +2203,9 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
         pi--thinking-section nil)
   (clrhash pi--tool-calls))
 
-(defun pi-refresh-session ()
-  "Refresh the current session state."
+(defun pi-refresh-session (&optional callback)
+  "Refresh the current session state.
+CALLBACK is called after a successful refresh."
   (interactive)
   (pi--with-chat-buffer
     (pi--send-command
@@ -2213,7 +2216,9 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
            (pi--clear-sections)
            (dolist (message messages)
              (pi--insert-message message))))
-       (pi-section-autohide)))))
+       (pi-section-autohide)
+       (when callback
+         (funcall callback))))))
 
 (defun pi-clone ()
   "Clone the current session."
@@ -2547,13 +2552,39 @@ With a prefix argument OTHER-WINDOW, visit in other window."
     (kill-buffer buffer))
   (pi--kill-agent))
 
+(defun pi--switch-session (session-file message)
+  "Switch to an existing session file and refresh.
+SESSION-FILE is the path to the session file to switch to.
+MESSAGE is shown as a notification when complete."
+  (pi--send-command
+   "switch_session" (list :sessionPath session-file)
+   (pi--on-response-success-callback resp
+     (pi--update-header-line)
+     (pi--unless-cancelled resp "Session switch"
+       (pi-refresh-session (lambda ()
+                             (pi--notify message)))))))
+
+(defun pi-reload ()
+  "Reload agent configuration by restarting the agent process."
+  (interactive)
+  (pi--with-chat-buffer
+    (pi--send-command
+     "get_state" '()
+     (pi--on-response-success-callback resp
+       (let* ((data (plist-get resp :data))
+              (session-file (plist-get data :sessionFile)))
+         (pi--kill-agent t)
+         (pi--widget-save-excursion
+           (pi--clear-sections))
+         (pi--start-agent (pi--project-key))
+         (pi--switch-session session-file "Agent reloaded."))))))
+
 (defun pi-restart-chat ()
   "Exit the current chat and restart."
   (interactive)
   (let ((root default-directory))
     (pi-quit-chat)
-    (let ((default-directory root)
-          (pi--project-root root))
+    (let ((default-directory root))
       (pi-chat))))
 
 (provide 'pi)

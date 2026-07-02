@@ -25,7 +25,7 @@ function initialize() {
     "--default-tape",
     scenario,
     "--host",
-    "http://100.126.93.103:11434",
+    "http://100.70.125.96:11434",
     "--port",
     "5544",
   ]);
@@ -152,8 +152,8 @@ export default function (pi: ExtensionAPI) {
     apiKey: "ollama",
     models: [
       {
-        id: "qwen3.5:4b",
-        name: "Qwen 3.5:4b",
+        id: "qwen3.5:0.8b",
+        name: "Qwen 3.5:0.8b",
         reasoning: true,
         input: ["text"],
         cost: {

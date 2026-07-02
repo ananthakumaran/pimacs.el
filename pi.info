@@ -271,7 +271,8 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
  -- User Option: pi-slash-commands
 
           (("model" pi-select-model 0) ("new" pi-new-session 0)
-           ("resume" pi-resume 0) ("compact" pi-compact 1)
+           ("reload" pi-reload 0) ("resume" pi-resume 0)
+           ("compact" pi-compact 1)
            ("set-auto-compaction" pi-set-auto-compaction 0)
            ("set-auto-retry" pi-set-auto-retry 0) ("session" pi-session-stats 0)
            ("name" pi-set-session-name 1)

@@ -41,6 +41,8 @@ notes.txt
 utils.py
 
 
+Resumed session
+
 user> h3
 
 assistant> The user is continuing what appears to be a sequence - "h1", "h2",

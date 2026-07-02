@@ -6,7 +6,7 @@
     "keepRecentTokens": 1000
   },
   "defaultProvider": "fixture",
-  "defaultModel": "qwen3.5:4b",
+  "defaultModel": "qwen3.5:0.8b",
   "retry": {
     "enabled": true
   },

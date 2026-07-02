@@ -150,7 +150,7 @@
       (pi-send-prompt-and-wait "/set-auto-compaction"))
     (pi-with-minibuffer-input "y"
       (pi-send-prompt-and-wait "/set-auto-compaction"))
-    (pi-with-minibuffer-input "(fixture) qwen3.5:4b"
+    (pi-with-minibuffer-input "(fixture) qwen3.5:0.8b"
       (pi-send-prompt-and-wait "/model"))
     (pi-with-minibuffer-input "minimal (Very brief reasoning ~1k tokens)"
       (pi-send-prompt-and-wait "/set-thinking-level"))
@@ -236,6 +236,14 @@
             (end (point-max)))
         (pi-send-region start end)))
     (pi-send-prompt-and-wait (widget-value pi--prompt-widget))))
+
+(ert-deftest pi-reload ()
+  (pi-with-integration-project "reload"
+    (pi-send-prompt-and-wait "hello")
+    (pi-send-prompt "/reload")
+    (sleep-for 3)
+    (pi-send-prompt-and-wait "hello")))
+
 
 (ert-deftest pi-extension-ui ()
   (pi-with-integration-project "extension-ui"
