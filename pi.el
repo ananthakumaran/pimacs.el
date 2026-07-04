@@ -55,8 +55,23 @@
   :group 'tools)
 
 (defface pi-chat-role-face
+  '((t :inherit font-lock-builtin-face))
+  "Face used for generic chat role labels."
+  :group 'pi)
+
+(defface pi-chat-user-role-face
   '((t :inherit font-lock-keyword-face))
-  "Face used for chat message role labels."
+  "Face used for user chat message role labels."
+  :group 'pi)
+
+(defface pi-chat-assistant-role-face
+  '((t :inherit font-lock-constant-face))
+  "Face used for assistant chat message role labels."
+  :group 'pi)
+
+(defface pi-chat-title-face
+  '((t :inherit font-lock-builtin-face))
+  "Face used for titles."
   :group 'pi)
 
 (defface pi-error-face
@@ -851,8 +866,14 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
      (equal (plist-get item :type) "toolCall"))
    (plist-get message :content)))
 
+(defun pi--role-face (role)
+  (pcase role
+    ("user" 'pi-chat-user-role-face)
+    ("assistant" 'pi-chat-assistant-role-face)
+    (_ 'pi-chat-role-face)))
+
 (defun pi--insert-role-prefix (role)
-  (insert (propertize (format "%s> " role) 'face 'pi-chat-role-face)))
+  (insert (propertize (format "%s> " role) 'face (pi--role-face role))))
 
 (defun pi--fill-string (string)
   (with-temp-buffer
@@ -1476,7 +1497,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
          (options (plist-get event :options)))
     (pi--widget-save-excursion
       (pi-section--create-section 'select pi-section--root-section
-        (insert (propertize (format "%s:" title) 'face 'pi-chat-role-face))
+        (insert (propertize (format "%s:" title) 'face 'pi-chat-title-face))
         (dolist (option options)
           (insert "\n")
           (insert (propertize (format "  • %s" option) 'face 'pi-notify-info-face)))))
@@ -1493,7 +1514,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
          (message (plist-get event :message)))
     (pi--widget-save-excursion
       (pi-section--create-section 'confirm pi-section--root-section
-        (insert (propertize (format "%s:" title) 'face 'pi-chat-role-face))
+        (insert (propertize (format "%s:" title) 'face 'pi-chat-title-face))
         (insert "\n")
         (insert (propertize message 'face 'pi-notify-info-face))))
     (pi--handle-extension-ui-prompt
@@ -1509,7 +1530,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
          (placeholder (plist-get event :placeholder)))
     (pi--widget-save-excursion
       (pi-section--create-section 'input pi-section--root-section
-        (insert (propertize (format "%s:" title) 'face 'pi-chat-role-face))
+        (insert (propertize (format "%s:" title) 'face 'pi-chat-title-face))
         (when placeholder
           (insert "\n")
           (insert (propertize placeholder 'face 'pi-notify-info-face)))))
@@ -1528,7 +1549,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
          (prefill (plist-get event :prefill)))
     (pi--widget-save-excursion
       (pi-section--create-section 'input pi-section--root-section
-        (insert (propertize (format "%s:" title) 'face 'pi-chat-role-face))))
+        (insert (propertize (format "%s:" title) 'face 'pi-chat-title-face))))
     (pi--handle-extension-ui-prompt
      event
      (lambda ()
@@ -2508,7 +2529,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
                        :keymap pi-chat-widget-field-keymap
                        :help-echo ""
                        :format "%[user>%] %v"
-                       :button-face 'pi-chat-role-face
+                       :button-face 'pi-chat-user-role-face
                        :action (lambda (widget &optional _event)
                                  (pi-send-prompt (widget-value widget)))))
   (setq pi--prompt-after-widget (widget-create 'pi-item :face 'pi-widget-face pi--empty-widget-text))
