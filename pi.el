@@ -2511,6 +2511,8 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   :doc "Keymap for `pi-chat-mode'."
   :parent special-mode-map
   "<remap> <keyboard-quit>" #'pi-abort
+  "<left-fringe> <mouse-1>" #'pi-mouse-toggle-section
+  "<left-fringe> <mouse-2>" #'pi-mouse-toggle-section
   "RET" #'pi-visit-item
   "M-RET" #'pi-visit-item-other-window
   "TAB" #'pi-toggle-section

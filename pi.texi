@@ -446,6 +446,14 @@ String inserted between sections to control the visual gap.
 Increase or decrease this value to adjust spacing between sections.
 @end defopt
 
+@defopt pi-section-visibility-indicators @code{'(pi-section-fringe-bitmap> . pi-section-fringe-bitmapv)}
+
+Fringe bitmaps used to indicate section visibility.
+
+The car is used for hidden sections and the cdr for visible sections.
+Set this to nil to disable fringe indicators.
+@end defopt
+
 @c custom-variables-end
 
 @bye

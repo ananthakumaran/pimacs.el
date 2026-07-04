@@ -378,6 +378,14 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      String inserted between sections to control the visual gap.
      Increase or decrease this value to adjust spacing between sections.
 
+ -- User Option: pi-section-visibility-indicators
+          '(pi-section-fringe-bitmap> . pi-section-fringe-bitmapv)
+
+     Fringe bitmaps used to indicate section visibility.
+
+     The car is used for hidden sections and the cdr for visible
+     sections.  Set this to nil to disable fringe indicators.
+
 
 Tag Table:
 Node: Top730

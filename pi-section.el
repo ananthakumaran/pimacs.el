@@ -41,8 +41,41 @@ Increase or decrease this value to adjust spacing between sections."
   :type 'string
   :group 'pi)
 
+(defcustom pi-section-visibility-indicators
+  '(pi-section-fringe-bitmap> . pi-section-fringe-bitmapv)
+  "Fringe bitmaps used to indicate section visibility.
+
+The car is used for hidden sections and the cdr for visible sections.
+Set this to nil to disable fringe indicators."
+  :type '(choice
+          (const :tag "No indicators" nil)
+          (cons :tag "Fringe indicators"
+                (symbol :tag "Hidden section bitmap")
+                (symbol :tag "Visible section bitmap")))
+  :group 'pi)
+
 (defvar pi-section--visibility-default :autoshow)
 (defvar-local pi-section--root-section nil)
+
+(define-fringe-bitmap 'pi-section-fringe-bitmap>
+  [#b01100000
+   #b00110000
+   #b00011000
+   #b00001100
+   #b00011000
+   #b00110000
+   #b01100000
+   #b00000000])
+
+(define-fringe-bitmap 'pi-section-fringe-bitmapv
+  [#b00000000
+   #b10000010
+   #b11000110
+   #b01101100
+   #b00111000
+   #b00010000
+   #b00000000
+   #b00000000])
 
 (defun pi-section--visible-p (section)
   (memq (pi-section-visibility section) '(:autoshow :show)))
@@ -113,6 +146,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
        (setf (pi-section-beginning ,s) (pi-section--advance-pointer-maker (pi-section-beginning ,s)))
        (pi-section--update-section-end ,s (point-marker))
        (pi-section--propertize-section ,s)
+       (pi-section--update-visibility-indicator ,s)
        ,s)))
 
 (defmacro pi-section--create-section (type parent &rest body)
@@ -137,6 +171,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
        (setf (pi-section-beginning ,s) (pi-section--advance-pointer-maker (pi-section-beginning ,s)))
        (pi-section--update-section-end ,s (point-marker))
        (pi-section--propertize-section ,s)
+       (pi-section--update-visibility-indicator ,s)
        ,s)))
 
 (defmacro pi-section--replace-section (section &rest body)
@@ -153,8 +188,9 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
        (setf (pi-section-beginning ,s) (pi-section--advance-pointer-maker (pi-section-beginning ,s)))
        (pi-section--update-section-end ,s (point-marker))
        (pi-section--propertize-section ,s)
-       (when (pi-section--hidden-p ,s)
-         (pi-section--set-visibility ,s (pi-section-visibility ,s)))
+       (if (pi-section--hidden-p ,s)
+           (pi-section--set-visibility ,s (pi-section-visibility ,s))
+         (pi-section--update-visibility-indicator ,s))
        ,s)))
 
 (defun pi-section--delete-section (section)
@@ -370,6 +406,30 @@ Return the first matching section, or nil if there is none."
       (setq parent (pi-section-parent section)))
     (pi-section--set-visibility section :show)))
 
+(defun pi-section--visibility-indicator ()
+  (and (display-graphic-p)
+       pi-section-visibility-indicators))
+
+(defun pi-section--update-visibility-indicator (section)
+  (when (pi-section-parent section)
+    (let ((beg (pi-section-beginning section))
+          (eol (save-excursion
+                 (goto-char (pi-section-beginning section))
+                 (line-end-position))))
+      (dolist (ov (overlays-in beg eol))
+        (when (overlay-get ov 'pi-section-visibility-indicator)
+          (delete-overlay ov)))
+      (when-let ((indicator (pi-section--visibility-indicator)))
+        (let ((ov (make-overlay beg eol nil t))
+              (bitmap (if (pi-section--hidden-p section)
+                          (car indicator)
+                        (cdr indicator))))
+          (overlay-put ov 'evaporate t)
+          (overlay-put ov 'pi-section-visibility-indicator t)
+          (overlay-put ov 'before-string
+                       (propertize "fringe" 'display
+                                   `(left-fringe ,bitmap fringe))))))))
+
 (defun pi-section--set-visibility (section visibility)
   "Set the visibility state of SECTION.
 
@@ -395,7 +455,9 @@ VISIBILITY can be one of:
         (overlay-put ov 'evaporate t)
         (overlay-put ov 'invisible t)
         (overlay-put ov 'isearch-open-invisible
-                     #'pi-section--isearch-open))))
+                     #'pi-section--isearch-open)))
+
+    (pi-section--update-visibility-indicator section))
 
   (when (pi-section--visible-p section)
     (dolist (child (pi-section-children section))
@@ -411,6 +473,15 @@ VISIBILITY can be one of:
       (if (pi-section--visible-p section)
           (pi-section--set-visibility section :hide)
         (pi-section--set-visibility section :show)))))
+
+(defun pi-mouse-toggle-section (event)
+  "Toggle visibility of the section clicked in the fringe."
+  (interactive "e")
+  (let* ((pos (event-start event))
+         (section (pi-section--section-at (posn-point pos))))
+    (when (and section (pi-section-parent section))
+      (goto-char (pi-section-beginning section))
+      (pi-toggle-section))))
 
 (defun pi-section-autohide ()
   "Hide sections beyond `pi-section-autohide-count'."

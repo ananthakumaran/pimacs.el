@@ -2,6 +2,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'ert)
 
 ;; development only packages, not declared as a package-dependency
@@ -69,6 +70,15 @@
          (insert "      Connected client #45\n"))
        (goto-char (point-min))
        ,@body)))
+
+(defun pi-section-tests--visibility-indicator-overlay (section)
+  (cl-find-if
+   (lambda (ov)
+     (overlay-get ov 'pi-section-visibility-indicator))
+   (overlays-in (pi-section-beginning section)
+                (save-excursion
+                  (goto-char (pi-section-beginning section))
+                  (line-end-position)))))
 
 
 ;; ─── Basic section creation ────────────────────────────────────────────
@@ -593,6 +603,54 @@
       (should (eq (pi-section-visibility build) :autohide))
       (pi-toggle-section)
       (should (eq (pi-section-visibility build) :show)))))
+
+(ert-deftest pi-section--set-visibility-updates-fringe-indicator ()
+  (cl-letf (((symbol-function 'display-graphic-p)
+             (lambda (&optional _frame) t)))
+    (pi-section-tests-with-demo-buffer
+      (let* ((build (pi-section--current-section))
+             (overlay (pi-section-tests--visibility-indicator-overlay build)))
+        (should overlay)
+        (should (equal (get-text-property 0 'display
+                                          (overlay-get overlay 'before-string))
+                       '(left-fringe pi-section-fringe-bitmapv fringe)))
+        (pi-section--set-visibility build :hide)
+        (setq overlay (pi-section-tests--visibility-indicator-overlay build))
+        (should overlay)
+        (should (equal (get-text-property 0 'display
+                                          (overlay-get overlay 'before-string))
+                       '(left-fringe pi-section-fringe-bitmap> fringe)))))))
+
+(ert-deftest pi-section--visibility-indicator-shows-for-leaf-sections ()
+  (cl-letf (((symbol-function 'display-graphic-p)
+             (lambda (&optional _frame) t)))
+    (pi-with-root-section
+      (let ((leaf (pi-section--new-section 'leaf pi-section--root-section)))
+        (pi-section--insert-section leaf
+          (insert "[-] Leaf\n"))
+        (should (pi-section-tests--visibility-indicator-overlay leaf))))))
+
+(ert-deftest pi-section--visibility-indicator-skips-root ()
+  (cl-letf (((symbol-function 'display-graphic-p)
+             (lambda (&optional _frame) t)))
+    (pi-with-root-section
+      (pi-section--propertize-section pi-section--root-section)
+      (should-not (pi-section-tests--visibility-indicator-overlay
+                   pi-section--root-section)))))
+
+(ert-deftest pi-section--delete-section-keeps-parent-fringe-indicator ()
+  (cl-letf (((symbol-function 'display-graphic-p)
+             (lambda (&optional _frame) t)))
+    (pi-with-root-section
+      (let* ((parent (pi-section--new-section 'parent pi-section--root-section))
+             (child (pi-section--new-section 'child parent)))
+        (pi-section--insert-section parent
+          (insert "[-] Parent\n"))
+        (pi-section--insert-section child
+          (insert "  [-] Child\n"))
+        (should (pi-section-tests--visibility-indicator-overlay parent))
+        (pi-section--delete-section child)
+        (should (pi-section-tests--visibility-indicator-overlay parent))))))
 
 
 ;; ─── pi-section-autohide ───────────────────────────────────────────────
