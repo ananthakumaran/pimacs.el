@@ -114,6 +114,39 @@
 
     (should (equal (widget-value pi--status-widget) "Status\nA Status B\n"))))
 
+(ert-deftest pi--handle-agent-state-formats-parallel-tools ()
+  (with-temp-buffer
+    (setq pi--spinner (spinner-create 'progress-bar))
+    (pi-section--create-root-section)
+
+    (pi--handle-agent-state '(:type "tool_execution_start" :toolName "read"))
+    (should (equal (pi--format-state) "Pi tool(read)"))
+    (should (spinner--active-p pi--spinner))
+
+    (pi--handle-agent-state '(:type "tool_execution_start" :toolName "grep"))
+    (should (equal (pi--format-state) "Pi tool(grep, read)"))
+    (should (spinner--active-p pi--spinner))
+
+    (pi--handle-agent-state '(:type "tool_execution_start" :toolName "bash"))
+    (should (equal (pi--format-state) "Pi tool(bash, grep + 1 more)"))
+    (should (spinner--active-p pi--spinner))
+
+    (pi--handle-agent-state '(:type "tool_execution_end" :toolName "bash"))
+    (should (equal (pi--format-state) "Pi tool(grep, read)"))
+    (should (spinner--active-p pi--spinner))
+
+    (pi--handle-agent-state '(:type "tool_execution_end" :toolName "grep"))
+    (should (equal (pi--format-state) "Pi tool(read)"))
+    (should (spinner--active-p pi--spinner))
+
+    (pi--handle-agent-state '(:type "tool_execution_end" :toolName "read"))
+    (should (equal (pi--format-state) "Pi thinking"))
+    (should (spinner--active-p pi--spinner))
+
+    (pi--handle-agent-state '(:type "turn_end"))
+    (should (equal (pi--format-state) "Pi"))
+    (should-not (spinner--active-p pi--spinner))))
+
 (ert-deftest pi-clear-ui-keeps-sections-before-prompt-widgets ()
   (with-temp-buffer
     (pi-section--create-root-section)

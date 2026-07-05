@@ -1622,11 +1622,20 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
   (interactive)
   (goto-char (widget-field-text-end pi--prompt-widget)))
 
+(defun pi--format-tool-state (tools)
+  (pcase tools
+    (`(,first ,second ,_ . ,rest)
+     (format "%s, %s + %d more" first second (1+ (length rest))))
+    (_
+     (mapconcat #'identity tools ", "))))
+
 (defun pi--format-state ()
   (if pi--agent-state
       (let ((state pi--agent-state))
         (if (consp state)
-            (format "Pi %s(%s)" (car state) (cdr state))
+            (format "Pi %s(%s)"
+                    (car state)
+                    (pi--format-tool-state (cdr state)))
           (format "Pi %s" state)))
     "Pi"))
 
@@ -1692,6 +1701,22 @@ Shows context usage and model info."
         (spinner-start pi--spinner))
     (spinner-stop pi--spinner)))
 
+(defun pi--agent-state-tools ()
+  (if (and (consp pi--agent-state)
+           (eq (car pi--agent-state) 'tool))
+      (cdr pi--agent-state)
+    nil))
+
+(defun pi--agent-state-add-tool (tool-name)
+  (cons 'tool
+        (cons tool-name (pi--agent-state-tools))))
+
+(defun pi--agent-state-remove-tool (tool-name)
+  (let ((tools (cl-remove tool-name (pi--agent-state-tools) :count 1 :test #'equal)))
+    (if tools
+        (cons 'tool tools)
+      'thinking)))
+
 (defun pi--handle-agent-state (event)
   (cl-case (intern (plist-get event :type))
     (agent_start (pi--update-agent-state 'thinking))
@@ -1699,8 +1724,12 @@ Shows context usage and model info."
                (pi-clear-project-file-cache))
     (turn_start (pi--update-agent-state 'thinking))
     (turn_end (pi--update-agent-state nil))
-    (tool_execution_start (pi--update-agent-state (cons 'tool (plist-get event :toolName))))
-    (tool_execution_end (pi--update-agent-state nil))
+    (tool_execution_start
+     (pi--update-agent-state
+      (pi--agent-state-add-tool (plist-get event :toolName))))
+    (tool_execution_end
+     (pi--update-agent-state
+      (pi--agent-state-remove-tool (plist-get event :toolName))))
     (compaction_start (pi--update-agent-state 'compacting))
     (compaction_end (pi--update-agent-state nil))
     (auto_retry_start (pi--update-agent-state 'retrying))
