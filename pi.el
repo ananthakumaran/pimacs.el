@@ -2642,7 +2642,8 @@ With a prefix argument OTHER-WINDOW, visit in other window."
 (defun pi--switch-session (session-file message &optional cb)
   "Switch to an existing session file and refresh.
 SESSION-FILE is the path to the session file to switch to.
-MESSAGE is shown as a notification when complete."
+MESSAGE is shown as a notification when complete.
+If non-nil, call CB after the session refresh finishes."
   (pi--widget-save-excursion
     (pi--clear-session-widgets))
   (pi--send-command

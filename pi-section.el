@@ -474,7 +474,8 @@ VISIBILITY can be one of:
         (pi-section--set-visibility section :show)))))
 
 (defun pi-mouse-toggle-section (event)
-  "Toggle visibility of the section clicked in the fringe."
+  "Toggle visibility of the section clicked in the fringe.
+EVENT is the mouse event that triggered the toggle."
   (interactive "e")
   (let* ((pos (event-start event))
          (section (pi-section--section-at (posn-point pos))))

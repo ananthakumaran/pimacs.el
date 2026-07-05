@@ -4,6 +4,7 @@
 
 ;; Test setup:
 
+(require 'cl-lib)
 (require 'ert)
 
 ;; development only packages, not declared as a package-dependency
@@ -38,45 +39,64 @@
 (defun pi-fixture-mode ()
   (or (getenv "FIXTURE_MODE") "replay"))
 
+(defconst pi-silenced-integration-message-patterns
+  '("^(.*) Starting pi version .+\.\.\.$"
+    "^(.*) pi agent started successfully\.$"
+    "^(.*) pi exits: killed\.$"
+    "^Copied last assistant message to clipboard\.$"))
+
+(defmacro pi-with-silenced-integration-messages (&rest body)
+  (declare (indent 0))
+  `(let ((message-fn (symbol-function 'message)))
+     (cl-letf (((symbol-function 'message)
+                (lambda (format-string &rest args)
+                  (let ((text (apply #'format-message format-string args)))
+                    (unless (cl-some (lambda (pattern)
+                                       (string-match-p pattern text))
+                                     pi-silenced-integration-message-patterns)
+                      (funcall message-fn "%s" text))))))
+       ,@body)))
+
 (defmacro pi-with-integration-project (scenario &rest body)
   (declare (indent 1))
-  `(let* ((default-directory pi-project-directory)
-          (pi-process-environment (list
-                                   (concat "FIXTURE_SCENARIO=" ,scenario)
-                                   (concat "PI_CODING_AGENT_DIR=" pi-project-agent-directory)
-                                   (concat "FIXTURE_MODE=" (pi-fixture-mode))))
-          (pi-flags (list "--tools" "read,bash,edit,write,grep,find,ls" "--extension" (expand-file-name "fixture" pi-integration-directory))))
-     (let ((sessions-dir (expand-file-name "sessions" pi-project-agent-directory)))
-       (when (file-exists-p sessions-dir)
-         (delete-directory sessions-dir t)
-         (make-directory sessions-dir)))
-     (pi-chat)
-     (sleep-for 2)
-     ,@body
-     (pi-drain-process-output)
-     (pi--with-chat-buffer
-       (let* ((tape-file (expand-file-name (concat ,scenario ".txt") pi-tape-directory))
-              (current-text (pi-normalize-buffer-text (buffer-substring (point-min) (point-max))))
-              (fixture-mode (pi-fixture-mode)))
-         (if (or (not (file-exists-p tape-file))
-                 (string= fixture-mode "record"))
-             (write-region current-text nil tape-file nil 'silent)
-           (let ((expected (pi-normalize-buffer-text
-                            (with-temp-buffer
-                              (insert-file-contents tape-file)
-                              (buffer-string)))))
-             (unless (string= current-text expected)
-               (let ((temp-file (make-temp-file "pi-tape-")))
-                 (unwind-protect
-                     (progn
-                       (write-region current-text nil temp-file nil 'silent)
-                       (with-temp-buffer
-                         (call-process "diff" nil (current-buffer) nil "-u" tape-file temp-file)
-                         (message "Tape mismatch for %s:\n%s" ,scenario (buffer-string))
-                         (ert-fail (format "Tape mismatch for %s" ,scenario))))
-                   (delete-file temp-file))))))))
+  `(pi-with-silenced-integration-messages
+     (let* ((default-directory pi-project-directory)
+            (pi-process-environment (list
+                                     (concat "FIXTURE_SCENARIO=" ,scenario)
+                                     (concat "PI_CODING_AGENT_DIR=" pi-project-agent-directory)
+                                     (concat "FIXTURE_MODE=" (pi-fixture-mode))))
+            (pi-flags (list "--tools" "read,bash,edit,write,grep,find,ls" "--extension" (expand-file-name "fixture" pi-integration-directory))))
+       (let ((sessions-dir (expand-file-name "sessions" pi-project-agent-directory)))
+         (when (file-exists-p sessions-dir)
+           (delete-directory sessions-dir t)
+           (make-directory sessions-dir)))
+       (pi-chat)
+       (sleep-for 2)
+       ,@body
+       (pi-drain-process-output)
+       (pi--with-chat-buffer
+         (let* ((tape-file (expand-file-name (concat ,scenario ".txt") pi-tape-directory))
+                (current-text (pi-normalize-buffer-text (buffer-substring (point-min) (point-max))))
+                (fixture-mode (pi-fixture-mode)))
+           (if (or (not (file-exists-p tape-file))
+                   (string= fixture-mode "record"))
+               (write-region current-text nil tape-file nil 'silent)
+             (let ((expected (pi-normalize-buffer-text
+                              (with-temp-buffer
+                                (insert-file-contents tape-file)
+                                (buffer-string)))))
+               (unless (string= current-text expected)
+                 (let ((temp-file (make-temp-file "pi-tape-")))
+                   (unwind-protect
+                       (progn
+                         (write-region current-text nil temp-file nil 'silent)
+                         (with-temp-buffer
+                           (call-process "diff" nil (current-buffer) nil "-u" tape-file temp-file)
+                           (message "Tape mismatch for %s:\n%s" ,scenario (buffer-string))
+                           (ert-fail (format "Tape mismatch for %s" ,scenario))))
+                     (delete-file temp-file))))))))
 
-     (pi-quit-chat)))
+       (pi-quit-chat))))
 
 (defvar pi-settle-time (if (getenv "CI") 1 0.1))
 (defvar pi-poll-interval (if (getenv "CI") 0.5 0.05))

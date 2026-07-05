@@ -17,34 +17,34 @@ setup: cask
 
 .PHONY: compile
 compile: cask
-	cask emacs -batch -L . -L test \
+	@cask emacs -batch -L . -L test \
 	  -f batch-byte-compile pi.el pi-section.el pi-edit.el; \
 	  (ret=$$? ; cask clean-elc && exit $$ret)
 
 .PHONY: package-lint
 package-lint: cask
-	cask emacs -Q --batch \
+	@cask emacs -Q --batch \
 	  --eval "(setq package-lint-main-file \"pi.el\")" \
 	  -f package-lint-batch-and-exit \
 	  pi.el pi-section.el pi-edit.el
 
 .PHONY: test
 test: compile
-	cask emacs --batch -L . -L test -l pi-tests.el -l pi-section-tests.el -eval '(ert-run-tests-batch-and-exit "$(MATCH)")'
+	@cask emacs --batch -L . -L test -l pi-tests.el -l pi-section-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
 
 .PHONY: integration
 integration: compile
-	cask emacs --batch -L . -L test -l integration/pi-integration-tests.el -eval '(ert-run-tests-batch-and-exit "$(MATCH)")'
+	@cask emacs --batch -L . -L test -l integration/pi-integration-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
 
 .PHONY: format
 format:
-	cask emacs --batch -L . -l pi.el -l pi-section.el -l pi-edit.el -l pi-tests.el -l pi-section-tests.el -l integration/pi-integration-tests.el \
+	@cask emacs --batch -L . -l pi.el -l pi-section.el -l pi-edit.el -l pi-tests.el -l pi-section-tests.el -l integration/pi-integration-tests.el \
 	  --eval " \
-	  (progn \
+	  (let ((inhibit-message t) \
+                (message-log-max nil)) \
             (setq-default indent-tabs-mode nil) \
 	    (dolist (f command-line-args-left) \
 	      (with-current-buffer (find-file-noselect f) \
-                (message \"formatting %s\" f) \
 	        (indent-region (point-min) (point-max)) \
 	        (save-buffer))))" \
           pi.el pi-section.el pi-edit.el pi-tests.el pi-section-tests.el integration/pi-integration-tests.el
@@ -110,7 +110,7 @@ export ESCRIPT
 
 .PHONY: docs-lint
 docs-lint:
-	cask emacs --batch -L . \
+	@cask emacs --batch -L . \
 	  --eval "(require 'checkdoc)" \
 	  --eval "(checkdoc-file \"pi.el\")" \
 	  --eval "(checkdoc-file \"pi-section.el\")" \
@@ -118,6 +118,6 @@ docs-lint:
 
 .PHONY: docs
 docs: pi.info
-	ruby -e 'txt = IO.read("pi.texi").split("@c custom-variables-start")[0] + "@c custom-variables-start\n\n" + `emacs --batch --eval "$$ESCRIPT"` + "@c custom-variables-end" + IO.read("pi.texi").split("@c custom-variables-end")[1]; File.write("pi.texi", txt)'
-	makeinfo pi.texi
-	makeinfo --no-number-sections --html --no-split -o ./docs/index.html pi.texi
+	@ruby -e 'txt = IO.read("pi.texi").split("@c custom-variables-start")[0] + "@c custom-variables-start\n\n" + `$(EMACS) -Q --batch --eval "$$ESCRIPT"` + "@c custom-variables-end" + IO.read("pi.texi").split("@c custom-variables-end")[1]; File.write("pi.texi", txt)'
+	@makeinfo pi.texi
+	@makeinfo --no-number-sections --html --no-split -o ./docs/index.html pi.texi
