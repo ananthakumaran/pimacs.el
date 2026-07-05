@@ -220,6 +220,10 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
      Whether to render ANSI colors in widget and status output.
 
+ -- User Option: pi-align-markdown-tables t
+
+     Whether to align markdown tables while rendering assistant output.
+
  -- User Option: pi-sync-request-timeout 2
 
      The number of seconds to wait for a sync response.

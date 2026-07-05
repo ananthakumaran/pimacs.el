@@ -72,8 +72,8 @@ Inline code is written as `` `inline` ``! Here's another one with variables like
 
 ## Tables & Data Grids |---|---|---|
 #### Column A || 🚀 Project Alpha (Active), 📋 Beta-Status: Development ✨ Gamma-Drafting
-|| Feature X Implemented ✅ Y-Z Pending ⏳ Z-Quality Testing Started 💫 W-Beta Released 🔥 V-A1.2 In Progress!  
-||||
+|   | Feature X Implemented ✅ Y-Z Pending ⏳ Z-Quality Testing Started 💫 W-Beta Released 🔥 V-A1.2 In Progress!   |
+|   |                                                                                                               |   |
 
 --- 
 
@@ -228,8 +228,8 @@ Inline code is written as `` `inline` ``! Here's another one with variables like
 
 ## Tables & Data Grids |---|---|---|
 #### Column A || 🚀 Project Alpha (Active), 📋 Beta-Status: Development ✨ Gamma-Drafting
-|| Feature X Implemented ✅ Y-Z Pending ⏳ Z-Quality Testing Started 💫 W-Beta Released 🔥 V-A1.2 In Progress!  
-||||
+|   | Feature X Implemented ✅ Y-Z Pending ⏳ Z-Quality Testing Started 💫 W-Beta Released 🔥 V-A1.2 In Progress!   |
+|   |                                                                                                               |   |
 
 --- 
 

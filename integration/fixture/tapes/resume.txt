@@ -61,14 +61,14 @@ assistant> I notice you are sending a sequence: h1, h2, h3. This looks like you 
 
 ## HTML Heading Tags (h1-h6)
 
-| Tag | Priority | Description |
-|-----|----------|-------------|
-| **h1** | 1 | Highest priority - main title |
-| **h2** | 2 | Secondary headings |
-| **h3** | 3 | Tertiary headings |
-| **h4** | 4 | Lower secondary headings |
-| **h5** | 5 | Secondary headings |
-| **h6** | 6 | Lowest priority - micro headings |
+| Tag    | Priority | Description                      |
+|--------|----------|----------------------------------|
+| **h1** | 1        | Highest priority - main title    |
+| **h2** | 2        | Secondary headings               |
+| **h3** | 3        | Tertiary headings                |
+| **h4** | 4        | Lower secondary headings         |
+| **h5** | 5        | Secondary headings               |
+| **h6** | 6        | Lowest priority - micro headings |
 
 ### Best Practices:
 - **Use h1** for your page's main title (one per page)

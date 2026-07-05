@@ -127,6 +127,11 @@
   :type 'boolean
   :group 'pi)
 
+(defcustom pi-align-markdown-tables t
+  "Whether to align markdown tables while rendering assistant output."
+  :type 'boolean
+  :group 'pi)
+
 (defcustom pi-sync-request-timeout 2
   "The number of seconds to wait for a sync response."
   :type 'integer
@@ -426,13 +431,27 @@ PRED is called with KEY VALUE."
              (pi--insert-error (format "%s cancelled." ,operation))))
        ,@body)))
 
+(defun pi--align-markdown-tables ()
+  (save-excursion
+    (goto-char (point-min))
+    (while (re-search-forward "|" nil t)
+      (when (markdown-table-at-point-p)
+        (goto-char (markdown-table-begin))
+        (markdown-table-align)
+        (goto-char (markdown-table-end))))))
+
 (defun pi--render-markdown (text)
   (with-temp-buffer
     (insert text)
     (let ((inhibit-message t))
       (ignore-errors
         (delay-mode-hooks
-          (markdown-view-mode))
+          (gfm-view-mode))
+        (when pi-align-markdown-tables
+          (condition-case nil
+              (let ((inhibit-read-only t))
+                (pi--align-markdown-tables))
+            (error nil)))
         (font-lock-ensure))
       (buffer-string))))
 

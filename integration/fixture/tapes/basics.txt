@@ -17,14 +17,14 @@ me present this information clearly to the user.
 
 assistant> Here are the files and directories in the current directory:
 
-| Files/Directories | Type |
-|-------------------|------|
-| `.project` | Hidden file |
-| `agent/` | Directory |
-| `config.json` | File |
-| `notes.txt` | File |
-| `README.md` | File |
-| `utils.py` | File |
+| Files/Directories | Type        |
+|-------------------|-------------|
+| `.project`        | Hidden file |
+| `agent/`          | Directory   |
+| `config.json`     | File        |
+| `notes.txt`       | File        |
+| `README.md`       | File        |
+| `utils.py`        | File        |
 
 Would you like me to explore any of these files or directories in more detail?
 
@@ -43,10 +43,10 @@ clearly to the user.
 
 assistant> Found 2 matches containing "sample":
 
-| File | Line | Match |
-|------|------|-------|
-| `config.json` | 2 | `"name": "sample-project",` |
-| `README.md` | 3 | This is a **sample project used for integration testing**. |
+| File          | Line | Match                                                      |
+|---------------|------|------------------------------------------------------------|
+| `config.json` | 2    | `"name": "sample-project",`                                |
+| `README.md`   | 3    | This is a **sample project used for integration testing**. |
 
 Would you like more context around these matches or search for a different pattern?
 
@@ -93,11 +93,11 @@ present this information clearly to the user.
 
 assistant> Found 3 files with `.json` extension:
 
-| File |
-|------|
-| `agent/auth.json` |
+| File                  |
+|-----------------------|
+| `agent/auth.json`     |
 | `agent/settings.json` |
-| `config.json` |
+| `config.json`         |
 
 Would you like to read the contents of any of these files?
 
