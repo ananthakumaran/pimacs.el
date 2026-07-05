@@ -69,5 +69,4 @@ Widget line 2
 user> 
 Widget line 3
 Widget line 4
-Status A value
-Status B value
+Status A value Status B value

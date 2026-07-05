@@ -349,12 +349,13 @@ with the message plist to insert the custom message content."
      (make-variable-buffer-local ',name)
      (put ',name 'permanent-local t)))
 
-(defun pi--join (x)
-  (cond
-   ((stringp x) x)
-   ((proper-list-p x) (mapconcat #'pi--join x "\n"))
-   ((consp x) (pi--join (cdr x)))
-   (t "")))
+(defun pi--join (x &optional join-char)
+  (let ((join-char (or join-char "\n")))
+    (cond
+     ((stringp x) x)
+     ((proper-list-p x) (mapconcat (lambda (item) (pi--join item join-char)) x join-char))
+     ((consp x) (pi--join (cdr x) join-char))
+     (t ""))))
 
 (defun pi--insert-error (text)
   "Insert TEXT with `pi-error-face'."
@@ -501,7 +502,7 @@ PRED is called with KEY VALUE."
 (pi--def-permanent-buffer-local pi--prompt-after-widget nil)
 (pi--def-permanent-buffer-local pi--prompt-widget-lines nil)
 (pi--def-permanent-buffer-local pi--status-widget nil)
-(pi--def-permanent-buffer-local pi--status-widget-lines nil)
+(pi--def-permanent-buffer-local pi--status-widget-texts nil)
 (pi--def-permanent-buffer-local pi--text-section nil)
 (pi--def-permanent-buffer-local pi--thinking-section nil)
 (pi--def-permanent-buffer-local pi--header-line-state nil)
@@ -1482,19 +1483,20 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
 
 (defun pi--update-status-widget ()
   (let (entries)
-    (when pi--status-widget-lines
+    (when pi--status-widget-texts
       (maphash (lambda (key text)
                  (push (cons key text) entries))
-               pi--status-widget-lines))
+               pi--status-widget-texts))
     (widget-value-set pi--status-widget
-                      (pi--widget-ensure-trailing-newline (pi--join (pi--sort-entries-by-key entries))))))
+                      (pi--widget-ensure-trailing-newline
+                       (pi--join (pi--sort-entries-by-key entries) " ")))))
 
 (defun pi--handle-set-status (event)
   (let* ((status-key (plist-get event :statusKey))
          (status-text (plist-get event :statusText)))
     (if (or (not status-text) (string-empty-p status-text))
-        (remhash status-key pi--status-widget-lines)
-      (puthash status-key status-text pi--status-widget-lines))
+        (remhash status-key pi--status-widget-texts)
+      (puthash status-key status-text pi--status-widget-texts))
     (pi--update-status-widget)))
 
 (defun pi--handle-set-editor-text (event)
@@ -2251,8 +2253,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
 (defun pi--clear-session-widgets ()
   (when pi--prompt-widget-lines
     (clrhash pi--prompt-widget-lines))
-  (when pi--status-widget-lines
-    (clrhash pi--status-widget-lines))
+  (when pi--status-widget-texts
+    (clrhash pi--status-widget-texts))
   (pi--update-prompt-widgets)
   (pi--update-status-widget))
 
@@ -2582,7 +2584,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (setq pi--prompt-after-widget (widget-create 'pi-item :face 'pi-widget-face pi--empty-widget-text))
   (setq pi--prompt-widget-lines (make-hash-table :test 'equal))
   (setq pi--status-widget (widget-create 'pi-item :face 'pi-status-face pi--empty-widget-text))
-  (setq pi--status-widget-lines (make-hash-table :test 'equal))
+  (setq pi--status-widget-texts (make-hash-table :test 'equal))
   (widget-setup)
   (pi-focus-prompt)
   (add-hook 'kill-buffer-hook #'pi--cleanup-chat-buffer nil t)

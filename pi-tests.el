@@ -97,9 +97,22 @@
   (should (equal (pi--join '()) ""))
   (should (equal (pi--join "hello") "hello"))
   (should (equal (pi--join '("a" "b" "c")) "a\nb\nc"))
+  (should (equal (pi--join '("a" "b" "c") ",") "a,b,c"))
   (should (equal (pi--join '("key" . "value")) "value"))
   (should (equal (pi--join '(("k1" . "v1") ("k2" . "v2"))) "v1\nv2"))
+  (should (equal (pi--join '(("k1" . "v1") ("k2" . "v2")) ",") "v1,v2"))
   (should (equal (pi--join '(("k1" . "a\nb") ("k2" . "c"))) "a\nb\nc")))
+
+(ert-deftest pi--update-status-widget-joins-statuses-with-space ()
+  (with-temp-buffer
+    (setq pi--status-widget
+          (widget-create 'pi-item :face 'pi-status-face pi--empty-widget-text))
+    (setq pi--status-widget-texts (make-hash-table :test 'equal))
+
+    (pi--handle-set-status '(:statusKey "status-b" :statusText "Status B"))
+    (pi--handle-set-status '(:statusKey "status-a" :statusText "Status\nA"))
+
+    (should (equal (widget-value pi--status-widget) "Status\nA Status B\n"))))
 
 (ert-deftest pi-clear-ui-keeps-sections-before-prompt-widgets ()
   (with-temp-buffer
@@ -114,7 +127,7 @@
     (setq pi--prompt-widget-lines (make-hash-table :test 'equal))
     (setq pi--status-widget
           (widget-create 'pi-item :face 'pi-status-face pi--empty-widget-text))
-    (setq pi--status-widget-lines (make-hash-table :test 'equal))
+    (setq pi--status-widget-texts (make-hash-table :test 'equal))
     (widget-setup)
 
     (cl-labels ((insert-section ()
