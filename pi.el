@@ -2248,6 +2248,14 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
         pi--thinking-section nil)
   (clrhash pi--tool-calls))
 
+(defun pi--clear-session-widgets ()
+  (when pi--prompt-widget-lines
+    (clrhash pi--prompt-widget-lines))
+  (when pi--status-widget-lines
+    (clrhash pi--status-widget-lines))
+  (pi--update-prompt-widgets)
+  (pi--update-status-widget))
+
 (defun pi-refresh-session (&optional callback)
   "Refresh the current session state.
 CALLBACK is called after a successful refresh."
@@ -2269,27 +2277,30 @@ CALLBACK is called after a successful refresh."
   "Clone the current session."
   (interactive)
   (pi--with-chat-buffer
+    (pi--widget-save-excursion
+      (pi--clear-session-widgets))
     (pi--send-command
      "clone" '()
      (pi--on-response-success-callback resp
        (pi--unless-cancelled resp "Clone"
-         (pi-refresh-session)
-         (pi--update-header-line)
-         (pi--widget-save-excursion
-           (pi-section--create-section 'info pi-section--root-section
-             (insert "Session cloned."))))))))
+         (pi-refresh-session
+          (lambda ()
+            (pi--update-header-line)
+            (pi--notify "Cloned to new session"))))))))
 
 (defun pi-new-session ()
   "Start a new session."
   (interactive)
   (pi--with-chat-buffer
+    (pi--widget-save-excursion
+      (pi--clear-sections)
+      (pi--clear-session-widgets))
     (pi--send-command
      "new_session" '()
      (pi--on-response-success-callback resp
        (pi--update-header-line)
        (pi--unless-cancelled resp "New session"
-         (pi--widget-save-excursion
-           (pi--clear-sections)))))))
+         (pi--notify "New session started."))))))
 
 (defun pi-set-session-name (name)
   "Set the session name to NAME."
@@ -2358,17 +2369,21 @@ CALLBACK is called after a successful refresh."
              (message "No fork points available.")
            (let* ((selected (pi--completing-read "Fork at message: " (reverse items)))
                   (message (alist-get selected items nil nil #'equal))
-                  (entry-id (plist-get message :entryId)))
+                  (entry-id (plist-get message :entryId))
+                  (message-text (plist-get message :text)))
+             (pi--widget-save-excursion
+               (pi--clear-session-widgets))
              (pi--send-command
               "fork" (list :entryId entry-id)
               (pi--on-response-success-callback resp
                 (pi--unless-cancelled resp "Fork"
-                  (let ((text (plist-get (plist-get resp :data) :text)))
-                    (pi-refresh-session)
-                    (pi--update-header-line)
-                    (pi--widget-save-excursion
-                      (pi-section--create-section 'fork pi-section--root-section
-                        (insert text))))))))))))))
+                  (pi-refresh-session
+                   (lambda ()
+                     (pi--widget-save-excursion
+                       (widget-value-set pi--prompt-widget (or message-text "")))
+                     (pi-focus-prompt)
+                     (pi--notify "Forked to new session")))
+                  (pi--update-header-line)))))))))))
 
 (defun pi-compact (&optional custom-instructions)
   "Compact the current session to reduce context usage.
@@ -2626,6 +2641,8 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   "Switch to an existing session file and refresh.
 SESSION-FILE is the path to the session file to switch to.
 MESSAGE is shown as a notification when complete."
+  (pi--widget-save-excursion
+    (pi--clear-session-widgets))
   (pi--send-command
    "switch_session" (list :sessionPath session-file)
    (pi--on-response-success-callback resp
@@ -2654,11 +2671,12 @@ MESSAGE is shown as a notification when complete."
               (with-current-buffer chat-buffer
                 (pi--kill-agent t)
                 (pi--widget-save-excursion
-                  (pi--clear-sections))
+                  (pi--clear-sections)
+                  (pi--clear-session-widgets))
                 (pi--start-agent project-key)
                 (pi--switch-session
                  session-file
-                 "Agent reloaded."
+                 "Reloaded extensions, skills and prompts."
                  (lambda ()
                    (pi--fetch-commands))))))))))))
 

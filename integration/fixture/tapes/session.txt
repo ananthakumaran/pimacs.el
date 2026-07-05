@@ -1,3 +1,5 @@
+New session started.
+
 Session renamed to: test-session
 
 Session Info

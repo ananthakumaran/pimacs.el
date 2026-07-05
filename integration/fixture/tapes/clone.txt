@@ -6,6 +6,8 @@ using any of the available functions.
 
 assistant> Hello! 👋 How can I help you today?
 
+Cloned to new session
+
 user> cloned
 
 assistant> The user seems to be saying "cloned" which could mean:

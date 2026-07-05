@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 const tapesDir = path.join(__dirname, "../tapes");
 const mode = process.env.FIXTURE_MODE || "replay";
 const scenario = process.env.FIXTURE_SCENARIO || "default";
+const ollamaHost = process.env.OLLAMA_HOST || "http://127.0.0.1:11434";
 
 const binPath = path.join(__dirname, "../node_modules/.bin/proxay");
 const logFile = "/tmp/proxay.log";
@@ -25,7 +26,7 @@ function initialize() {
     "--default-tape",
     scenario,
     "--host",
-    "http://100.70.125.96:11434",
+    ollamaHost,
     "--port",
     "5544",
   ]);

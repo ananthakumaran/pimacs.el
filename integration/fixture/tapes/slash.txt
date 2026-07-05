@@ -1,3 +1,5 @@
+New session started.
+
 Session renamed to: session1
 
 Session Info

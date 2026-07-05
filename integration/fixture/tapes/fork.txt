@@ -6,6 +6,8 @@ they need.
 
 assistant> Hello! How can I help you today?
 
+Forked to new session
+
 user> hello fork
 
 assistant> The user is saying "hello fork" - this seems like they're greeting me
@@ -17,5 +19,5 @@ assistant> Hello! It's great to see you again. 😊
 
 How can I assist you today?
 
- user> 
+ user> hello again
   
