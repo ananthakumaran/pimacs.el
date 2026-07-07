@@ -808,7 +808,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
                (pi-section--insert-section call-section
                  (pi--insert-tool-name tool-name)
                  (pi--format-tool-args tool-name args))
-               (pi-section--set-section-info call-section (list tool-name args))
+               (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name tool-name :args args))
                (let ((result-section (pi-section--new-section 'tool-result call-section)))
                  (pi-section--insert-section result-section)
                  (puthash tool-call-id
@@ -831,7 +831,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
            (pi--widget-save-excursion
              (pi-section--replace-section result-section
                (pi--insert-tool-result tool-name result-text is-error details args))
-             (pi-section--set-section-info result-section (list tool-name details args))))
+             (pi-section--set-info result-section (make-pi-section-tool-result-info :tool-name tool-name :details details :args args))))
          (remhash tool-call-id pi--tool-calls))))
 
     ("bashExecution"
@@ -843,10 +843,10 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
            (pi-section--insert-section call-section
              (pi--insert-tool-name "bash")
              (pi--format-tool-args "bash" args))
-           (pi-section--set-section-info call-section (list "bash" args))
+           (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name "bash" :args args))
            (pi-section--insert-section result-section
              (pi--insert-tool-result "bash" output nil message))
-           (pi-section--set-section-info result-section (list "bash" nil args))))))
+           (pi-section--set-info result-section (make-pi-section-tool-result-info :tool-name "bash" :details nil :args args))))))
 
     ("custom"
      (pi--insert-custom-message message))))
@@ -890,7 +890,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
                (pi-section--insert-section call-section
                  (pi--insert-tool-name tool-name)
                  (pi--format-tool-args tool-name args))
-               (pi-section--set-section-info call-section (list tool-name args))
+               (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name tool-name :args args))
                (let ((result-section (pi-section--new-section 'tool-result call-section)))
                  (pi-section--insert-section result-section)
                  (puthash tool-call-id
@@ -1220,7 +1220,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
             (pi--insert-tool-result tool-name result-text is-error
                                     details
                                     args)))
-        (pi-section--set-section-info result-section (list tool-name details args)))
+        (pi-section--set-info result-section (make-pi-section-tool-result-info :tool-name tool-name :details details :args args)))
       (remhash tool-call-id pi--tool-calls))))
 
 (defun pi--handle-auto-retry-start (event)
@@ -2296,7 +2296,7 @@ summarization."
           (pi-section--insert-section call-section
             (pi--insert-tool-name "bash")
             (pi--format-tool-args "bash" (list :command command)))
-          (pi-section--set-section-info call-section (list "bash" args)))
+          (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name "bash" :args args)))
         (pi--send-command
          "bash" args
          (lambda (resp)
@@ -2344,17 +2344,17 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (pi-section--section-case
       ((tool-result)
        (if-let* ((info (pi-section-info (pi-section--current-section)))
-                 (tool-name (nth 0 info))
+                 (tool-name (pi-section-tool-result-info-tool-name info))
                  (visitor (alist-get tool-name pi-visit-tool-result-functions nil nil #'equal)))
-           (let* ((details (nth 1 info))
-                  (args (nth 2 info)))
+           (let* ((details (pi-section-tool-result-info-details info))
+                  (args (pi-section-tool-result-info-args info)))
              (pi--visit-file (funcall visitor details args) other-window))
          (pi--visit-file-at-point other-window)))
     ((tool-call)
      (if-let* ((info (pi-section-info (pi-section--current-section)))
-               (tool-name (nth 0 info))
+               (tool-name (pi-section-tool-call-info-tool-name info))
                (visitor (alist-get tool-name pi-visit-tool-call-functions nil nil #'equal)))
-         (let ((args (nth 1 info)))
+         (let ((args (pi-section-tool-call-info-args info)))
            (pi--visit-file (funcall visitor args) other-window))
        (pi--visit-file-at-point other-window)))
     (t

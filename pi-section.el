@@ -105,7 +105,13 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
 (cl-defstruct pi-section
   parent children beginning end type visibility info padding)
 
-(defun pi-section--set-section-info (section info)
+(cl-defstruct pi-section-tool-call-info
+  tool-name args)
+
+(cl-defstruct pi-section-tool-result-info
+  tool-name details args)
+
+(defun pi-section--set-info (section info)
   (setf (pi-section-info section) info))
 
 (defun pi-section--advance-pointer-maker (marker)
