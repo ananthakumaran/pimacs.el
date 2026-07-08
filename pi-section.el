@@ -106,10 +106,16 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
   parent children beginning end type visibility info padding)
 
 (cl-defstruct pi-section-tool-call-info
-  tool-name args)
+  tool-name args header)
 
 (cl-defstruct pi-section-tool-result-info
   tool-name details args)
+
+(cl-defstruct pi-section-user-info
+  header message)
+
+(cl-defstruct pi-section-assistant-info
+  header message type)
 
 (defun pi-section--set-info (section info)
   (setf (pi-section-info section) info))

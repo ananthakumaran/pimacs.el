@@ -45,6 +45,7 @@
 (require 'ffap)
 (require 'ansi-color)
 (require 'diff-mode)
+(require 'imenu)
 
 (defgroup pi nil
   "Emacs client for Pi."
@@ -778,12 +779,16 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
 (defun pi--insert-message (message)
   (pcase (pi--message-role message)
     ("user"
-     (let ((text (pi--content-text message)))
+     (let* ((text (pi--content-text message))
+            (header (pi--section-header text)))
        (unless (string-empty-p text)
          (pi--widget-save-excursion
-           (pi-section--create-section 'user pi-section--root-section
-             (pi--insert-role-prefix "user")
-             (insert text))))))
+           (let ((section (pi-section--create-section 'user pi-section--root-section
+                            (pi--insert-role-prefix "user")
+                            (insert text))))
+             (pi-section--set-info section (make-pi-section-user-info
+                                            :header header
+                                            :message text)))))))
 
     ("assistant"
      (let ((thinking-text (pi--content-thinking message))
@@ -791,24 +796,29 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
            (tool-calls (pi--content-tool-calls message)))
        (unless (string-empty-p thinking-text)
          (pi--widget-save-excursion
-           (pi-section--create-section 'thinking pi-section--root-section
-             (pi--insert-role-prefix "assistant")
-             (pi--insert-thinking (pi--fill-string thinking-text)))))
+           (let ((section (pi-section--create-section 'thinking pi-section--root-section
+                            (pi--insert-role-prefix "assistant")
+                            (pi--insert-thinking (pi--fill-string thinking-text)))))
+             (pi-section--set-info section (make-pi-section-assistant-info
+                                            :header (pi--section-header thinking-text)
+                                            :message thinking-text
+                                            :type 'thinking)))))
        (unless (string-empty-p text)
          (pi--widget-save-excursion
-           (pi-section--create-section 'assistant pi-section--root-section
-             (pi--insert-role-prefix "assistant")
-             (insert (pi--render-markdown text)))))
+           (let ((section (pi-section--create-section 'assistant pi-section--root-section
+                            (pi--insert-role-prefix "assistant")
+                            (insert (pi--render-markdown text)))))
+             (pi-section--set-info section (make-pi-section-assistant-info
+                                            :header (pi--section-header text)
+                                            :message text
+                                            :type 'text)))))
        (dolist (tool-call tool-calls)
          (let ((tool-call-id (plist-get tool-call :id))
                (tool-name (plist-get tool-call :name))
                (args (plist-get tool-call :arguments)))
            (pi--widget-save-excursion
              (let ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
-               (pi-section--insert-section call-section
-                 (pi--insert-tool-name tool-name)
-                 (pi--format-tool-args tool-name args))
-               (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name tool-name :args args))
+               (pi--insert-tool-call call-section tool-name args)
                (let ((result-section (pi-section--new-section 'tool-result call-section)))
                  (pi-section--insert-section result-section)
                  (puthash tool-call-id
@@ -840,10 +850,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
        (pi--widget-save-excursion
          (let* ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n"))
                 (result-section (pi-section--new-section 'tool-result call-section)))
-           (pi-section--insert-section call-section
-             (pi--insert-tool-name "bash")
-             (pi--format-tool-args "bash" args))
-           (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name "bash" :args args))
+           (pi--insert-tool-call call-section "bash" args)
            (pi-section--insert-section result-section
              (pi--insert-tool-result "bash" output nil message))
            (pi-section--set-info result-section (make-pi-section-tool-result-info :tool-name "bash" :details nil :args args))))))
@@ -887,10 +894,7 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
                 (args (plist-get tool-call :arguments)))
            (pi--widget-save-excursion
              (let ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
-               (pi-section--insert-section call-section
-                 (pi--insert-tool-name tool-name)
-                 (pi--format-tool-args tool-name args))
-               (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name tool-name :args args))
+               (pi--insert-tool-call call-section tool-name args)
                (let ((result-section (pi-section--new-section 'tool-result call-section)))
                  (pi-section--insert-section result-section)
                  (puthash tool-call-id
@@ -912,20 +916,33 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
     (when (member role '("assistant" "user"))
       (unless (string-empty-p thinking-text)
         (pi--widget-save-excursion
-          (pi-section--create-or-replace-section pi--thinking-section 'thinking pi-section--root-section
-            (pi--insert-role-prefix role)
-            (pi--insert-thinking (pi--fill-string thinking-text)))))
+          (let ((section (pi-section--create-or-replace-section pi--thinking-section 'thinking pi-section--root-section
+                           (pi--insert-role-prefix role)
+                           (pi--insert-thinking (pi--fill-string thinking-text)))))
+            (when (equal role "assistant")
+              (pi-section--set-info section (make-pi-section-assistant-info
+                                             :header (pi--section-header thinking-text)
+                                             :message thinking-text
+                                             :type 'thinking))))))
 
       (unless (string-empty-p text)
         (pi--widget-save-excursion
-          (pi-section--create-or-replace-section pi--text-section (if (equal role "user") 'user 'assistant) pi-section--root-section
-            (pi--insert-role-prefix role)
-            (insert text)))))
+          (let ((section (pi-section--create-or-replace-section pi--text-section (if (equal role "user") 'user 'assistant) pi-section--root-section
+                           (pi--insert-role-prefix role)
+                           (insert text))))
+            (when (equal role "user")
+              (pi-section--set-info section (make-pi-section-user-info
+                                             :header (pi--section-header text)
+                                             :message text)))))))
     (when (and (equal role "assistant") (not (string-empty-p text)))
       (pi--widget-save-excursion
-        (pi-section--replace-section pi--text-section
-          (pi--insert-role-prefix role)
-          (insert (pi--render-markdown text)))))
+        (let ((section (pi-section--replace-section pi--text-section
+                         (pi--insert-role-prefix role)
+                         (insert (pi--render-markdown text)))))
+          (pi-section--set-info section (make-pi-section-assistant-info
+                                         :header (pi--section-header text)
+                                         :message text
+                                         :type 'text)))))
     (when (equal role "custom")
       (pi--insert-custom-message message))
     (when (and error-message (not (string-empty-p error-message)))
@@ -1172,10 +1189,24 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
     (insert result-text)))
 
 (defun pi--format-tool-args (tool-name args)
-  (if-let ((inserter (alist-get tool-name pi-insert-tool-args-functions nil nil #'equal)))
-      (funcall inserter args)
-    (when args
-      (insert (format "%S" args)))))
+  (with-temp-buffer
+    (if-let ((inserter (alist-get tool-name pi-insert-tool-args-functions nil nil #'equal)))
+        (funcall inserter args)
+      (when args
+        (insert (format "%S" args))))
+    (buffer-string)))
+
+(defun pi--insert-tool-call (section tool-name args)
+  "Format and insert a tool call into SECTION for TOOL-NAME with ARGS."
+  (let ((formatted-args (pi--format-tool-args tool-name args)))
+    (pi--widget-save-excursion
+      (pi-section--insert-section section
+        (pi--insert-tool-name tool-name)
+        (insert formatted-args))
+      (pi-section--set-info section (make-pi-section-tool-call-info
+                                     :tool-name tool-name
+                                     :args args
+                                     :header (pi--section-header (substring-no-properties formatted-args)))))))
 
 (defun pi--insert-tool-result (tool-name result-text is-error &optional details args)
   (if (eq is-error t)
@@ -1555,6 +1586,7 @@ Shows context usage and model info."
 
 (defun pi--update-agent-state (state)
   (setq pi--agent-state state)
+  (setq imenu--index-alist nil)
   (if pi--agent-state
       (unless (spinner--active-p pi--spinner)
         (spinner-start pi--spinner))
@@ -2039,7 +2071,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                        (let ((first-msg-text (pi--content-text (plist-get json :message))))
                          (when (and (not (string-empty-p first-msg-text))
                                     (null first-text))
-                           (setq first-text (truncate-string-to-width first-msg-text 80 nil nil t))))))))
+                           (setq first-text (pi--section-header first-msg-text))))))))
               (error nil))))
         (forward-line 1)
         (cl-incf lines-read))
@@ -2292,11 +2324,7 @@ summarization."
             (call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
         (when exclude-from-context
           (setq args (nconc args (list :excludeFromContext t))))
-        (pi--widget-save-excursion
-          (pi-section--insert-section call-section
-            (pi--insert-tool-name "bash")
-            (pi--format-tool-args "bash" (list :command command)))
-          (pi-section--set-info call-section (make-pi-section-tool-call-info :tool-name "bash" :args args)))
+        (pi--insert-tool-call call-section "bash" args)
         (pi--send-command
          "bash" args
          (lambda (resp)
@@ -2411,6 +2439,29 @@ With a prefix argument OTHER-WINDOW, visit in other window."
     (keymap-set map "C-m" #'widget-field-activate)
     map))
 
+(defun pi--imenu-create-index ()
+  "Build an imenu index from the top-level chat sections."
+  (let ((groups (make-hash-table :test 'equal))
+        result)
+    (dolist (section (pi-section-children pi-section--root-section))
+      (when-let ((pair (pcase (pi-section-type section)
+                         ('user
+                          (when-let ((info (pi-section-info section)))
+                            (cons "user" (pi-section-user-info-header info))))
+                         ((or 'assistant 'thinking)
+                          (when-let ((info (pi-section-info section)))
+                            (cons "assistant" (pi-section-assistant-info-header info))))
+                         ('tool-call
+                          (when-let ((info (pi-section-info section)))
+                            (cons (pi-section-tool-call-info-tool-name info)
+                                  (pi-section-tool-call-info-header info)))))))
+        (push (cons (cdr pair) (marker-position (pi-section-beginning section)))
+              (gethash (car pair) groups))))
+    (maphash (lambda (name entries)
+               (push (cons name (nreverse entries)) result))
+             groups)
+    result))
+
 (define-derived-mode pi-chat-mode nil "pi-chat"
   "Major mode for pi chat.
 
@@ -2419,6 +2470,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (setq header-line-format '(:eval (pi--format-header)))
   (setq pi--tool-calls (make-hash-table :test 'equal))
   (pi-section--create-root-section)
+  (setq imenu-create-index-function #'pi--imenu-create-index)
   (setq pi--prompt-history (make-ring pi-prompt-history-max-size))
   (setq-local completion-at-point-functions
               (append (list #'pi--completion-at-point-slash

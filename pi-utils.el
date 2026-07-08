@@ -201,6 +201,11 @@ PRED is called with KEY VALUE."
     ;; Preserve text properties
     (buffer-string)))
 
+(defun pi--section-header (text)
+  "Extract a short header from TEXT for use as section info."
+  (when-let ((header (car (split-string text "\n" t))))
+    (truncate-string-to-width (string-trim header) 80 nil nil t)))
+
 (defun pi--diff-overlay-to-text-properties ()
   (dolist (ov (overlays-in (point-min) (point-max)))
     (when (eq (overlay-get ov 'diff-mode) 'fine)
