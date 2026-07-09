@@ -1,3 +1,7 @@
+Switched to model: (fixture) qwen3.5:0.8b
+
+Thinking level set to: low
+
 user> hello
 
 assistant> The user is simply saying "hello" which is a greeting. I should

@@ -1,3 +1,9 @@
+Switched to model: (fixture) qwen3.5:0.8b
+
+Thinking level set to: low
+
+Session renamed to: sessionv1
+
 user> h1
 
 assistant> The user just sent "h1" which seems incomplete or unclear. Could be a

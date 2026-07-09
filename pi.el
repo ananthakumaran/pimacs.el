@@ -121,7 +121,7 @@
   "Face used for extension status."
   :group 'pi)
 
-(defvar pi--minimum-version "0.79.9"
+(defvar pi--minimum-version "0.80.3"
   "The minimum supported Pi agent version.")
 
 (defcustom pi-use-ansi-colors t
@@ -764,6 +764,25 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
             (match-string 1 result-text))
     (cons result-text nil)))
 
+(defun pi--insert-model-change (provider model-id)
+  (pi-section--create-section 'model pi-section--root-section
+    (insert (format "Switched to model: (%s) %s" provider model-id))))
+
+(defun pi--insert-thinking-level-change (level)
+  (pi-section--create-section 'thinking pi-section--root-section
+    (insert (format "Thinking level set to: %s" level))))
+
+(defun pi--insert-compaction (summary tokens-before)
+  (let ((header (format "**Compacted from %s tokens**\n"
+                        (pi--format-number-short tokens-before))))
+    (pi-section--create-section 'compact pi-section--root-section
+      (pi--insert-role-prefix "assistant")
+      (insert (pi--render-markdown (concat header summary))))))
+
+(defun pi--insert-session-info (name)
+  (pi-section--create-section 'info pi-section--root-section
+    (insert (format "Session renamed to: %s" name))))
+
 (defun pi--insert-custom-message (message)
   (let ((display (plist-get message :display))
         (custom-type (plist-get message :customType)))
@@ -1301,14 +1320,10 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
         (pi-section--create-section 'error pi-section--root-section
           (pi--insert-error error-message))))
      (result
-      (let* ((summary (plist-get result :summary))
-             (tokens-before (plist-get result :tokensBefore))
-             (header (format "**Compacted from %s tokens**\n"
-                             (pi--format-number-short tokens-before))))
+      (let ((summary (plist-get result :summary))
+            (tokens-before (plist-get result :tokensBefore)))
         (pi--widget-save-excursion
-          (pi-section--create-section 'compact pi-section--root-section
-            (pi--insert-role-prefix "assistant")
-            (insert (pi--render-markdown (concat header summary))))))))))
+          (pi--insert-compaction summary tokens-before)))))))
 
 (defun pi--notify (message &optional notify-type)
   (let ((face (pcase (or notify-type "info")
@@ -1896,8 +1911,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
               (pi--on-response-success-callback resp
                 (pi--update-header-line)
                 (pi--widget-save-excursion
-                  (pi-section--create-section 'model pi-section--root-section
-                    (insert (format "Switched to model: (%s) %s" provider model-id)))))))))))))
+                  (pi--insert-model-change provider model-id)))))))))))
 
 (defvar pi--thinking-level-descriptions
   '((:off     . "No reasoning")
@@ -1955,8 +1969,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                 (pi--on-response-success-callback resp
                   (pi--update-header-line)
                   (pi--widget-save-excursion
-                    (pi-section--create-section 'thinking pi-section--root-section
-                      (insert (format "Thinking level set to: %s" (car choice)))))))))))))))
+                    (pi--insert-thinking-level-change (car choice)))))))))))))
 
 (defun pi-cycle-model ()
   "Cycle to the next available model."
@@ -2149,13 +2162,29 @@ CALLBACK is called after a successful refresh."
   (interactive)
   (pi--with-chat-buffer
     (pi--send-command
-     "get_messages" '()
+     "get_entries" '()
      (pi--on-response-success-callback resp
-       (let ((messages (plist-get (plist-get resp :data) :messages)))
+       (let ((entries (plist-get (plist-get resp :data) :entries)))
          (pi--widget-save-excursion
            (pi--clear-sections)
-           (dolist (message messages)
-             (pi--insert-message message))))
+           (dolist (entry entries)
+             (pcase (plist-get entry :type)
+               ("message"
+                (pi--insert-message (plist-get entry :message)))
+               ("compaction"
+                (pi--insert-compaction (plist-get entry :summary)
+                                       (plist-get entry :tokensBefore)))
+               ("model_change"
+                (pi--insert-model-change (plist-get entry :provider)
+                                         (plist-get entry :modelId)))
+               ("thinking_level_change"
+                (pi--insert-thinking-level-change (plist-get entry :thinkingLevel)))
+               ("custom_message"
+                (pi--insert-custom-message entry))
+               ("session_info"
+                (when-let ((name (plist-get entry :name)))
+                  (pi--insert-session-info name)))
+               (_ nil)))))
        (pi-section-autohide)
        (when callback
          (funcall callback))))))
@@ -2202,8 +2231,7 @@ CALLBACK is called after a successful refresh."
            (rename-buffer (pi--chat-buffer-name trimmed) t)
            (pi--update-header-line)
            (pi--widget-save-excursion
-             (pi-section--create-section 'info pi-section--root-section
-               (insert (format "Session renamed to: %s" trimmed))))))))))
+             (pi--insert-session-info trimmed))))))))
 
 (defun pi-export (&optional output-path)
   "Export the current session to OUTPUT-PATH."

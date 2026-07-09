@@ -47,15 +47,22 @@
 
 (defmacro pi-with-silenced-integration-messages (&rest body)
   (declare (indent 0))
-  `(let ((message-fn (symbol-function 'message)))
-     (cl-letf (((symbol-function 'message)
-                (lambda (format-string &rest args)
-                  (let ((text (apply #'format-message format-string args)))
-                    (unless (cl-some (lambda (pattern)
-                                       (string-match-p pattern text))
-                                     pi-silenced-integration-message-patterns)
-                      (funcall message-fn "%s" text))))))
-       ,@body)))
+  `(let* ((message-fn (symbol-function 'message))
+          (settings-file (expand-file-name "settings.json" pi-project-agent-directory))
+          (original-settings (with-temp-buffer
+                               (insert-file-contents settings-file)
+                               (buffer-string))))
+     (unwind-protect
+         (cl-letf (((symbol-function 'message)
+                    (lambda (format-string &rest args)
+                      (let ((text (apply #'format-message format-string args)))
+                        (unless (cl-some (lambda (pattern)
+                                           (string-match-p pattern text))
+                                         pi-silenced-integration-message-patterns)
+                          (funcall message-fn "%s" text))))))
+           ,@body)
+       ;; Restore settings file to original content
+       (write-region original-settings nil settings-file nil 'silent))))
 
 (defmacro pi-with-integration-project (scenario &rest body)
   (declare (indent 1))
@@ -194,8 +201,17 @@
 
 (ert-deftest pi-clone ()
   (pi-with-integration-project "clone"
+    (pi-send-prompt-and-wait "/name clone-test")
     (pi-send-prompt-and-wait "say hello")
-    (pi-send-prompt-and-wait "/session")
+    (pi-send-prompt-and-wait "write a story, 1000 words")
+    (pi-send-prompt-and-wait "!ls -1 | LC_ALL=C sort")
+    (pi-send-prompt-and-wait "!cat README.md")
+    (pi-send-prompt-and-wait "!cat config.json")
+    (pi-send-prompt-and-wait "!cat notes.txt")
+    (pi-send-prompt-and-wait "!cat utils.py")
+    (pi-send-prompt-and-wait "/compact")
+    (pi-with-minibuffer-input "high (Deep reasoning ~16k tokens)"
+      (pi-send-prompt-and-wait "/set-thinking-level"))
     (pi-send-prompt-and-wait "/clone")
     (pi-send-prompt-and-wait "cloned")))
 
