@@ -3,7 +3,8 @@
   "defaultThinkingLevel": "low",
   "compaction": {
     "enabled": true,
-    "keepRecentTokens": 1000
+    "keepRecentTokens": 100,
+    "reserveTokens": 500
   },
   "defaultProvider": "fixture",
   "defaultModel": "qwen3.5:0.8b",

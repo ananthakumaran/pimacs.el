@@ -203,12 +203,7 @@
   (pi-with-integration-project "clone"
     (pi-send-prompt-and-wait "/name clone-test")
     (pi-send-prompt-and-wait "say hello")
-    (pi-send-prompt-and-wait "write a story, 1000 words")
-    (pi-send-prompt-and-wait "!ls -1 | LC_ALL=C sort")
-    (pi-send-prompt-and-wait "!cat README.md")
-    (pi-send-prompt-and-wait "!cat config.json")
-    (pi-send-prompt-and-wait "!cat notes.txt")
-    (pi-send-prompt-and-wait "!cat utils.py")
+    (pi-send-prompt-and-wait "tell me a story, 100 words")
     (pi-send-prompt-and-wait "/compact")
     (pi-with-minibuffer-input "high (Deep reasoning ~16k tokens)"
       (pi-send-prompt-and-wait "/set-thinking-level"))
@@ -238,12 +233,7 @@
 (ert-deftest pi-compact ()
   (pi-with-integration-project "compact"
     (pi-send-prompt-and-wait "hello")
-    (pi-send-prompt-and-wait "display a sample markdown document with examples, don't create any file")
-    (pi-send-prompt-and-wait "!ls -1 | LC_ALL=C sort")
-    (pi-send-prompt-and-wait "!cat README.md")
-    (pi-send-prompt-and-wait "!cat config.json")
-    (pi-send-prompt-and-wait "!cat notes.txt")
-    (pi-send-prompt-and-wait "!cat utils.py")
+    (pi-send-prompt-and-wait "tell me a story, 100 words")
     (pi-send-prompt-and-wait "/compact")
     (pi-send-prompt-and-wait "hello again")))
 
