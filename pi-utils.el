@@ -133,7 +133,11 @@ PRED is called with KEY VALUE."
                             (cdr (assoc current-keyword options))))
          (selected-display (completing-read
                             (format "%s (current: %s): " prompt (or current "?"))
-                            items nil t nil nil default-display)))
+                            (lambda (string pred action)
+                              (if (eq action 'metadata)
+                                  '(metadata (display-sort-function . identity))
+                                (complete-with-action action items string pred)))
+                            nil t nil nil default-display)))
     (when selected-display
       (let ((selected-keyword (alist-get selected-display items nil nil #'equal)))
         (cons (pi--keyword-name selected-keyword)
