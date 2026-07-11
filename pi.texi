@@ -133,6 +133,78 @@ input area.
 support completion in the prompt buffer.  Type @kbd{/} and press
 @kbd{C-M-i} (or any key bound to completion) to see available commands.
 
+In addition to the commands listed below, extension commands, prompt
+templates, and skills registered with the Pi agent can also be
+invoked via slash commands.  These are fetched automatically from the
+agent and included in the completion list.
+
+Angle brackets @code{<>} denote required arguments, square brackets
+@code{[]} denote optional arguments.
+
+@multitable @columnfractions .25 .15 .6
+@headitem Command @tab Arguments @tab Description
+@item @code{/compact}
+@tab @code{[prompt]}
+@tab Manually compact context, optionally with custom instructions.
+@item @code{/clone}
+@tab
+@tab Duplicate the current active branch into a new session.
+@item @code{/copy}
+@tab
+@tab Copy last assistant message to clipboard.
+@item @code{/cycle-model}
+@tab
+@tab Cycle through available models.
+@item @code{/cycle-thinking-level}
+@tab
+@tab Cycle through thinking levels.
+@item @code{/exit}
+@tab
+@tab Quit pi.
+@item @code{/export}
+@tab @code{[file]}
+@tab Export session to HTML.
+@item @code{/fork}
+@tab
+@tab Create a new session from a previous user message.
+@item @code{/model}
+@tab
+@tab Switch models.
+@item @code{/name}
+@tab @code{<name>}
+@tab Set session display name.
+@item @code{/new}
+@tab
+@tab Start a new session.
+@item @code{/quit}
+@tab
+@tab Quit pi.
+@item @code{/reload}
+@tab
+@tab Reload extensions, skills and prompts.
+@item @code{/resume}
+@tab
+@tab Pick from previous sessions.
+@item @code{/session}
+@tab
+@tab Show session file, ID, messages, tokens, and cost.
+@item @code{/set-auto-compaction}
+@tab
+@tab Set auto compaction.
+@item @code{/set-auto-retry}
+@tab
+@tab Set auto retry.
+@item @code{/set-follow-up-mode}
+@tab
+@tab Set follow-up mode.
+@item @code{/set-steering-mode}
+@tab
+@tab Set steering mode.
+@item @code{/set-thinking-level}
+@tab
+@tab Set thinking level.
+@end multitable
+
 @node File Name Completion
 @section File Name Completion
 
@@ -294,34 +366,35 @@ when agent stops.
 @defopt pi-slash-commands
 
 @lisp
-'(("model" pi-select-model 0)
-  ("new" pi-new-session 0)
-  ("reload" pi-reload 0)
-  ("resume" pi-resume 0)
-  ("compact" pi-compact 1)
-  ("set-auto-compaction" pi-set-auto-compaction 0)
-  ("set-auto-retry" pi-set-auto-retry 0)
-  ("session" pi-session-stats 0)
-  ("name" pi-set-session-name 1)
-  ("set-thinking-level" pi-set-thinking-level 0)
-  ("cycle-model" pi-cycle-model 0)
-  ("cycle-thinking-level" pi-cycle-thinking-level 0)
-  ("set-steering-mode" pi-set-steering-mode 0)
-  ("set-follow-up-mode" pi-set-follow-up-mode 0)
-  ("fork" pi-fork 0)
-  ("clone" pi-clone 0)
-  ("copy" pi-copy 0)
-  ("export" pi-export 1)
-  ("quit" pi-quit-chat 0)
-  ("exit" pi-quit-chat 0))
+'(("model" pi-select-model 0 "Switch models")
+  ("new" pi-new-session 0 "Start a new session")
+  ("reload" pi-reload 0 "Reload extensions, skills and prompts")
+  ("resume" pi-resume 0 "Pick from previous sessions")
+  ("compact" pi-compact 1 "Manually compact context, optionally with custom instructions")
+  ("set-auto-compaction" pi-set-auto-compaction 0 "Set auto compaction")
+  ("set-auto-retry" pi-set-auto-retry 0 "Set auto retry")
+  ("session" pi-session-stats 0 "Show session file, ID, messages, tokens, and cost")
+  ("name" pi-set-session-name 1 "Set session display name")
+  ("set-thinking-level" pi-set-thinking-level 0 "Set thinking level")
+  ("cycle-model" pi-cycle-model 0 "Cycle through available models")
+  ("cycle-thinking-level" pi-cycle-thinking-level 0 "Cycle through thinking levels")
+  ("set-steering-mode" pi-set-steering-mode 0 "Set steering mode")
+  ("set-follow-up-mode" pi-set-follow-up-mode 0 "Set follow-up mode")
+  ("fork" pi-fork 0 "Create a new session from a previous user message")
+  ("clone" pi-clone 0 "Duplicate the current active branch into a new session")
+  ("copy" pi-copy 0 "Copy last assistant message to clipboard")
+  ("export" pi-export 1 "Export session to HTML")
+  ("quit" pi-quit-chat 0 "Quit pi")
+  ("exit" pi-quit-chat 0 "Quit pi"))
 @end lisp
 
 Alist mapping slash command names to command specs.
 
-Each entry is (NAME COMMAND MAX-ARGS) where NAME is the command
+Each entry is (NAME COMMAND MAX-ARGS DESCRIPTION) where NAME is the command
 string without the leading slash, COMMAND is a command symbol,
-and MAX-ARGS is 0 or 1 indicating the number of optional string
-arguments the command accepts.
+MAX-ARGS is 0 or 1 indicating the number of optional string
+arguments the command accepts, and DESCRIPTION is a short
+description string.
 @end defopt
 
 @defopt pi-insert-tool-args-functions

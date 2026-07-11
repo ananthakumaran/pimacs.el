@@ -104,6 +104,41 @@ Slash commands (https://pi.dev/docs/latest/usage#slash-commands) support
 completion in the prompt buffer.  Type ‘/’ and press ‘C-M-i’ (or any key
 bound to completion) to see available commands.
 
+   In addition to the commands listed below, extension commands, prompt
+templates, and skills registered with the Pi agent can also be invoked
+via slash commands.  These are fetched automatically from the agent and
+included in the completion list.
+
+   Angle brackets ‘<>’ denote required arguments, square brackets ‘[]’
+denote optional arguments.
+
+Command            Arguments   Description
+---------------------------------------------------------------------------
+‘/compact’         ‘[prompt]’  Manually compact context, optionally with
+                               custom instructions.
+‘/clone’                       Duplicate the current active branch into
+                               a new session.
+‘/copy’                        Copy last assistant message to clipboard.
+‘/cycle-model’                 Cycle through available models.
+‘/cycle-thinking-level’        Cycle through thinking levels.
+‘/exit’                        Quit pi.
+‘/export’          ‘[file]’    Export session to HTML.
+‘/fork’                        Create a new session from a previous user
+                               message.
+‘/model’                       Switch models.
+‘/name’            ‘<name>’    Set session display name.
+‘/new’                         Start a new session.
+‘/quit’                        Quit pi.
+‘/reload’                      Reload extensions, skills and prompts.
+‘/resume’                      Pick from previous sessions.
+‘/session’                     Show session file, ID, messages, tokens,
+                               and cost.
+‘/set-auto-compaction’         Set auto compaction.
+‘/set-auto-retry’              Set auto retry.
+‘/set-follow-up-mode’          Set follow-up mode.
+‘/set-steering-mode’           Set steering mode.
+‘/set-thinking-level’          Set thinking level.
+
 
 File: pi.info,  Node: File Name Completion,  Next: Bash,  Prev: Slash Commands,  Up: Usage
 
@@ -248,33 +283,34 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
  -- User Option: pi-slash-commands
 
-          '(("model" pi-select-model 0)
-            ("new" pi-new-session 0)
-            ("reload" pi-reload 0)
-            ("resume" pi-resume 0)
-            ("compact" pi-compact 1)
-            ("set-auto-compaction" pi-set-auto-compaction 0)
-            ("set-auto-retry" pi-set-auto-retry 0)
-            ("session" pi-session-stats 0)
-            ("name" pi-set-session-name 1)
-            ("set-thinking-level" pi-set-thinking-level 0)
-            ("cycle-model" pi-cycle-model 0)
-            ("cycle-thinking-level" pi-cycle-thinking-level 0)
-            ("set-steering-mode" pi-set-steering-mode 0)
-            ("set-follow-up-mode" pi-set-follow-up-mode 0)
-            ("fork" pi-fork 0)
-            ("clone" pi-clone 0)
-            ("copy" pi-copy 0)
-            ("export" pi-export 1)
-            ("quit" pi-quit-chat 0)
-            ("exit" pi-quit-chat 0))
+          '(("model" pi-select-model 0 "Switch models")
+            ("new" pi-new-session 0 "Start a new session")
+            ("reload" pi-reload 0 "Reload extensions, skills and prompts")
+            ("resume" pi-resume 0 "Pick from previous sessions")
+            ("compact" pi-compact 1 "Manually compact context, optionally with custom instructions")
+            ("set-auto-compaction" pi-set-auto-compaction 0 "Set auto compaction")
+            ("set-auto-retry" pi-set-auto-retry 0 "Set auto retry")
+            ("session" pi-session-stats 0 "Show session file, ID, messages, tokens, and cost")
+            ("name" pi-set-session-name 1 "Set session display name")
+            ("set-thinking-level" pi-set-thinking-level 0 "Set thinking level")
+            ("cycle-model" pi-cycle-model 0 "Cycle through available models")
+            ("cycle-thinking-level" pi-cycle-thinking-level 0 "Cycle through thinking levels")
+            ("set-steering-mode" pi-set-steering-mode 0 "Set steering mode")
+            ("set-follow-up-mode" pi-set-follow-up-mode 0 "Set follow-up mode")
+            ("fork" pi-fork 0 "Create a new session from a previous user message")
+            ("clone" pi-clone 0 "Duplicate the current active branch into a new session")
+            ("copy" pi-copy 0 "Copy last assistant message to clipboard")
+            ("export" pi-export 1 "Export session to HTML")
+            ("quit" pi-quit-chat 0 "Quit pi")
+            ("exit" pi-quit-chat 0 "Quit pi"))
 
      Alist mapping slash command names to command specs.
 
-     Each entry is (NAME COMMAND MAX-ARGS) where NAME is the command
-     string without the leading slash, COMMAND is a command symbol, and
-     MAX-ARGS is 0 or 1 indicating the number of optional string
-     arguments the command accepts.
+     Each entry is (NAME COMMAND MAX-ARGS DESCRIPTION) where NAME is the
+     command string without the leading slash, COMMAND is a command
+     symbol, MAX-ARGS is 0 or 1 indicating the number of optional string
+     arguments the command accepts, and DESCRIPTION is a short
+     description string.
 
  -- User Option: pi-insert-tool-args-functions
 
@@ -397,13 +433,13 @@ Node: Introduction980
 Node: Setup1229
 Node: Usage1804
 Node: Slash Commands2372
-Node: File Name Completion2695
-Node: Bash3015
-Node: Sending Context3278
-Node: Sandbox4060
-Node: How It Works4422
-Node: Keybindings4868
-Node: Custom Variables6996
+Node: File Name Completion4601
+Node: Bash4921
+Node: Sending Context5184
+Node: Sandbox5966
+Node: How It Works6328
+Node: Keybindings6774
+Node: Custom Variables8902
 
 End Tag Table
 

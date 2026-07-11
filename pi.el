@@ -161,33 +161,34 @@ when agent stops."
   :group 'pi)
 
 (defcustom pi-slash-commands
-  '(("model" pi-select-model 0)
-    ("new" pi-new-session 0)
-    ("reload" pi-reload 0)
-    ("resume" pi-resume 0)
-    ("compact" pi-compact 1)
-    ("set-auto-compaction" pi-set-auto-compaction 0)
-    ("set-auto-retry" pi-set-auto-retry 0)
-    ("session" pi-session-stats 0)
-    ("name" pi-set-session-name 1)
-    ("set-thinking-level" pi-set-thinking-level 0)
-    ("cycle-model" pi-cycle-model 0)
-    ("cycle-thinking-level" pi-cycle-thinking-level 0)
-    ("set-steering-mode" pi-set-steering-mode 0)
-    ("set-follow-up-mode" pi-set-follow-up-mode 0)
-    ("fork" pi-fork 0)
-    ("clone" pi-clone 0)
-    ("copy" pi-copy 0)
-    ("export" pi-export 1)
-    ("quit" pi-quit-chat 0)
-    ("exit" pi-quit-chat 0))
+  '(("model" pi-select-model 0 "Switch models")
+    ("new" pi-new-session 0 "Start a new session")
+    ("reload" pi-reload 0 "Reload extensions, skills and prompts")
+    ("resume" pi-resume 0 "Pick from previous sessions")
+    ("compact" pi-compact 1 "Manually compact context, optionally with custom instructions")
+    ("set-auto-compaction" pi-set-auto-compaction 0 "Set auto compaction")
+    ("set-auto-retry" pi-set-auto-retry 0 "Set auto retry")
+    ("session" pi-session-stats 0 "Show session file, ID, messages, tokens, and cost")
+    ("name" pi-set-session-name 1 "Set session display name")
+    ("set-thinking-level" pi-set-thinking-level 0 "Set thinking level")
+    ("cycle-model" pi-cycle-model 0 "Cycle through available models")
+    ("cycle-thinking-level" pi-cycle-thinking-level 0 "Cycle through thinking levels")
+    ("set-steering-mode" pi-set-steering-mode 0 "Set steering mode")
+    ("set-follow-up-mode" pi-set-follow-up-mode 0 "Set follow-up mode")
+    ("fork" pi-fork 0 "Create a new session from a previous user message")
+    ("clone" pi-clone 0 "Duplicate the current active branch into a new session")
+    ("copy" pi-copy 0 "Copy last assistant message to clipboard")
+    ("export" pi-export 1 "Export session to HTML")
+    ("quit" pi-quit-chat 0 "Quit pi")
+    ("exit" pi-quit-chat 0 "Quit pi"))
   "Alist mapping slash command names to command specs.
 
-Each entry is (NAME COMMAND MAX-ARGS) where NAME is the command
+Each entry is (NAME COMMAND MAX-ARGS DESCRIPTION) where NAME is the command
 string without the leading slash, COMMAND is a command symbol,
-and MAX-ARGS is 0 or 1 indicating the number of optional string
-arguments the command accepts."
-  :type '(repeat (list string symbol integer))
+MAX-ARGS is 0 or 1 indicating the number of optional string
+arguments the command accepts, and DESCRIPTION is a short
+description string."
+  :type '(repeat (list string symbol integer string))
   :group 'pi)
 
 (defcustom pi-insert-tool-args-functions
@@ -464,9 +465,17 @@ with the message plist to insert the custom message content."
                     (cond
                      ((member c slash-names) "(emacs)")
                      (pi--commands
-                      (when-let ((cmd (assoc c pi--commands #'string=))
-                                 (desc (plist-get (cdr cmd) :description)))
-                        (format "(%s)" (plist-get (cdr cmd) :source)))))))))))))
+                      (when-let ((cmd (assoc c pi--commands #'string=)))
+                        (format "(%s)" (plist-get (cdr cmd) :source))))))
+                  :company-docsig
+                  (lambda (c)
+                    (cond
+                     ((member c slash-names)
+                      (when-let ((command (assoc c pi-slash-commands #'string=)))
+                        (nth 3 command)))
+                     (pi--commands
+                      (when-let ((cmd (assoc c pi--commands #'string=)))
+                        (plist-get (cdr cmd) :description))))))))))))
 
 ;;; Chat
 
