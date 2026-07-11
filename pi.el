@@ -377,6 +377,7 @@ with the message plist to insert the custom message content."
 (pi--def-permanent-buffer-local pi--thinking-section nil)
 (pi--def-permanent-buffer-local pi--header-line-state nil)
 (pi--def-permanent-buffer-local pi--tool-calls nil)
+(pi--def-permanent-buffer-local pi--cleanup-callback-fn nil)
 (pi--def-permanent-buffer-local pi--agent-state nil)
 (pi--def-permanent-buffer-local pi--spinner nil)
 (pi--def-permanent-buffer-local pi--retry-in-progress nil)
@@ -635,22 +636,35 @@ with the message plist to insert the custom message content."
       (message "(%s) pi agent started successfully." (pi--project-name)))))
 
 
+(defun pi--agent-add-cleanup (process fn)
+  "Register FN as a cleanup callback for PROCESS.
+Cleanup callbacks are run when the agent process exits."
+  (push fn (process-get process 'pi--agent-cleanup-fns)))
+
+(defun pi--agent-remove-cleanup (process fn)
+  "Remove FN from the cleanup callbacks of PROCESS."
+  (let ((cleanup-fns (process-get process 'pi--agent-cleanup-fns)))
+    (process-put process 'pi--agent-cleanup-fns
+                 (delq fn cleanup-fns))))
+
 (defun pi--cleanup-agent (process)
+  "Run cleanup callbacks registered on PROCESS and remove from agents table."
   (let ((project-key (process-get process 'project-key)))
     (when project-key
-      (remhash project-key pi--agents)
-      (unless (process-get process 'pi--preserve-chat)
-        (when-let (buffer (gethash project-key pi--chats))
-          (kill-buffer buffer))))))
+      (remhash project-key pi--agents))
+    (dolist (fn (process-get process 'pi--agent-cleanup-fns))
+      (ignore-errors (funcall fn)))
+    (process-put process 'pi--agent-cleanup-fns nil)))
 
 ;;; Utility commands
 
-(defun pi--kill-agent (&optional preserve-chat)
+(defun pi--kill-agent (&optional skip-cleanup-fn)
   "Kill the agent process.
-When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
+When SKIP-CLEANUP-FN is non-nil, that cleanup callback is
+removed before killing, so it won't run when the process exits."
   (when-let (agent (pi--current-agent))
-    (when preserve-chat
-      (process-put agent 'pi--preserve-chat t))
+    (when skip-cleanup-fn
+      (pi--agent-remove-cleanup agent skip-cleanup-fn))
     (delete-process agent)))
 
 ;;; Completion
@@ -1521,6 +1535,16 @@ When PRESERVE-CHAT is non-nil, the chat buffer is not killed."
   (pi--set-event-listener "compaction_end" #'pi--handle-compaction-end)
   (pi--set-event-listener "extension_ui_request" #'pi--handle-extension-ui-request)
   (pi--set-event-listener t #'pi--handle-agent-state))
+
+(defun pi--register-agent-cleanup ()
+  "Register a cleanup callback on the agent to kill the chat buffer on exit."
+  (when-let (agent (pi--current-agent))
+    (let* ((buf (current-buffer))
+           (fn (lambda ()
+                 (when (buffer-live-p buf)
+                   (kill-buffer buf)))))
+      (pi--agent-add-cleanup agent fn)
+      (setq-local pi--cleanup-callback-fn fn))))
 
 (defun pi-focus-prompt ()
   "Move point to the chat prompt input field."
@@ -2522,6 +2546,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (widget-setup)
   (pi-focus-prompt)
   (add-hook 'kill-buffer-hook #'pi--cleanup-chat-buffer nil t)
+  (pi--register-agent-cleanup)
   (pi--register-event-listeners)
   (setq-local mode-line-misc-info
               (append (list '(:eval (pi--format-mode-line)))
@@ -2606,11 +2631,12 @@ If non-nil, call CB after the session refresh finishes."
           (lambda ()
             (when (buffer-live-p chat-buffer)
               (with-current-buffer chat-buffer
-                (pi--kill-agent t)
+                (pi--kill-agent pi--cleanup-callback-fn)
                 (pi--widget-save-excursion
                   (pi--clear-sections)
                   (pi--clear-session-widgets))
                 (pi--start-agent project-key)
+                (pi--register-agent-cleanup)
                 (pi--switch-session
                  session-file
                  "Reloaded extensions, skills and prompts."
