@@ -220,31 +220,6 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
      Whether to render ANSI colors in widget and status output.
 
- -- User Option: pi-sync-request-timeout 2
-
-     The number of seconds to wait for a sync response.
-
- -- User Option: pi-executable "pi"
-
-     Pi command executable name.
-
- -- User Option: pi-process-environment '()
-
-     List of extra environment variables to use when starting pi.
-
- -- User Option: pi-flags '()
-
-     List of additional flags to provide when starting pi.
-
- -- User Option: pi-log-rpc nil
-
-     When non-nil, log all RPC JSON to ‘pi-log-rpc-file’.
-
- -- User Option: pi-log-rpc-file (expand-file-name "pi.el.log"
-          (temporary-file-directory))
-
-     File to write RPC JSON log entries to.
-
  -- User Option: pi-file-completion-backend 'project
 
      Completion backend for prefixed file paths in prompts.  ‘project’
@@ -365,6 +340,31 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
      Whether to pop to the chat buffer after sending region, filename or
      errors.
+
+ -- User Option: pi-sync-request-timeout 2
+
+     The number of seconds to wait for a sync response.
+
+ -- User Option: pi-executable "pi"
+
+     Pi command executable name.
+
+ -- User Option: pi-process-environment '()
+
+     List of extra environment variables to use when starting pi.
+
+ -- User Option: pi-flags '()
+
+     List of additional flags to provide when starting pi.
+
+ -- User Option: pi-log-rpc nil
+
+     When non-nil, log all RPC JSON to ‘pi-log-rpc-file’.
+
+ -- User Option: pi-log-rpc-file (expand-file-name "pi.el.log"
+          (temporary-file-directory))
+
+     File to write RPC JSON log entries to.
 
  -- User Option: pi-align-markdown-tables t
 

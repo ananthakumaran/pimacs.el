@@ -262,36 +262,6 @@ in another window
 Whether to render ANSI colors in widget and status output.
 @end defopt
 
-@defopt pi-sync-request-timeout @code{2}
-
-The number of seconds to wait for a sync response.
-@end defopt
-
-@defopt pi-executable @code{"pi"}
-
-Pi command executable name.
-@end defopt
-
-@defopt pi-process-environment @code{'()}
-
-List of extra environment variables to use when starting pi.
-@end defopt
-
-@defopt pi-flags @code{'()}
-
-List of additional flags to provide when starting pi.
-@end defopt
-
-@defopt pi-log-rpc @code{nil}
-
-When non-nil, log all RPC JSON to @code{pi-log-rpc-file}.
-@end defopt
-
-@defopt pi-log-rpc-file @code{(expand-file-name "pi.el.log" (temporary-file-directory))}
-
-File to write RPC JSON log entries to.
-@end defopt
-
 @defopt pi-file-completion-backend @code{'project}
 
 Completion backend for @-prefixed file paths in prompts.
@@ -430,6 +400,36 @@ with the message plist to insert the custom message content.
 @defopt pi-send-pop-to-chat @code{t}
 
 Whether to pop to the chat buffer after sending region, filename or errors.
+@end defopt
+
+@defopt pi-sync-request-timeout @code{2}
+
+The number of seconds to wait for a sync response.
+@end defopt
+
+@defopt pi-executable @code{"pi"}
+
+Pi command executable name.
+@end defopt
+
+@defopt pi-process-environment @code{'()}
+
+List of extra environment variables to use when starting pi.
+@end defopt
+
+@defopt pi-flags @code{'()}
+
+List of additional flags to provide when starting pi.
+@end defopt
+
+@defopt pi-log-rpc @code{nil}
+
+When non-nil, log all RPC JSON to @code{pi-log-rpc-file}.
+@end defopt
+
+@defopt pi-log-rpc-file @code{(expand-file-name "pi.el.log" (temporary-file-directory))}
+
+File to write RPC JSON log entries to.
 @end defopt
 
 @defopt pi-align-markdown-tables @code{t}
