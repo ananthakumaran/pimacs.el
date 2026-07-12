@@ -554,15 +554,16 @@ with the message plist to insert the custom message content."
   "Alist mapping MIME type strings to image type symbols.")
 
 (defun pi--create-image (item)
-  (when-let ((data (plist-get item :data))
-             (mime-type (plist-get item :mimeType))
-             (image-type (pi--alist-get-equal mime-type pi--image-type-alist))
-             (raw-data (base64-decode-string data))
-             (max-width (floor (* 0.9 (window-pixel-width))))
-             (max-height (floor (* 0.9 (window-pixel-height)))))
-    (create-image raw-data image-type t
-                  :max-width max-width
-                  :max-height max-height)))
+  (when (display-images-p)
+   (when-let ((data (plist-get item :data))
+              (mime-type (plist-get item :mimeType))
+              (image-type (pi--alist-get-equal mime-type pi--image-type-alist))
+              (raw-data (base64-decode-string data))
+              (max-width (floor (* 0.9 (window-pixel-width))))
+              (max-height (floor (* 0.9 (window-pixel-height)))))
+     (create-image raw-data image-type t
+                   :max-width max-width
+                   :max-height max-height))))
 
 (defun pi--role-face (role)
   (pcase role
