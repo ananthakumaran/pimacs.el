@@ -340,7 +340,9 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      Alist mapping tool names to result inserter functions.
 
      Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
-     (RESULT-TEXT DETAILS ARGS) to insert the tool execution result.
+     (CONTENT DETAILS ARGS) to insert the tool execution result.
+     CONTENT is a list of content items.  Use ‘pi--insert-content’ to
+     render it, or ‘pi--content-text’ to extract text from content.
 
  -- User Option: pi-visit-tool-result-functions
 

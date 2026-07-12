@@ -217,7 +217,9 @@ with ARGS plist to insert formatted tool call arguments."
   "Alist mapping tool names to result inserter functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
-with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result."
+with (CONTENT DETAILS ARGS) to insert the tool execution result.
+CONTENT is a list of content items.  Use `pi--insert-content' to render
+it, or `pi--content-text' to extract text from content."
   :type '(alist :key-type string :value-type function)
   :group 'pi)
 
@@ -332,8 +334,7 @@ with the message plist to insert the custom message content."
 (pi--def-permanent-buffer-local pi--prompt-widget-lines nil)
 (pi--def-permanent-buffer-local pi--status-widget nil)
 (pi--def-permanent-buffer-local pi--status-widget-texts nil)
-(pi--def-permanent-buffer-local pi--text-section nil)
-(pi--def-permanent-buffer-local pi--thinking-section nil)
+(pi--def-permanent-buffer-local pi--content-sections (make-hash-table :test 'eql))
 (pi--def-permanent-buffer-local pi--header-line-state nil)
 (pi--def-permanent-buffer-local pi--tool-calls nil)
 (pi--def-permanent-buffer-local pi--cleanup-callback-fn nil)
@@ -482,30 +483,82 @@ with the message plist to insert the custom message content."
 (defun pi--message-role (message)
   (or (plist-get message :role) "unknown"))
 
-(defun pi--content-join (message type)
-  (let ((content (plist-get message :content)))
-    (if (stringp content)
-        (if (string= type "text")
-            content
-          "")
-      (mapconcat
-       (lambda (item)
-         (when (equal (plist-get item :type) type)
-           (plist-get item (intern (concat ":" type)))))
-       content
-       ""))))
+(defun pi--content-text (content)
+  (let ((content (pi--content-normalize content)))
+    (mapconcat
+     (lambda (item)
+       (if (equal (plist-get item :type) "text")
+           (or (plist-get item :text) "")
+         ""))
+     content
+     "")))
 
-(defun pi--content-text (message)
-  (pi--content-join message "text"))
+(defun pi--content-normalize (content)
+  (if (stringp content)
+      (list (list :type "text" :text content))
+    content))
 
-(defun pi--content-thinking (message)
-  (pi--content-join message "thinking"))
+(defmacro pi--docontent (binding &rest body)
+  (declare (indent 1))
+  (let ((item-var (car binding))
+        (source-expr (cadr binding)))
+    `(dolist (,item-var (pi--content-normalize ,source-expr))
+       ,@body)))
 
-(defun pi--content-tool-calls (message)
-  (cl-remove-if-not
-   (lambda (item)
-     (equal (plist-get item :type) "toolCall"))
-   (plist-get message :content)))
+(defun pi--content-header (content)
+  (let ((content (pi--content-normalize content)))
+    (when-let ((item (cl-find-if (lambda (i)
+                                   (member (plist-get i :type) '("text" "thinking")))
+                                 content)))
+      (pi--section-header (or (plist-get item :text)
+                              (plist-get item :thinking))))))
+
+(defun pi--insert-content-item (item &optional markdown-p)
+  (pcase (plist-get item :type)
+    ("text"
+     (insert (if markdown-p
+                 (pi--render-markdown (plist-get item :text))
+               (plist-get item :text))))
+    ("image"
+     (when-let ((image (pi--create-image item)))
+       (insert "\n")
+       (insert-image image)
+       (insert "\n")))
+    ("thinking"
+     (pi--insert-thinking (pi--fill-string (plist-get item :thinking))))
+    (_
+     (insert (prin1-to-string item)))))
+
+(defun pi--insert-content (content &optional markdown-p)
+  (pi--docontent (item content)
+    (pi--insert-content-item item markdown-p)))
+
+(defun pi--insert-user-message (content)
+  (pi--widget-save-excursion
+    (let ((section (pi-section--create-section 'user pi-section--root-section
+                     (pi--insert-role-prefix "user")
+                     (pi--insert-content content))))
+      (pi-section--set-info section (make-pi-section-user-info
+                                     :header (pi--content-header content)
+                                     :content content)))))
+
+(defun pi--create-image (item)
+  (when-let ((data (plist-get item :data))
+             (mime-type (plist-get item :mimeType))
+             (image-type (pcase mime-type
+                           ("image/png" 'png)
+                           ("image/jpeg" 'jpeg)
+                           ("image/gif" 'gif)
+                           ("image/svg+xml" 'svg)
+                           ("image/webp" 'webp)
+                           ("image/tiff" 'tiff)
+                           (_ nil)))
+             (raw-data (base64-decode-string data))
+             (max-width (floor (* 0.9 (window-pixel-width))))
+             (max-height (floor (* 0.9 (window-pixel-height)))))
+    (create-image raw-data image-type t
+                  :max-width max-width
+                  :max-height max-height)))
 
 (defun pi--role-face (role)
   (pcase role
@@ -566,65 +619,57 @@ with the message plist to insert the custom message content."
         (pi--widget-save-excursion
           (pi-section--create-section 'custom pi-section--root-section
             (pi--insert-role-prefix (or custom-type "custom"))
-            (insert (pi--render-markdown (pi--content-text message)))))))))
+            (pi--insert-content (plist-get message :content) t)))))))
 
 (defun pi--insert-message (message)
   (pcase (pi--message-role message)
     ("user"
-     (let* ((text (pi--content-text message))
-            (header (pi--section-header text)))
-       (unless (string-empty-p text)
-         (pi--widget-save-excursion
-           (let ((section (pi-section--create-section 'user pi-section--root-section
-                            (pi--insert-role-prefix "user")
-                            (insert text))))
-             (pi-section--set-info section (make-pi-section-user-info
-                                            :header header
-                                            :message text)))))))
+     (pi--insert-user-message (plist-get message :content)))
 
     ("assistant"
-     (let ((thinking-text (pi--content-thinking message))
-           (text (pi--content-text message))
-           (tool-calls (pi--content-tool-calls message)))
-       (unless (string-empty-p thinking-text)
-         (pi--widget-save-excursion
-           (let ((section (pi-section--create-section 'thinking pi-section--root-section
-                            (pi--insert-role-prefix "assistant")
-                            (pi--insert-thinking (pi--fill-string thinking-text)))))
-             (pi-section--set-info section (make-pi-section-assistant-info
-                                            :header (pi--section-header thinking-text)
-                                            :message thinking-text
-                                            :type 'thinking)))))
-       (unless (string-empty-p text)
-         (pi--widget-save-excursion
-           (let ((section (pi-section--create-section 'assistant pi-section--root-section
-                            (pi--insert-role-prefix "assistant")
-                            (insert (pi--render-markdown text)))))
-             (pi-section--set-info section (make-pi-section-assistant-info
-                                            :header (pi--section-header text)
-                                            :message text
-                                            :type 'text)))))
-       (dolist (tool-call tool-calls)
-         (let ((tool-call-id (plist-get tool-call :id))
-               (tool-name (plist-get tool-call :name))
-               (args (plist-get tool-call :arguments)))
-           (pi--widget-save-excursion
-             (let ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
-               (pi--insert-tool-call call-section tool-name args)
-               (let ((result-section (pi-section--new-section 'tool-result call-section)))
-                 (pi-section--insert-section result-section)
-                 (puthash tool-call-id
-                          (make-pi-tool-call
-                           :call-section call-section
-                           :result-section result-section
-                           :prev-text ""
-                           :tool-name tool-name
-                           :args args)
-                          pi--tool-calls))))))))
+     (pi--docontent (item (plist-get message :content))
+       (pcase (plist-get item :type)
+         ("thinking"
+          (let ((content (list item)))
+            (pi--widget-save-excursion
+              (let ((section (pi-section--create-section 'thinking pi-section--root-section
+                               (pi--insert-role-prefix "assistant")
+                               (pi--insert-content content))))
+                (pi-section--set-info section (make-pi-section-assistant-info
+                                               :header (pi--content-header content)
+                                               :content content
+                                               :type 'thinking))))))
+         ("text"
+          (let ((content (list item)))
+            (pi--widget-save-excursion
+              (let ((section (pi-section--create-section 'assistant pi-section--root-section
+                               (pi--insert-role-prefix "assistant")
+                               (pi--insert-content content t))))
+                (pi-section--set-info section (make-pi-section-assistant-info
+                                               :header (pi--content-header content)
+                                               :content content
+                                               :type 'text))))))
+         ("toolCall"
+          (let ((tool-call-id (plist-get item :id))
+                (tool-name (plist-get item :name))
+                (args (plist-get item :arguments)))
+            (pi--widget-save-excursion
+              (let ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
+                (pi--insert-tool-call call-section tool-name args)
+                (let ((result-section (pi-section--new-section 'tool-result call-section)))
+                  (pi-section--insert-section result-section)
+                  (puthash tool-call-id
+                           (make-pi-tool-call
+                            :call-section call-section
+                            :result-section result-section
+                            :prev-text ""
+                            :tool-name tool-name
+                            :args args)
+                           pi--tool-calls)))))))))
     ("toolResult"
      (let ((tool-call-id (plist-get message :toolCallId))
            (tool-name (plist-get message :toolName))
-           (result-text (pi--content-text message))
+           (content (pi--content-normalize (plist-get message :content)))
            (is-error (plist-get message :isError))
            (details (plist-get message :details)))
        (when-let ((entry (gethash tool-call-id pi--tool-calls)))
@@ -632,19 +677,19 @@ with the message plist to insert the custom message content."
                (args (pi-tool-call-args entry)))
            (pi--widget-save-excursion
              (pi-section--replace-section result-section
-               (pi--insert-tool-result tool-name result-text is-error details args))
+               (pi--insert-tool-result tool-name content is-error details args))
              (pi-section--set-info result-section (make-pi-section-tool-result-info :tool-name tool-name :details details :args args))))
          (remhash tool-call-id pi--tool-calls))))
 
     ("bashExecution"
      (let* ((args (list :command (plist-get message :command)))
-            (output (plist-get message :output)))
+            (content (pi--content-normalize (plist-get message :output))))
        (pi--widget-save-excursion
          (let* ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n"))
                 (result-section (pi-section--new-section 'tool-result call-section)))
            (pi--insert-tool-call call-section "bash" args)
            (pi-section--insert-section result-section
-             (pi--insert-tool-result "bash" output nil message))
+             (pi--insert-tool-result "bash" content nil message))
            (pi-section--set-info result-section (make-pi-section-tool-result-info :tool-name "bash" :details nil :args args))))))
 
     ("custom"
@@ -654,96 +699,95 @@ with the message plist to insert the custom message content."
   (let* ((assistant-message-event (plist-get event :assistantMessageEvent))
          (event-type (plist-get assistant-message-event :type))
          (delta (plist-get assistant-message-event :delta))
-         (message (plist-get event :message))
-         (role (pi--message-role message)))
-    (when (member role '("assistant" "user"))
-      (pcase event-type
-        ("thinking_delta"
-         (unless (string-empty-p delta)
-           (pi--widget-save-excursion
-             (if pi--thinking-section
-                 (pi-section--append-section pi--thinking-section
-                   (pi--insert-thinking delta))
-               (setq pi--thinking-section (pi-section--new-section 'thinking pi-section--root-section))
-               (pi-section--insert-section pi--thinking-section
+         (content-index (plist-get assistant-message-event :contentIndex))
+         (role (pi--message-role (plist-get event :message))))
+    (pcase event-type
+      ("thinking_delta"
+       (unless (string-empty-p delta)
+         (pi--widget-save-excursion
+           (if-let ((section (gethash content-index pi--content-sections)))
+               (pi-section--append-section section
+                 (pi--insert-thinking delta))
+             (let ((section (pi-section--new-section 'thinking pi-section--root-section)))
+               (pi-section--insert-section section
                  (pi--insert-role-prefix role)
-                 (pi--insert-thinking delta))))))
-        ("text_delta"
-         (unless (string-empty-p delta)
-           (pi--widget-save-excursion
-             (if pi--text-section
-                 (pi-section--append-section pi--text-section
-                   (insert delta))
-               (setq pi--text-section (pi-section--new-section (if (equal role "user") 'user 'assistant)
-                                                               pi-section--root-section))
-               (pi-section--insert-section pi--text-section
+                 (pi--insert-thinking delta))
+               (puthash content-index section pi--content-sections))))))
+      ("text_delta"
+       (unless (string-empty-p delta)
+         (pi--widget-save-excursion
+           (if-let ((section (gethash content-index pi--content-sections)))
+               (pi-section--append-section section
+                 (insert delta))
+             (let ((section (pi-section--new-section 'assistant pi-section--root-section)))
+               (pi-section--insert-section section
                  (pi--insert-role-prefix role)
-                 (insert delta))))))
-        ("toolcall_end"
-         (let* ((tool-call (plist-get assistant-message-event :toolCall))
-                (tool-call-id (plist-get tool-call :id))
-                (tool-name (plist-get tool-call :name))
-                (args (plist-get tool-call :arguments)))
-           (pi--widget-save-excursion
-             (let ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
-               (pi--insert-tool-call call-section tool-name args)
-               (let ((result-section (pi-section--new-section 'tool-result call-section)))
-                 (pi-section--insert-section result-section)
-                 (puthash tool-call-id
-                          (make-pi-tool-call
-                           :call-section call-section
-                           :result-section result-section
-                           :prev-text ""
-                           :tool-name tool-name
-                           :args args)
-                          pi--tool-calls))))))))))
+                 (insert delta))
+               (puthash content-index section pi--content-sections))))))
+      ("toolcall_end"
+       (let* ((tool-call (plist-get assistant-message-event :toolCall))
+              (tool-call-id (plist-get tool-call :id))
+              (tool-name (plist-get tool-call :name))
+              (args (plist-get tool-call :arguments)))
+         (pi--widget-save-excursion
+           (let ((call-section (pi-section--new-section 'tool-call pi-section--root-section :padding "\n")))
+             (pi--insert-tool-call call-section tool-name args)
+             (let ((result-section (pi-section--new-section 'tool-result call-section)))
+               (pi-section--insert-section result-section)
+               (puthash tool-call-id
+                        (make-pi-tool-call
+                         :call-section call-section
+                         :result-section result-section
+                         :prev-text ""
+                         :tool-name tool-name
+                         :args args)
+                        pi--tool-calls)))))))))
 
 
 (defun pi--handle-message-end (event)
   (let* ((message (plist-get event :message))
          (error-message (plist-get message :errorMessage))
-         (role (pi--message-role message))
-         (thinking-text (pi--content-thinking message))
-         (text (pi--content-text message)))
-    (when (member role '("assistant" "user"))
-      (unless (string-empty-p thinking-text)
-        (pi--widget-save-excursion
-          (let ((section (pi-section--create-or-replace-section pi--thinking-section 'thinking pi-section--root-section
-                           (pi--insert-role-prefix role)
-                           (pi--insert-thinking (pi--fill-string thinking-text)))))
-            (when (equal role "assistant")
-              (pi-section--set-info section (make-pi-section-assistant-info
-                                             :header (pi--section-header thinking-text)
-                                             :message thinking-text
-                                             :type 'thinking))))))
-
-      (unless (string-empty-p text)
-        (pi--widget-save-excursion
-          (let ((section (pi-section--create-or-replace-section pi--text-section (if (equal role "user") 'user 'assistant) pi-section--root-section
-                           (pi--insert-role-prefix role)
-                           (insert text))))
-            (when (equal role "user")
-              (pi-section--set-info section (make-pi-section-user-info
-                                             :header (pi--section-header text)
-                                             :message text)))))))
-    (when (and (equal role "assistant") (not (string-empty-p text)))
-      (pi--widget-save-excursion
-        (let ((section (pi-section--replace-section pi--text-section
-                         (pi--insert-role-prefix role)
-                         (insert (pi--render-markdown text)))))
-          (pi-section--set-info section (make-pi-section-assistant-info
-                                         :header (pi--section-header text)
-                                         :message text
-                                         :type 'text)))))
-    (when (equal role "custom")
-      (pi--insert-custom-message message))
+         (role (pi--message-role message)))
+    (pcase role
+      ("assistant"
+       (let ((index 0))
+         (pi--docontent (item (plist-get message :content))
+           (pcase (plist-get item :type)
+             ("thinking"
+              (let* ((content (list item))
+                     (section (or (gethash index pi--content-sections)
+                                  (pi-section--new-section 'thinking pi-section--root-section))))
+                (pi--widget-save-excursion
+                  (pi-section--replace-section section
+                    (pi--insert-role-prefix role)
+                    (pi--insert-content content))
+                  (pi-section--set-info section (make-pi-section-assistant-info
+                                                 :header (pi--content-header content)
+                                                 :content content
+                                                 :type 'thinking)))))
+             ("text"
+              (let* ((content (list item))
+                     (section (or (gethash index pi--content-sections)
+                                  (pi-section--new-section 'assistant pi-section--root-section))))
+                (pi--widget-save-excursion
+                  (pi-section--replace-section section
+                    (pi--insert-role-prefix role)
+                    (pi--insert-content content t))
+                  (pi-section--set-info section (make-pi-section-assistant-info
+                                                 :header (pi--content-header content)
+                                                 :content content
+                                                 :type 'text))))))
+           (setq index (1+ index)))))
+      ("user"
+       (pi--insert-user-message (plist-get message :content)))
+      ("custom"
+       (pi--insert-custom-message message)))
     (when (and error-message (not (string-empty-p error-message)))
       (pi--widget-save-excursion
         (pi-section--create-section 'error pi-section--root-section
           (pi--insert-error error-message))))
     ;; Cleanup tracking state
-    (setq pi--text-section nil
-          pi--thinking-section nil)))
+    (clrhash pi--content-sections)))
 
 ;; read
 (defun pi--insert-read-args (args)
@@ -758,13 +802,22 @@ with the message plist to insert the custom message content."
                          (format ":%d-%d" start-line end-line))))))
       (pi--insert-file-link (expand-file-name path (pi--project-root)) suffix))))
 
-(defun pi--insert-read-result (result-text _details args)
+(defun pi--insert-read-result (content _details args)
   (when-let ((path (plist-get args :path)))
-    (when (not (string-empty-p result-text))
-      (pcase-let ((`(,clean-text . ,truncated-line) (pi--extract-truncation-notice result-text)))
-        (insert (pi--render-content (expand-file-name path (pi--project-root)) clean-text))
-        (when truncated-line
-          (insert truncated-line))))))
+    (dolist (item content)
+      (pcase (plist-get item :type)
+        ("text"
+         (let ((text (plist-get item :text)))
+           (when (not (string-empty-p text))
+             (pcase-let ((`(,clean-text . ,truncated-line) (pi--extract-truncation-notice text)))
+               (insert (pi--render-content (expand-file-name path (pi--project-root)) clean-text))
+               (when truncated-line
+                 (insert truncated-line))))))
+        ("image"
+         (when-let ((image (pi--create-image item)))
+           (insert "\n")
+           (insert-image image)
+           (insert "\n")))))))
 
 (defun pi--visit-read-result (_details args)
   (when-let ((path (plist-get args :path)))
@@ -788,9 +841,8 @@ with the message plist to insert the custom message content."
       (insert "\n")
       (insert (pi--render-content path content)))))
 
-(defun pi--insert-write-result (result-text _details _args)
-  (when (not (string-empty-p result-text))
-    (insert (format "%s" result-text))))
+(defun pi--insert-write-result (content _details _args)
+  (pi--insert-content content))
 
 (defun pi--visit-write-result (_details args)
   (when-let ((path (plist-get args :path)))
@@ -810,11 +862,12 @@ with the message plist to insert the custom message content."
   (when-let ((path (plist-get args :path)))
     (pi--insert-file-link (expand-file-name path (pi--project-root)))))
 
-(defun pi--insert-edit-result (result-text details _args)
+(defun pi--insert-edit-result (content details _args)
   (when-let ((patch (plist-get details :patch)))
     (insert (pi--render-diff patch)))
-  (when (not (string-empty-p result-text))
-    (insert (format "\n\n%s" result-text))))
+  (let ((text (pi--content-text content)))
+    (when (not (string-empty-p text))
+      (insert (format "\n\n%s" text)))))
 
 (defun pi--visit-edit-call (args)
   (when-let ((path (plist-get args :path)))
@@ -847,12 +900,13 @@ with the message plist to insert the custom message content."
   (when-let ((command (plist-get args :command)))
     (insert (pi--render-content "tmp.sh" command))))
 
-(defun pi--insert-bash-result (result-text details _args)
+(defun pi--insert-bash-result (content details _args)
   (let* ((exit-code (plist-get details :exitCode))
          (cancelled (plist-get details :cancelled))
-         (full-output-path (plist-get details :fullOutputPath)))
-    (when (not (string-empty-p result-text))
-      (insert (format "%s" result-text)))
+         (full-output-path (plist-get details :fullOutputPath))
+         (text (pi--content-text content)))
+    (when (not (string-empty-p text))
+      (insert (format "%s" text)))
     (when (eq cancelled t)
       (pi--insert-error "Cancelled"))
     (when (and (numberp exit-code) (not (zerop exit-code)))
@@ -902,32 +956,31 @@ with the message plist to insert the custom message content."
 (defconst pi--grep-line-regexp "^\\(.*\\):\\([0-9]+\\): \\(.*\\)$")
 (defconst pi--grep-line-alt-regexp "^\\(.*\\)\\([-:]\\)\\([0-9]+\\)\\([-:] ?\\)\\(.*\\)$")
 
-(defun pi--insert-grep-result (result-text _details args)
-  (if (string-empty-p result-text)
-      (insert result-text)
-    (let ((pattern (plist-get args :pattern))
-          (ignore-case (plist-get args :ignoreCase))
-          (literal (plist-get args :literal)))
-      (if (or (null pattern) (string-empty-p pattern))
-          (insert result-text)
-        (let ((lines (split-string result-text "\n")))
-          (dolist (line lines)
-            (cond
-             ((string-match pi--grep-line-regexp line)
-              (insert (propertize (match-string 1 line) 'face 'compilation-info) ":")
-              (insert (propertize (match-string 2 line) 'face 'compilation-line-number))
-              (insert ": ")
-              (pi--insert-grep-highlighted (match-string 3 line) pattern ignore-case literal))
-             ((string-match pi--grep-line-alt-regexp line)
-              (insert (propertize (match-string 1 line) 'face 'compilation-info))
-              (insert (match-string 2 line))
-              (insert (propertize (match-string 3 line) 'face 'compilation-line-number))
-              (insert (match-string 4 line))
-              (insert (match-string 5 line)))
-             (t
-              (insert line)))
-            (insert "\n"))
-          (delete-char -1))))))
+(defun pi--insert-grep-result (content _details args)
+  (let* ((result-text (pi--content-text content))
+         (pattern (plist-get args :pattern))
+         (ignore-case (plist-get args :ignoreCase))
+         (literal (plist-get args :literal)))
+    (if (or (null pattern) (string-empty-p pattern))
+        (insert result-text)
+      (let ((lines (split-string result-text "\n")))
+        (dolist (line lines)
+          (cond
+           ((string-match pi--grep-line-regexp line)
+            (insert (propertize (match-string 1 line) 'face 'compilation-info) ":")
+            (insert (propertize (match-string 2 line) 'face 'compilation-line-number))
+            (insert ": ")
+            (pi--insert-grep-highlighted (match-string 3 line) pattern ignore-case literal))
+           ((string-match pi--grep-line-alt-regexp line)
+            (insert (propertize (match-string 1 line) 'face 'compilation-info))
+            (insert (match-string 2 line))
+            (insert (propertize (match-string 3 line) 'face 'compilation-line-number))
+            (insert (match-string 4 line))
+            (insert (match-string 5 line)))
+           (t
+            (insert line)))
+          (insert "\n"))
+        (delete-char -1)))))
 
 (defun pi--normalize-grep-file (file args)
   (if-let ((path (plist-get args :path)))
@@ -965,9 +1018,8 @@ with the message plist to insert the custom message content."
     (when limit
       (insert (format " limit %d" limit)))))
 
-(defun pi--insert-find-result (result-text _details _args)
-  (when (not (string-empty-p result-text))
-    (insert result-text)))
+(defun pi--insert-find-result (content _details _args)
+  (pi--insert-content content))
 
 ;; ls
 (defun pi--insert-ls-args (args)
@@ -976,9 +1028,8 @@ with the message plist to insert the custom message content."
   (when-let ((limit (plist-get args :limit)))
     (insert (format " limit %d" limit))))
 
-(defun pi--insert-ls-result (result-text _details _args)
-  (when (not (string-empty-p result-text))
-    (insert result-text)))
+(defun pi--insert-ls-result (content _details _args)
+  (pi--insert-content content))
 
 (defun pi--format-tool-args (tool-name args)
   (with-temp-buffer
@@ -1000,19 +1051,19 @@ with the message plist to insert the custom message content."
                                      :args args
                                      :header (pi--section-header (substring-no-properties formatted-args)))))))
 
-(defun pi--insert-tool-result (tool-name result-text is-error &optional details args)
+(defun pi--insert-tool-result (tool-name content is-error &optional details args)
   (if (eq is-error t)
-      (when (not (string-empty-p result-text))
-        (pi--insert-error (format "%s" result-text)))
+      (let ((text (pi--content-text content)))
+        (when (not (string-empty-p text))
+          (pi--insert-error (format "%s" text))))
     (if-let ((inserter (alist-get tool-name pi-insert-tool-result-functions nil nil #'equal)))
-        (funcall inserter result-text details args)
-      (when (not (string-empty-p result-text))
-        (insert (format "%s" result-text))))))
+        (funcall inserter content details args)
+      (pi--insert-content content))))
 
 (defun pi--handle-tool-execution-update (event)
   (let* ((tool-call-id (plist-get event :toolCallId))
          (partial-result (plist-get event :partialResult))
-         (new-text (pi--content-text partial-result))
+         (new-text (pi--content-text (plist-get partial-result :content)))
          (entry (gethash tool-call-id pi--tool-calls)))
     (when (and entry new-text)
       (let ((prev-text (pi-tool-call-prev-text entry))
@@ -1030,7 +1081,7 @@ with the message plist to insert the custom message content."
 (defun pi--handle-tool-execution-end (event)
   (let* ((tool-call-id (plist-get event :toolCallId))
          (result (plist-get event :result))
-         (result-text (pi--content-text result))
+         (content (pi--content-normalize (plist-get result :content)))
          (is-error (plist-get event :isError))
          (tool-name (plist-get event :toolName))
          (entry (gethash tool-call-id pi--tool-calls)))
@@ -1040,7 +1091,7 @@ with the message plist to insert the custom message content."
             (args (pi-tool-call-args entry)))
         (pi--widget-save-excursion
           (pi-section--replace-section result-section
-            (pi--insert-tool-result tool-name result-text is-error
+            (pi--insert-tool-result tool-name content is-error
                                     details
                                     args)))
         (pi-section--set-info result-section (make-pi-section-tool-result-info :tool-name tool-name :details details :args args)))
@@ -1522,6 +1573,14 @@ If `pi-prompt-streaming-behavior' is `followUp', use `steer' and vice versa."
     (when (and prompt-text (not (string-empty-p prompt-text)))
       (pi-send-prompt prompt-text alt-behavior))))
 
+(defun pi--dnd-handler (url _action)
+  (when-let ((file (dnd-get-local-file-name url t)))
+    (let ((path (if (file-in-directory-p file (pi--project-root))
+                    (file-relative-name file (pi--project-root))
+                  file)))
+      (pi--prompt-append (format "@%s" path))))
+  'private)
+
 (defun pi--prompt-append (text)
   (pi--with-chat-buffer
     (let ((current-value (widget-value pi--prompt-widget)))
@@ -1865,10 +1924,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                      (setq name (plist-get json :name)))
                     ('message
                      (unless first-text
-                       (let ((first-msg-text (pi--content-text (plist-get json :message))))
-                         (when (and (not (string-empty-p first-msg-text))
-                                    (null first-text))
-                           (setq first-text (pi--section-header first-msg-text))))))))
+                       (setq first-text (pi--content-header (plist-get (plist-get json :message) :content)))))))
               (error nil))))
         (forward-line 1)
         (cl-incf lines-read))
@@ -1928,8 +1984,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
 (defun pi--clear-sections ()
   (dolist (child (copy-sequence (pi-section-children pi-section--root-section)))
     (pi-section--delete-section child))
-  (setq pi--text-section nil
-        pi--thinking-section nil)
+  (clrhash pi--content-sections)
   (clrhash pi--tool-calls))
 
 (defun pi--clear-session-widgets ()
@@ -2302,6 +2357,9 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (setq pi--prompt-widget-lines (make-hash-table :test 'equal))
   (setq pi--status-widget (widget-create 'pi-item :face 'pi-status-face pi--empty-widget-text))
   (setq pi--status-widget-texts (make-hash-table :test 'equal))
+  (setq-local dnd-protocol-alist
+              (cons '("^file:" . pi--dnd-handler)
+                    dnd-protocol-alist))
   (widget-setup)
   (pi-focus-prompt)
   (add-hook 'kill-buffer-hook #'pi--cleanup-chat-buffer nil t)

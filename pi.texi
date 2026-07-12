@@ -430,7 +430,9 @@ with ARGS plist to insert formatted tool call arguments.
 Alist mapping tool names to result inserter functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
-with (RESULT-TEXT DETAILS ARGS) to insert the tool execution result.
+with (CONTENT DETAILS ARGS) to insert the tool execution result.
+CONTENT is a list of content items.  Use @code{pi--insert-content} to render
+it, or @code{pi--content-text} to extract text from content.
 @end defopt
 
 @defopt pi-visit-tool-result-functions

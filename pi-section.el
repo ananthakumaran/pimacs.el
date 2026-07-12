@@ -112,10 +112,10 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
   tool-name details args)
 
 (cl-defstruct pi-section-user-info
-  header message)
+  header content)
 
 (cl-defstruct pi-section-assistant-info
-  header message type)
+  header content type)
 
 (defun pi-section--set-info (section info)
   (setf (pi-section-info section) info))
@@ -214,13 +214,6 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
       (setf (pi-section-children parent)
             (delq section (pi-section-children parent)))
       (pi-section--update-section-end parent (copy-marker beg)))))
-
-(defmacro pi-section--create-or-replace-section (section type parent &rest body)
-  (declare (indent 3)
-           (debug (symbolp symbolp symbolp body)))
-  `(if ,section
-       (pi-section--replace-section ,section ,@body)
-     (pi-section--create-section ,type ,parent ,@body)))
 
 (defun pi-section--update-section-end (section end)
   (when section
@@ -465,6 +458,7 @@ VISIBILITY can be one of:
         (overlay-put ov 'pi-section-hidden t)
         (overlay-put ov 'evaporate t)
         (overlay-put ov 'invisible t)
+        (overlay-put ov 'display "")
         (overlay-put ov 'isearch-open-invisible
                      #'pi-section--isearch-open)))
 
