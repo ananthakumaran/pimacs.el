@@ -288,7 +288,7 @@ user about the deletion.
 
 assistant> File `test.txt` has been deleted successfully.
 
-Session exported to: /tmp/pi-session.html
+Session exported to: /tmp/pimacs-session.html
 
   user> 
   

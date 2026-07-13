@@ -1,0 +1,644 @@
+;;; pimacs-section.el --- Section support -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2026 Anantha Kumaran.
+
+;; This program is free software: you can redistribute it and/or modify it
+;; under the terms of the GNU General Public License as published by
+
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful, but
+;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;; General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+
+;; A buffer in pimacs-mode is organized into hierarchical sections.
+;; These sections are used for navigation and for hiding parts of the
+;; buffer.
+
+;;; Code:
+
+(require 'cl-lib)
+
+(defcustom pimacs-section-autohide-count 2
+  "Automatically hide older chat sections beyond this count.
+This helps reduce clutter by collapsing earlier responses when the
+conversation grows long.  When nil, auto hiding is disabled and no
+sections are hidden automatically."
+  :type '(choice (const :tag "Disable" nil)
+                 integer)
+  :group 'pimacs)
+
+(defcustom pimacs-section-padding "\n\n"
+  "String inserted between sections to control the visual gap.
+Increase or decrease this value to adjust spacing between sections."
+  :type 'string
+  :group 'pimacs)
+
+(defcustom pimacs-section-visibility-indicators
+  '(pimacs-section-fringe-bitmap> . pimacs-section-fringe-bitmapv)
+  "Fringe bitmaps used to indicate section visibility.
+
+The car is used for hidden sections and the cdr for visible sections.
+Set this to nil to disable fringe indicators."
+  :type '(choice
+          (const :tag "No indicators" nil)
+          (cons :tag "Fringe indicators"
+                (symbol :tag "Hidden section bitmap")
+                (symbol :tag "Visible section bitmap")))
+  :group 'pimacs)
+
+(defvar pimacs-section--visibility-default :autoshow)
+(defvar-local pimacs-section--root-section nil)
+
+(define-fringe-bitmap 'pimacs-section-fringe-bitmap>
+  [#b01100000
+   #b00110000
+   #b00011000
+   #b00001100
+   #b00011000
+   #b00110000
+   #b01100000
+   #b00000000])
+
+(define-fringe-bitmap 'pimacs-section-fringe-bitmapv
+  [#b00000000
+   #b10000010
+   #b11000110
+   #b01101100
+   #b00111000
+   #b00010000
+   #b00000000
+   #b00000000])
+
+(defun pimacs-section--visible-p (section)
+  (memq (pimacs-section-visibility section) '(:autoshow :show)))
+
+(defun pimacs-section--hidden-p (section)
+  (memq (pimacs-section-visibility section) '(:autohide :hide)))
+
+(defun pimacs-section--user-toggled-p (section)
+  (memq (pimacs-section-visibility section) '(:show :hide)))
+
+(defun pimacs-section--prefix-p (prefix list)
+  "Return non-nil if PREFIX is a prefix of LIST.
+PREFIX and LIST should both be lists.
+
+If the car of PREFIX is the symbol '*, then return non-nil if the cdr of PREFIX
+is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
+  (or (null prefix)
+      (if (eq (car prefix) '*)
+          (or (pimacs-section--prefix-p (cdr prefix) list)
+              (and list
+                   (pimacs-section--prefix-p prefix (cdr list))))
+        (and list
+             (equal (car prefix) (car list))
+             (pimacs-section--prefix-p (cdr prefix) (cdr list))))))
+
+
+(cl-defstruct pimacs-section
+  parent children beginning end type visibility info padding)
+
+(cl-defstruct pimacs-section-tool-call-info
+  tool-name args header)
+
+(cl-defstruct pimacs-section-tool-result-info
+  tool-name details args)
+
+(cl-defstruct pimacs-section-user-info
+  header content)
+
+(cl-defstruct pimacs-section-assistant-info
+  header content type)
+
+(defun pimacs-section--set-info (section info)
+  (setf (pimacs-section-info section) info))
+
+(defun pimacs-section--advance-pointer-maker (marker)
+  (let ((m (copy-marker marker)))
+    (set-marker-insertion-type m t)
+    m))
+
+(defun pimacs-section--new-section (type parent &rest args)
+  (let* ((padding (or (plist-get args :padding) pimacs-section-padding))
+         (s (make-pimacs-section :parent parent
+                                 :type type
+                                 :visibility pimacs-section--visibility-default
+                                 :padding padding)))
+    (when parent
+      (setf (pimacs-section-children parent)
+            (nconc (pimacs-section-children parent)
+                   (list s))))
+    s))
+
+(defun pimacs-section--create-root-section ()
+  (when pimacs-section--root-section
+    (error "Root section already exists"))
+  (let ((root (pimacs-section--new-section 'root nil)))
+    (setf (pimacs-section-beginning root) (point-min))
+    (setf (pimacs-section-end root) (point-min-marker))
+    (setq pimacs-section--root-section root)
+    root))
+
+(defmacro pimacs-section--insert-section (section &rest body)
+  (declare (indent 1)
+           (debug (symbolp body)))
+  (let ((s (make-symbol "*section*")))
+    `(let* ((,s ,section))
+       (goto-char (pimacs-section-end (pimacs-section-parent ,s)))
+       (setf (pimacs-section-beginning ,s) (point-marker))
+       ,@body
+       (insert (pimacs-section-padding ,s))
+       (setf (pimacs-section-beginning ,s) (pimacs-section--advance-pointer-maker (pimacs-section-beginning ,s)))
+       (pimacs-section--update-section-end ,s (point-marker))
+       (pimacs-section--propertize-section ,s)
+       (pimacs-section--update-visibility-indicator ,s)
+       ,s)))
+
+(defmacro pimacs-section--create-section (type parent &rest body)
+  (declare (indent 2)
+           (debug (symbolp symbolp body)))
+  (let ((s (make-symbol "*section*")))
+    `(let* ((,s (pimacs-section--new-section ,type ,parent)))
+       (pimacs-section--insert-section ,s
+         ,@body)
+       ,s)))
+
+(defmacro pimacs-section--append-section (section &rest body)
+  (declare (indent 1)
+           (debug (symbolp body)))
+  (let ((s (make-symbol "*section*")))
+    `(let* ((,s ,section))
+       (goto-char (pimacs-section-beginning ,s))
+       (setf (pimacs-section-beginning ,s) (point-marker))
+       (goto-char (- (pimacs-section-end ,s) (length (pimacs-section-padding ,s))))
+       ,@body
+       (forward-char (length (pimacs-section-padding ,s)))
+       (setf (pimacs-section-beginning ,s) (pimacs-section--advance-pointer-maker (pimacs-section-beginning ,s)))
+       (pimacs-section--update-section-end ,s (point-marker))
+       (pimacs-section--propertize-section ,s)
+       (pimacs-section--update-visibility-indicator ,s)
+       ,s)))
+
+(defmacro pimacs-section--replace-section (section &rest body)
+  (declare (indent 1)
+           (debug (symbolp body)))
+  (let ((s (make-symbol "*section*")))
+    `(let* ((,s ,section))
+       (delete-region (pimacs-section-beginning ,s) (pimacs-section-end ,s))
+       (setf (pimacs-section-children ,s) nil)
+       (goto-char (pimacs-section-beginning ,s))
+       (setf (pimacs-section-beginning ,s) (point-marker))
+       ,@body
+       (insert (pimacs-section-padding ,s))
+       (setf (pimacs-section-beginning ,s) (pimacs-section--advance-pointer-maker (pimacs-section-beginning ,s)))
+       (pimacs-section--update-section-end ,s (point-marker))
+       (pimacs-section--propertize-section ,s)
+       (if (pimacs-section--hidden-p ,s)
+           (pimacs-section--set-visibility ,s (pimacs-section-visibility ,s))
+         (pimacs-section--update-visibility-indicator ,s))
+       ,s)))
+
+(defun pimacs-section--delete-section (section)
+  (let ((beg (pimacs-section-beginning section))
+        (end (pimacs-section-end section))
+        (parent (pimacs-section-parent section)))
+    (delete-region beg end)
+    (when parent
+      (setf (pimacs-section-children parent)
+            (delq section (pimacs-section-children parent)))
+      (pimacs-section--update-section-end parent (copy-marker beg)))))
+
+(defun pimacs-section--update-section-end (section end)
+  (when section
+    (let ((current-end (pimacs-section-end section)))
+      (when (or (null current-end)
+                (<= (marker-position current-end) (marker-position end)))
+        (setf (pimacs-section-end section) end)
+        ;; rebuild the overlay if the section is hidden
+        (when (pimacs-section--hidden-p section)
+          (pimacs-section--set-visibility section (pimacs-section-visibility section)))))
+    (pimacs-section--update-section-end (pimacs-section-parent section) end)))
+
+(defun pimacs-section--propertize-section (section)
+  "Add text-property needed for SECTION."
+  (put-text-property (pimacs-section-beginning section)
+                     (pimacs-section-end section)
+                     'pimacs-section section))
+
+(defun pimacs-section--find-section (path top)
+  "Find the section at the path PATH in subsection of section TOP."
+  (if (null path)
+      top
+    (let ((secs (pimacs-section-children top)))
+      (while (and secs (not (eq (car path)
+                                (pimacs-section-type (car secs)))))
+        (setq secs (cdr secs)))
+      (and (car secs)
+           (pimacs-section--find-section (cdr path) (car secs))))))
+
+(defun pimacs-section--section-path (section)
+  "Return the path of SECTION."
+  (if (or (not section) (not (pimacs-section-parent section)))
+      '()
+    (append (pimacs-section--section-path (pimacs-section-parent section))
+            (list (pimacs-section-type section)))))
+
+(defun pimacs-section--current-section ()
+  "Return the pimacs section at point."
+  (pimacs-section--section-at (point)))
+
+(defun pimacs-section--section-at (pos)
+  "Return the pimacs section at position POS."
+  (get-text-property pos 'pimacs-section))
+
+(defun pimacs-section--find-section-after (pos secs)
+  "Find the first section that begins after POS in the list SECS."
+  (while (and secs
+              (not (> (pimacs-section-beginning (car secs)) pos)))
+    (setq secs (cdr secs)))
+  (car secs))
+
+(defun pimacs-section--find-section-before (pos secs)
+  "Find the last section that begins before POS in the list SECS."
+  (let ((prev nil))
+    (while (and secs
+                (not (> (pimacs-section-beginning (car secs)) pos)))
+      (setq prev (car secs))
+      (setq secs (cdr secs)))
+    prev))
+
+(defun pimacs-section--walk-sections (section step predicate)
+  "Walk from SECTION using STEP until PREDICATE matches.
+Return the first matching section, or nil if there is none."
+  (setq section (and section (funcall step section)))
+  (while (and section
+              (not (funcall predicate section)))
+    (setq section (funcall step section)))
+  section)
+
+(defun pimacs-section--navigable-children (section)
+  "Return the child sections of SECTION that should be navigated."
+  (and (pimacs-section--visible-p section)
+       (pimacs-section-children section)))
+
+(defun pimacs-section--next-after-subtree-step (section)
+  "Return the first section after SECTION's subtree in tree order."
+  (let ((parent (pimacs-section-parent section)))
+    (if parent
+        (let ((next (cadr (memq section
+                                (pimacs-section-children parent)))))
+          (or next
+              (pimacs-section--next-after-subtree-step parent))))))
+
+(defun pimacs-section--next-section-step (section)
+  "Return the section immediately after SECTION in tree order."
+  (or (car (pimacs-section--navigable-children section))
+      (pimacs-section--next-after-subtree-step section)))
+
+(defun pimacs-section--next-section (section)
+  "Return the section that is after SECTION."
+  (pimacs-section--walk-sections section #'pimacs-section--next-section-step
+                                 (lambda (_section) t)))
+
+(defun pimacs-section--next-section-of-type (section type)
+  "Return the first section after SECTION whose type is TYPE."
+  (pimacs-section--walk-sections section #'pimacs-section--next-section-step
+                                 (lambda (next)
+                                   (eq (pimacs-section-type next) type))))
+(defun pimacs-section--next-target-at-point ()
+  "Return the section `pimacs-goto-next-section' would jump to from point."
+  (let ((section (pimacs-section--current-section)))
+    (and section
+         (or (pimacs-section--find-section-after (point)
+                                                 (pimacs-section--navigable-children section))
+             (pimacs-section--next-after-subtree-step section)))))
+
+(defun pimacs-section--goto-next-section-of-type (type)
+  "Go to the next pimacs section whose type is TYPE."
+  (let* ((target (pimacs-section--next-target-at-point))
+         (next (and target
+                    (if (eq (pimacs-section-type target) type)
+                        target
+                      (pimacs-section--next-section-of-type target type)))))
+    (if next
+        (goto-char (pimacs-section-beginning next))
+      (message "No next %s section" type))))
+
+(defun pimacs-goto-next-section ()
+  "Go to the next pimacs section."
+  (interactive)
+  (if-let ((next (pimacs-section--next-target-at-point)))
+      (goto-char (pimacs-section-beginning next))
+    (message "No next section")))
+
+(defun pimacs-section--prev-section-step (section)
+  "Return the section immediately before SECTION in tree order."
+  (when-let ((parent (pimacs-section-parent section)))
+    (if-let ((prev (cadr (memq section
+                               (reverse (pimacs-section-children parent))))))
+        (progn
+          (while (pimacs-section--navigable-children prev)
+            (setq prev (car (last (pimacs-section--navigable-children prev)))))
+          prev)
+      (and (pimacs-section-parent parent)
+           parent))))
+
+(defun pimacs-section--prev-section (section)
+  "Return the section that is before SECTION."
+  (pimacs-section--walk-sections section #'pimacs-section--prev-section-step
+                                 (lambda (_section) t)))
+
+(defun pimacs-section--prev-section-of-type (section type)
+  "Return the first section before SECTION whose type is TYPE."
+  (pimacs-section--walk-sections section #'pimacs-section--prev-section-step
+                                 (lambda (prev)
+                                   (eq (pimacs-section-type prev) type))))
+(defun pimacs-section--previous-target-at-point ()
+  "Return the section `pimacs-goto-previous-section' would jump to from point."
+  (let ((section (pimacs-section--current-section)))
+    (cond
+     ((null section)
+      (and pimacs-section--root-section
+           (car (last (pimacs-section-children pimacs-section--root-section)))))
+     ((= (point) (pimacs-section-beginning section))
+      (pimacs-section--prev-section section))
+     (t
+      (or (pimacs-section--find-section-before (point)
+                                               (pimacs-section--navigable-children section))
+          section)))))
+
+(defun pimacs-goto-previous-section ()
+  "Goto the previous pimacs section."
+  (interactive)
+  (if-let ((prev (pimacs-section--previous-target-at-point)))
+      (goto-char (pimacs-section-beginning prev))
+    (message "No previous section")))
+
+(defun pimacs-section--goto-previous-section-of-type (type)
+  "Go to the previous pimacs section whose type is TYPE."
+  (let* ((target (pimacs-section--previous-target-at-point))
+         (prev (and target
+                    (if (eq (pimacs-section-type target) type)
+                        target
+                      (pimacs-section--prev-section-of-type target type)))))
+    (if prev
+        (goto-char (pimacs-section-beginning prev))
+      (message "No previous %s section" type))))
+
+(defun pimacs-goto-last-section ()
+  "Go to the last child section of `pimacs-section--root-section'."
+  (interactive)
+  (if (and pimacs-section--root-section
+           (pimacs-section-children pimacs-section--root-section))
+      (goto-char (pimacs-section-beginning
+                  (car (last (pimacs-section-children pimacs-section--root-section)))))
+    (message "No sections")))
+
+(defun pimacs-section--isearch-open (ov)
+  (when-let ((section
+              (get-text-property (overlay-start ov) 'pimacs-section))
+             (parent (pimacs-section-parent section)))
+    (while (and parent (not (eq parent pimacs-section--root-section)))
+      (setq section (pimacs-section-parent section))
+      (setq parent (pimacs-section-parent section)))
+    (pimacs-section--set-visibility section :show)))
+
+(defun pimacs-section--visibility-indicator ()
+  (and (display-graphic-p)
+       pimacs-section-visibility-indicators))
+
+(defun pimacs-section--update-visibility-indicator (section)
+  (when (pimacs-section-parent section)
+    (let ((beg (pimacs-section-beginning section))
+          (eol (save-excursion
+                 (goto-char (pimacs-section-beginning section))
+                 (line-end-position))))
+      (dolist (ov (overlays-in beg eol))
+        (when (overlay-get ov 'pimacs-section-visibility-indicator)
+          (delete-overlay ov)))
+      (when-let ((indicator (pimacs-section--visibility-indicator)))
+        (let ((ov (make-overlay beg eol nil t))
+              (bitmap (if (pimacs-section--hidden-p section)
+                          (car indicator)
+                        (cdr indicator))))
+          (overlay-put ov 'evaporate t)
+          (overlay-put ov 'pimacs-section-visibility-indicator t)
+          (overlay-put ov 'before-string
+                       (propertize "fringe" 'display
+                                   `(left-fringe ,bitmap fringe))))))))
+
+(defun pimacs-section--set-visibility (section visibility)
+  "Set the visibility state of SECTION.
+
+VISIBILITY can be one of:
+- `:autoshow'  - visible, never toggled by user (initial state)
+- `:autohide'  - hidden, auto-managed
+- `:show'      - visible, user explicitly toggled
+- `:hide'      - hidden, user explicitly toggled"
+  (setf (pimacs-section-visibility section) visibility)
+  (let ((inhibit-read-only t)
+        (beg (save-excursion
+               (goto-char (pimacs-section-beginning section))
+               (forward-line)
+               (point-marker)))
+        (end (pimacs-section-end section)))
+
+    ;; Remove any existing hide overlays.
+    (remove-overlays beg end 'pimacs-section-hidden t)
+
+    (when (and (pimacs-section--hidden-p section) (< beg end))
+      (let ((ov (make-overlay beg end)))
+        (overlay-put ov 'pimacs-section-hidden t)
+        (overlay-put ov 'evaporate t)
+        (overlay-put ov 'invisible t)
+        (overlay-put ov 'display "")
+        (overlay-put ov 'isearch-open-invisible
+                     #'pimacs-section--isearch-open)))
+
+    (pimacs-section--update-visibility-indicator section))
+
+  (when (pimacs-section--visible-p section)
+    (dolist (child (pimacs-section-children section))
+      (pimacs-section--set-visibility child
+                                      (pimacs-section-visibility child)))))
+
+(defun pimacs-toggle-section ()
+  "Toggle visibility of current section."
+  (interactive)
+  (when-let (section (pimacs-section--current-section))
+    (when (pimacs-section-parent section)
+      (goto-char (pimacs-section-beginning section))
+      (if (pimacs-section--visible-p section)
+          (pimacs-section--set-visibility section :hide)
+        (pimacs-section--set-visibility section :show)))))
+
+(defun pimacs-mouse-toggle-section (event)
+  "Toggle visibility of the section clicked in the fringe.
+EVENT is the mouse event that triggered the toggle."
+  (interactive "e")
+  (let* ((pos (event-start event))
+         (section (pimacs-section--section-at (posn-point pos))))
+    (when (and section (pimacs-section-parent section))
+      (goto-char (pimacs-section-beginning section))
+      (pimacs-toggle-section))))
+
+(defun pimacs-section-autohide ()
+  "Hide sections beyond `pimacs-section-autohide-count'."
+  (interactive)
+  (when-let* ((count pimacs-section-autohide-count)
+              (children (pimacs-section-children pimacs-section--root-section)))
+    (let ((hide-count (max 0 (- (length children) count))))
+      (dolist (child (seq-take children hide-count))
+        (when (and (eq (pimacs-section-visibility child) :autoshow)
+                   (not (and (>= (point) (pimacs-section-beginning child))
+                             (< (point) (pimacs-section-end child)))))
+          (pimacs-section--set-visibility child :autohide))))))
+
+(defun pimacs-section-show-level-1-all ()
+  "Collapse all the sections in the pimacs status buffer."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (and (not (eobp)) (pimacs-section--current-section))
+      (let ((section (pimacs-section--current-section)))
+	(pimacs-section--set-visibility section :hide))
+      (forward-line 1))))
+
+
+(defmacro pimacs-section--section-case (&rest clauses)
+  "Make different action depending of current section.
+
+CLAUSES is a list of CLAUSE, each clause is (SECTION-TYPE &BODY)
+where SECTION-TYPE describe section where BODY will be run.
+
+This returns non-nil if some section matches.  If the
+corresponding body return a non-nil value, it is returned,
+otherwise it return t."
+
+  (declare (indent 1)
+           (debug (&rest (sexp body))))
+  (let ((section (make-symbol "*section*"))
+        (path (make-symbol "*path*")))
+    `(let* ((,section (pimacs-section--current-section))
+            (,path (pimacs-section--section-path ,section)))
+       (cond ,@(mapcar (lambda (clause)
+                         (let ((prefix (car clause))
+                               (body (cdr clause)))
+                           `(,(if (eq prefix t)
+                                  `t
+                                `(pimacs-section--prefix-p ',(reverse prefix) (reverse ,path)))
+                             (or (progn ,@body)
+                                 t))))
+                       clauses)))))
+
+
+(defun pimacs-demo ()
+  "Create a demo buffer with nested pimacs sections."
+  (interactive)
+  (let ((buf (get-buffer-create "*pimacs-demo*")))
+    (with-current-buffer buf
+      (setq buffer-read-only nil)
+      (erase-buffer)
+      (let* ((pimacs-section-padding "\n")
+             (root (pimacs-section--create-root-section))
+             (build (pimacs-section--new-section 'build root))
+             (compile (pimacs-section--new-section 'compile build))
+             (tests (pimacs-section--new-section 'test build))
+             (unit-tests (pimacs-section--new-section 'test tests))
+             (integration-tests (pimacs-section--new-section 'integration-tests tests))
+             (logs (pimacs-section--new-section 'logs root))
+             (server-log (pimacs-section--new-section 'server-log logs))
+             (worker-log (pimacs-section--new-section 'worker-log logs))
+             (deploy (pimacs-section--new-section 'deploy root)))
+        (pimacs-section--insert-section build
+          (insert "[-] Build\n"))
+        (pimacs-section--insert-section compile
+          (insert "  [-] Compile\n")
+          (insert "      Compiling foo.c\n")
+          (insert "      Compiling bar.c\n"))
+        (pimacs-section--insert-section tests
+          (insert "  [-] Tests\n"))
+        (pimacs-section--insert-section unit-tests
+          (insert "      [-] Unit Tests\n")
+          (insert "          test-auth ... ok\n")
+          (insert "          test-db ... ok\n"))
+        (pimacs-section--insert-section integration-tests
+          (insert "      [-] Integration Tests\n")
+          (insert "          api-flow ... running\n"))
+        (pimacs-section--insert-section logs
+          (insert "[-] Logs\n"))
+        (pimacs-section--insert-section server-log
+          (insert "  [-] Server\n")
+          (insert "      Listening on :8080\n")
+          (insert "      Connected client #42\n"))
+        (pimacs-section--insert-section worker-log
+          (insert "  [-] Worker\n")
+          (insert "      Job started\n")
+          (insert "      Job completed\n"))
+        (pimacs-section--insert-section deploy
+          (insert "[-] Deploy\n")
+          (insert "    Uploading artifacts...\n")
+          (insert "    Restarting services...\n"))
+        (pimacs-section--append-section server-log
+          (insert "      Connected client #43\n")
+          (insert "      Connected client #44\n")
+          (insert "      Connected client #45\n"))
+        (pimacs-section--replace-section worker-log
+          (insert "  [-] Worker\n")
+          (insert "      Restarted\n")
+          (insert "      Processing queue...\n")
+          (insert "      Queue drained\n"))
+        (pimacs-section--append-section server-log
+          (insert "      Connected client #46\n")
+          (insert "      Connected client #47\n")
+          (insert "      Connected client #48\n")))
+
+      (setq buffer-read-only t)
+      (goto-char (point-min)))
+
+    (pop-to-buffer buf)))
+
+(defun pimacs-describe-section (section &optional indent)
+  "Pretty print SECTION and its children with INDENT.
+Does not recurse into the parent."
+  (interactive (list (pimacs-section--current-section) 0))
+  (let ((prefix (make-string (* indent 2) ?\s))
+        (parent (pimacs-section-parent section)))
+    (princ (format "%sSection: %s\n" prefix
+                   (pimacs-section-type section)))
+    (when parent
+      (princ (format "%s  parent: %s\n" prefix
+                     (pimacs-section-type parent))))
+    (princ (format "%s  beginning: %s, end: %s\n" prefix
+                   (pimacs-section-beginning section)
+                   (pimacs-section-end section)))
+    (princ (format "%s  visibility: %s\n" prefix
+                   (pimacs-section-visibility section)))
+    (when (pimacs-section-info section)
+      (princ (format "%s  info: %s\n" prefix
+                     (pimacs-section-info section))))
+    (let ((children (pimacs-section-children section)))
+      (when children
+        (princ (format "%s  Children:\n" prefix))
+        (dolist (child children)
+          (pimacs-describe-section child (1+ indent)))))))
+
+(defun pimacs-section--section-line ()
+  "Return the 0-based line number of point within the current section.
+Returns 0 if point is on the first line of the section or if there is
+no current section."
+  (if-let ((section (pimacs-section--current-section)))
+      (- (line-number-at-pos (point))
+         (line-number-at-pos (pimacs-section-beginning section)))
+    0))
+
+(provide 'pimacs-section)
+
+;;; pimacs-section.el ends here

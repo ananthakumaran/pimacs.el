@@ -1,7 +1,7 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
-@setfilename pi.info
-@settitle Pi User Manual
+@setfilename pimacs.info
+@settitle Pimacs User Manual
 @c %**end of header
 
 @copying
@@ -53,13 +53,13 @@ hljs.highlightAll();
 
 @dircategory Emacs
 @direntry
-* Pi: (pi).               An Emacs client for Pi Coding Agent.
+* Pimacs: (pimacs).               An Emacs client for Pi Coding Agent.
 @end direntry
 
 @node Top
-@top Pi User Manual
+@top Pimacs User Manual
 
-Pi is an Emacs client for Pi Coding Agent.
+Pimacs is an Emacs client for Pi Coding Agent.
 
 @menu
 * Introduction::
@@ -74,44 +74,44 @@ Pi is an Emacs client for Pi Coding Agent.
 @node Introduction
 @chapter Introduction
 
-Pi is an Emacs client for @uref{https://pi.dev/, Pi Coding Agent}.
+Pimacs is an Emacs client for @uref{https://pi.dev/, Pi Coding Agent}.
 It provides an interactive interface to the Pi Coding Agent directly
 from Emacs.
 
 @node Setup
 @chapter Setup
 
-@section Install the Pi Agent
+@section Install the Pimacs Agent
 
-First, install the Pi agent using npm:
+First, install the Pimacs agent using npm:
 
 @example
 npm install -g --ignore-scripts @@earendil-works/pi-coding-agent
 @end example
 
-Then start Pi and run @code{/login} to configure your provider:
+Then start Pimacs and run @code{/login} to configure your provider:
 
 @example
 pi
 @end example
 
-@section Install @code{pi.el}
+@section Install @code{pimacs.el}
 
 Add the following to your Emacs configuration:
 
 @lisp
-(use-package pi
+(use-package pimacs
   :ensure t
-  :vc (:url "git@@github.com:ananthakumaran/pi.el.git"
+  :vc (:url "git@@github.com:ananthakumaran/pimacs.el.git"
        :rev :newest)
-  :commands (pi-chat))
+  :commands (pimacs-chat))
 @end lisp
 
 @node Usage
 @chapter Usage
 
-Run @kbd{M-x pi-chat} from any file in your project to start a Pi chat
-session.  Use a prefix argument (@kbd{C-u M-x pi-chat}) to start
+Run @kbd{M-x pimacs-chat} from any file in your project to start a Pimacs chat
+session.  Use a prefix argument (@kbd{C-u M-x pimacs-chat}) to start
 multiple chats on the same project.
 
 The chat buffer is read-only except for the prompt input area.  Use
@@ -135,7 +135,7 @@ support completion in the prompt buffer.  Type @kbd{/} and press
 @kbd{C-M-i} (or any key bound to completion) to see available commands.
 
 In addition to the commands listed below, extension commands, prompt
-templates, and skills registered with the Pi agent can also be
+templates, and skills registered with the Pimacs agent can also be
 invoked via slash commands.  These are fetched automatically from the
 agent and included in the completion list.
 
@@ -161,7 +161,7 @@ Angle brackets @code{<>} denote required arguments, square brackets
 @tab Cycle through thinking levels.
 @item @code{/exit}
 @tab
-@tab Quit pi.
+@tab Quit pimacs.
 @item @code{/export}
 @tab @code{[file]}
 @tab Export session to HTML.
@@ -179,7 +179,7 @@ Angle brackets @code{<>} denote required arguments, square brackets
 @tab Start a new session.
 @item @code{/quit}
 @tab
-@tab Quit pi.
+@tab Quit pimacs.
 @item @code{/reload}
 @tab
 @tab Reload extensions, skills and prompts.
@@ -211,7 +211,7 @@ Angle brackets @code{<>} denote required arguments, square brackets
 
 Type @kbd{@@} followed by a partial file path to trigger file name
 completion in the prompt buffer.  The completion backend is controlled
-by @code{pi-file-completion-backend}.
+by @code{pimacs-file-completion-backend}.
 
 @node Bash
 @section Bash
@@ -226,14 +226,14 @@ run a command without adding it to the conversation context.
 @node Sending Context
 @section Sending Context
 
-You can send contextual information from any buffer to the Pi chat
+You can send contextual information from any buffer to the Pimacs chat
 prompt.
 
 @multitable @columnfractions .35 .65
 @headitem Command @tab Description
-@item @code{pi-send-region} @tab Append the selected region to the prompt input.
-@item @code{pi-send-filename} @tab Append the current buffer's filename (prefixed with @code{@@}) to the prompt input.
-@item @code{pi-send-flycheck-errors} @tab Append the Flycheck errors at point to the prompt input.  Falls back to all current errors in the buffer when there are none at point.
+@item @code{pimacs-send-region} @tab Append the selected region to the prompt input.
+@item @code{pimacs-send-filename} @tab Append the current buffer's filename (prefixed with @code{@@}) to the prompt input.
+@item @code{pimacs-send-flycheck-errors} @tab Append the Flycheck errors at point to the prompt input.  Falls back to all current errors in the buffer when there are none at point.
 @end multitable
 
 @node Images
@@ -257,7 +257,7 @@ The following image formats are supported:
 @end itemize
 
 
-Drag an image file from your file manager and drop it into the Pi
+Drag an image file from your file manager and drop it into the Pimacs
 chat buffer, or paste a supported image from the clipboard via
 @code{yank-media}.  To remove an attached image, click on the
 thumbnail with the mouse, or place point on it and press
@@ -266,20 +266,20 @@ thumbnail with the mouse, or place point on it and press
 @node Sandbox
 @chapter Sandbox
 
-To run Pi inside a sandbox, customize @code{pi-executable} and
-@code{pi-flags}:
+To run Pimacs inside a sandbox, customize @code{pimacs-executable} and
+@code{pimacs-flags}:
 
 @lisp
-(setq pi-executable "nono")
-(setq pi-flags '("run" "--silent" "--profile" "pi" "--allow-cwd" "--" "pi"
+(setq pimacs-executable "nono")
+(setq pimacs-flags '("run" "--silent" "--profile" "pi" "--allow-cwd" "--" "pi"
                  "--tools" "read,bash,edit,write,grep,find,ls"))
 @end lisp
 
 @node How It Works
 @chapter How It Works
 
-Emacs starts Pi in @uref{https://pi.dev/docs/latest/rpc, RPC mode}.
-In this setup, Pi handles the agent logic while Emacs provides the
+Emacs starts Pimacs in @uref{https://pi.dev/docs/latest/rpc, RPC mode}.
+In this setup, Pimacs handles the agent logic while Emacs provides the
 user interface. Some features, such as @code{/login} and
 @code{/logout}, are not
 @uref{https://github.com/earendil-works/pi/issues/885, supported}
@@ -293,35 +293,35 @@ because they are not currently exposed through the RPC API.
 @multitable @columnfractions .2 .3 .5
 @headitem Key @tab Command @tab Description
 @item @kbd{RET}
-@tab @code{pi-visit-item}
+@tab @code{pimacs-visit-item}
 @tab Jump to the source location at point; with a prefix argument, open
 in another window
 @item @kbd{C-g}
-@tab @code{pi-abort}
+@tab @code{pimacs-abort}
 @tab Abort the current operation
 @item @kbd{TAB}, @kbd{C-i}
-@tab @code{pi-toggle-section}
+@tab @code{pimacs-toggle-section}
 @tab Toggle visibility of the section at point
 @item @kbd{n}, @kbd{M-n}
-@tab @code{pi-goto-next-section}
+@tab @code{pimacs-goto-next-section}
 @tab Move to the next section
 @item @kbd{N}
-@tab @code{pi-goto-next-user-message}
+@tab @code{pimacs-goto-next-user-message}
 @tab Move to the next user message
 @item @kbd{p}, @kbd{M-p}
-@tab @code{pi-goto-previous-section}
+@tab @code{pimacs-goto-previous-section}
 @tab Move to the previous section
 @item @kbd{P}
-@tab @code{pi-goto-previous-user-message}
+@tab @code{pimacs-goto-previous-user-message}
 @tab Move to the previous user message
 @item @kbd{l}, @kbd{M-g l}
-@tab @code{pi-goto-last-section}
+@tab @code{pimacs-goto-last-section}
 @tab Jump to the most recent section
 @item @kbd{i}
-@tab @code{pi-focus-prompt}
+@tab @code{pimacs-focus-prompt}
 @tab Focus the prompt input field
 @item @kbd{q}
-@tab @code{pi-quit-chat}
+@tab @code{pimacs-quit-chat}
 @tab Quit the chat buffer
 @end multitable
 
@@ -330,25 +330,25 @@ in another window
 @multitable @columnfractions .2 .3 .5
 @headitem Key @tab Command @tab Description
 @item @kbd{C-g}
-@tab @code{pi-abort}
+@tab @code{pimacs-abort}
 @tab Abort the current operation
 @item @kbd{M-p}
-@tab @code{pi-previous-prompt}
+@tab @code{pimacs-previous-prompt}
 @tab Recall the previous prompt from history
 @item @kbd{M-n}
-@tab @code{pi-next-prompt}
+@tab @code{pimacs-next-prompt}
 @tab Recall the next prompt from history
 @item @kbd{C-r}
-@tab @code{pi-search-prompt}
+@tab @code{pimacs-search-prompt}
 @tab Search prompt history
 @item @kbd{RET}
 @tab @code{widget-field-activate}
 @tab Send the current prompt
 @item @kbd{M-RET}
-@tab @code{pi-send-prompt-alternate}
+@tab @code{pimacs-send-prompt-alternate}
 @tab Send the prompt using the alternate streaming behavior
 @item @kbd{M-g l}
-@tab @code{pi-goto-last-section}
+@tab @code{pimacs-goto-last-section}
 @tab Jump to the most recent section
 @end multitable
 
@@ -357,29 +357,29 @@ in another window
 
 @c custom-variables-start
 
-@defopt pi-use-ansi-colors @code{t}
+@defopt pimacs-use-ansi-colors @code{t}
 
 Whether to render ANSI colors in widget and status output.
 @end defopt
 
-@defopt pi-file-completion-backend @code{'project}
+@defopt pimacs-file-completion-backend @code{'project}
 
 Completion backend for @-prefixed file paths in prompts.
 @code{project} uses @code{project-files} to list files in the current project.
 @code{file} uses @code{file-name-all-completions} to list files under the project root.
 @end defopt
 
-@defopt pi-prompt-history-max-size @code{500}
+@defopt pimacs-prompt-history-max-size @code{500}
 
 Maximum number of prompt history entries to keep.
 @end defopt
 
-@defopt pi-resume-max-sessions @code{100}
+@defopt pimacs-resume-max-sessions @code{100}
 
 Maximum number of recent sessions to list when resuming a session.
 @end defopt
 
-@defopt pi-prompt-streaming-behavior @code{'followUp}
+@defopt pimacs-prompt-streaming-behavior @code{'followUp}
 
 Default streaming behavior for prompts.
 
@@ -391,29 +391,29 @@ before the next LLM call.
 when agent stops.
 @end defopt
 
-@defopt pi-slash-commands
+@defopt pimacs-slash-commands
 
 @lisp
-'(("model" pi-select-model 0 "Switch models")
-  ("new" pi-new-session 0 "Start a new session")
-  ("reload" pi-reload 0 "Reload extensions, skills and prompts")
-  ("resume" pi-resume 0 "Pick from previous sessions")
-  ("compact" pi-compact 1 "Manually compact context, optionally with custom instructions")
-  ("set-auto-compaction" pi-set-auto-compaction 0 "Set auto compaction")
-  ("set-auto-retry" pi-set-auto-retry 0 "Set auto retry")
-  ("session" pi-session-stats 0 "Show session file, ID, messages, tokens, and cost")
-  ("name" pi-set-session-name 1 "Set session display name")
-  ("set-thinking-level" pi-set-thinking-level 0 "Set thinking level")
-  ("cycle-model" pi-cycle-model 0 "Cycle through available models")
-  ("cycle-thinking-level" pi-cycle-thinking-level 0 "Cycle through thinking levels")
-  ("set-steering-mode" pi-set-steering-mode 0 "Set steering mode")
-  ("set-follow-up-mode" pi-set-follow-up-mode 0 "Set follow-up mode")
-  ("fork" pi-fork 0 "Create a new session from a previous user message")
-  ("clone" pi-clone 0 "Duplicate the current active branch into a new session")
-  ("copy" pi-copy 0 "Copy last assistant message to clipboard")
-  ("export" pi-export 1 "Export session to HTML")
-  ("quit" pi-quit-chat 0 "Quit pi")
-  ("exit" pi-quit-chat 0 "Quit pi"))
+'(("model" pimacs-select-model 0 "Switch models")
+  ("new" pimacs-new-session 0 "Start a new session")
+  ("reload" pimacs-reload 0 "Reload extensions, skills and prompts")
+  ("resume" pimacs-resume 0 "Pick from previous sessions")
+  ("compact" pimacs-compact 1 "Manually compact context, optionally with custom instructions")
+  ("set-auto-compaction" pimacs-set-auto-compaction 0 "Set auto compaction")
+  ("set-auto-retry" pimacs-set-auto-retry 0 "Set auto retry")
+  ("session" pimacs-session-stats 0 "Show session file, ID, messages, tokens, and cost")
+  ("name" pimacs-set-session-name 1 "Set session display name")
+  ("set-thinking-level" pimacs-set-thinking-level 0 "Set thinking level")
+  ("cycle-model" pimacs-cycle-model 0 "Cycle through available models")
+  ("cycle-thinking-level" pimacs-cycle-thinking-level 0 "Cycle through thinking levels")
+  ("set-steering-mode" pimacs-set-steering-mode 0 "Set steering mode")
+  ("set-follow-up-mode" pimacs-set-follow-up-mode 0 "Set follow-up mode")
+  ("fork" pimacs-fork 0 "Create a new session from a previous user message")
+  ("clone" pimacs-clone 0 "Duplicate the current active branch into a new session")
+  ("copy" pimacs-copy 0 "Copy last assistant message to clipboard")
+  ("export" pimacs-export 1 "Export session to HTML")
+  ("quit" pimacs-quit-chat 0 "Quit pimacs")
+  ("exit" pimacs-quit-chat 0 "Quit pimacs"))
 @end lisp
 
 Alist mapping slash command names to command specs.
@@ -425,16 +425,16 @@ arguments the command accepts, and DESCRIPTION is a short
 description string.
 @end defopt
 
-@defopt pi-insert-tool-args-functions
+@defopt pimacs-insert-tool-args-functions
 
 @lisp
-'(("read" . pi--insert-read-args)
-  ("write" . pi--insert-write-args)
-  ("edit" . pi--insert-edit-args)
-  ("bash" . pi--insert-bash-args)
-  ("grep" . pi--insert-grep-args)
-  ("find" . pi--insert-find-args)
-  ("ls" . pi--insert-ls-args))
+'(("read" . pimacs--insert-read-args)
+  ("write" . pimacs--insert-write-args)
+  ("edit" . pimacs--insert-edit-args)
+  ("bash" . pimacs--insert-bash-args)
+  ("grep" . pimacs--insert-grep-args)
+  ("find" . pimacs--insert-find-args)
+  ("ls" . pimacs--insert-ls-args))
 @end lisp
 
 Alist mapping tool names to inserter functions.
@@ -443,33 +443,33 @@ Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
 with ARGS plist to insert formatted tool call arguments.
 @end defopt
 
-@defopt pi-insert-tool-result-functions
+@defopt pimacs-insert-tool-result-functions
 
 @lisp
-'(("bash" . pi--insert-bash-result)
-  ("read" . pi--insert-read-result)
-  ("write" . pi--insert-write-result)
-  ("edit" . pi--insert-edit-result)
-  ("grep" . pi--insert-grep-result)
-  ("find" . pi--insert-find-result)
-  ("ls" . pi--insert-ls-result))
+'(("bash" . pimacs--insert-bash-result)
+  ("read" . pimacs--insert-read-result)
+  ("write" . pimacs--insert-write-result)
+  ("edit" . pimacs--insert-edit-result)
+  ("grep" . pimacs--insert-grep-result)
+  ("find" . pimacs--insert-find-result)
+  ("ls" . pimacs--insert-ls-result))
 @end lisp
 
 Alist mapping tool names to result inserter functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
 with (CONTENT DETAILS ARGS) to insert the tool execution result.
-CONTENT is a list of content items.  Use @code{pi--insert-content} to render
-it, or @code{pi--content-text} to extract text from content.
+CONTENT is a list of content items.  Use @code{pimacs--insert-content} to render
+it, or @code{pimacs--content-text} to extract text from content.
 @end defopt
 
-@defopt pi-visit-tool-result-functions
+@defopt pimacs-visit-tool-result-functions
 
 @lisp
-'(("read" . pi--visit-read-result)
-  ("write" . pi--visit-write-result)
-  ("edit" . pi--visit-edit-result)
-  ("grep" . pi--visit-grep-result))
+'(("read" . pimacs--visit-read-result)
+  ("write" . pimacs--visit-write-result)
+  ("edit" . pimacs--visit-edit-result)
+  ("grep" . pimacs--visit-grep-result))
 @end lisp
 
 Alist mapping tool names to result visitor functions.
@@ -478,12 +478,12 @@ Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
 with (DETAILS ARGS) to visit the relevant location of the tool result.
 @end defopt
 
-@defopt pi-visit-tool-call-functions
+@defopt pimacs-visit-tool-call-functions
 
 @lisp
-'(("read" . pi--visit-read-call)
-  ("write" . pi--visit-write-call)
-  ("edit" . pi--visit-edit-call))
+'(("read" . pimacs--visit-read-call)
+  ("write" . pimacs--visit-write-call)
+  ("edit" . pimacs--visit-edit-call))
 @end lisp
 
 Alist mapping tool names to call visitor functions.
@@ -492,7 +492,7 @@ Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
 with (ARGS) to visit the relevant location of the tool call.
 @end defopt
 
-@defopt pi-insert-custom-message-functions @code{'()}
+@defopt pimacs-insert-custom-message-functions @code{'()}
 
 Alist mapping custom message types to inserter functions.
 
@@ -500,47 +500,47 @@ Each entry is (CUSTOM-TYPE . FUNCTION) where FUNCTION is called
 with the message plist to insert the custom message content.
 @end defopt
 
-@defopt pi-send-pop-to-chat @code{t}
+@defopt pimacs-send-pop-to-chat @code{t}
 
 Whether to pop to the chat buffer after sending region, filename or errors.
 @end defopt
 
-@defopt pi-sync-request-timeout @code{2}
+@defopt pimacs-sync-request-timeout @code{2}
 
 The number of seconds to wait for a sync response.
 @end defopt
 
-@defopt pi-executable @code{"pi"}
+@defopt pimacs-executable @code{"pi"}
 
-Pi command executable name.
+Pimacs command executable name.
 @end defopt
 
-@defopt pi-process-environment @code{'()}
+@defopt pimacs-process-environment @code{'()}
 
-List of extra environment variables to use when starting pi.
+List of extra environment variables to use when starting pimacs.
 @end defopt
 
-@defopt pi-flags @code{'()}
+@defopt pimacs-flags @code{'()}
 
-List of additional flags to provide when starting pi.
+List of additional flags to provide when starting pimacs.
 @end defopt
 
-@defopt pi-log-rpc @code{nil}
+@defopt pimacs-log-rpc @code{nil}
 
-When non-nil, log all RPC JSON to @code{pi-log-rpc-file}.
+When non-nil, log all RPC JSON to @code{pimacs-log-rpc-file}.
 @end defopt
 
-@defopt pi-log-rpc-file @code{(expand-file-name "pi.el.log" (temporary-file-directory))}
+@defopt pimacs-log-rpc-file @code{(expand-file-name "pimacs.el.log" (temporary-file-directory))}
 
 File to write RPC JSON log entries to.
 @end defopt
 
-@defopt pi-align-markdown-tables @code{t}
+@defopt pimacs-align-markdown-tables @code{t}
 
 Whether to align markdown tables while rendering assistant output.
 @end defopt
 
-@defopt pi-section-autohide-count @code{2}
+@defopt pimacs-section-autohide-count @code{2}
 
 Automatically hide older chat sections beyond this count.
 This helps reduce clutter by collapsing earlier responses when the
@@ -548,13 +548,13 @@ conversation grows long.  When nil, auto hiding is disabled and no
 sections are hidden automatically.
 @end defopt
 
-@defopt pi-section-padding @code{"\n\n"}
+@defopt pimacs-section-padding @code{"\n\n"}
 
 String inserted between sections to control the visual gap.
 Increase or decrease this value to adjust spacing between sections.
 @end defopt
 
-@defopt pi-section-visibility-indicators @code{'(pi-section-fringe-bitmap> . pi-section-fringe-bitmapv)}
+@defopt pimacs-section-visibility-indicators @code{'(pimacs-section-fringe-bitmap> . pimacs-section-fringe-bitmapv)}
 
 Fringe bitmaps used to indicate section visibility.
 

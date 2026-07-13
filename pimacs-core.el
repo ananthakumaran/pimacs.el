@@ -1,4 +1,4 @@
-;;; pi-core.el --- Core shared definitions -*- lexical-binding: t; -*-
+;;; pimacs-core.el --- Core shared definitions -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Anantha Kumaran.
 
@@ -18,40 +18,40 @@
 
 ;;; Commentary:
 
-;; Core shared definitions used by both pi.el and pi-agent.el.
+;; Core shared definitions used by both pimacs.el and pimacs-agent.el.
 
 ;;; Code:
 
-(require 'pi-utils)
+(require 'pimacs-utils)
 (require 'project)
 
-(pi--def-permanent-buffer-local pi--project-root nil)
-(pi--def-permanent-buffer-local pi--project-key nil)
+(pimacs--def-permanent-buffer-local pimacs--project-root nil)
+(pimacs--def-permanent-buffer-local pimacs--project-key nil)
 
-(defun pi--project-root ()
+(defun pimacs--project-root ()
   (or
-   pi--project-root
+   pimacs--project-root
    (let ((project (project-current))
          (path default-directory))
      (if project
          (setq path (project-root project))
        (message "Couldn't find project root folder. Using '%s' as project root." default-directory))
      (let ((full-path (expand-file-name path)))
-       (setq pi--project-root full-path)
+       (setq pimacs--project-root full-path)
        full-path))))
 
-(defun pi--project-name ()
-  (file-name-nondirectory (directory-file-name (pi--project-root))))
+(defun pimacs--project-name ()
+  (file-name-nondirectory (directory-file-name (pimacs--project-root))))
 
-(defun pi--agent-buffer-name ()
-  (format "*pi-agent:%s*" (pi--project-key)))
+(defun pimacs--agent-buffer-name ()
+  (format "*pimacs-agent:%s*" (pimacs--project-key)))
 
-(defun pi--project-key ()
+(defun pimacs--project-key ()
   "Unique key for the current project, used for internal hash tables."
   (or
-   pi--project-key
-   (md5 (pi--project-root))))
+   pimacs--project-key
+   (md5 (pimacs--project-root))))
 
-(provide 'pi-core)
+(provide 'pimacs-core)
 
-;;; pi-core.el ends here
+;;; pimacs-core.el ends here

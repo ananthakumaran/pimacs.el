@@ -1,4 +1,4 @@
-This is pi.info, produced by makeinfo version 7.2 from pi.texi.
+This is pimacs.info, produced by makeinfo version 7.2 from pimacs.texi.
 
      Copyright © 2026 Anantha Kumaran.
 
@@ -14,16 +14,16 @@ This is pi.info, produced by makeinfo version 7.2 from pi.texi.
 
 INFO-DIR-SECTION Emacs
 START-INFO-DIR-ENTRY
-* Pi: (pi).               An Emacs client for Pi Coding Agent.
+* Pimacs: (pimacs).               An Emacs client for Pi Coding Agent.
 END-INFO-DIR-ENTRY
 
 
-File: pi.info,  Node: Top,  Next: Introduction,  Up: (dir)
+File: pimacs.info,  Node: Top,  Next: Introduction,  Up: (dir)
 
-Pi User Manual
-**************
+Pimacs User Manual
+******************
 
-Pi is an Emacs client for Pi Coding Agent.
+Pimacs is an Emacs client for Pi Coding Agent.
 
 * Menu:
 
@@ -36,52 +36,52 @@ Pi is an Emacs client for Pi Coding Agent.
 * Custom Variables::
 
 
-File: pi.info,  Node: Introduction,  Next: Setup,  Prev: Top,  Up: Top
+File: pimacs.info,  Node: Introduction,  Next: Setup,  Prev: Top,  Up: Top
 
 1 Introduction
 **************
 
-Pi is an Emacs client for Pi Coding Agent (https://pi.dev/).  It
+Pimacs is an Emacs client for Pi Coding Agent (https://pi.dev/).  It
 provides an interactive interface to the Pi Coding Agent directly from
 Emacs.
 
 
-File: pi.info,  Node: Setup,  Next: Usage,  Prev: Introduction,  Up: Top
+File: pimacs.info,  Node: Setup,  Next: Usage,  Prev: Introduction,  Up: Top
 
 2 Setup
 *******
 
-2.1 Install the Pi Agent
-========================
+2.1 Install the Pimacs Agent
+============================
 
-First, install the Pi agent using npm:
+First, install the Pimacs agent using npm:
 
      npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
-   Then start Pi and run ‘/login’ to configure your provider:
+   Then start Pimacs and run ‘/login’ to configure your provider:
 
      pi
 
-2.2 Install ‘pi.el’
-===================
+2.2 Install ‘pimacs.el’
+=======================
 
 Add the following to your Emacs configuration:
 
-     (use-package pi
+     (use-package pimacs
        :ensure t
-       :vc (:url "git@github.com:ananthakumaran/pi.el.git"
+       :vc (:url "git@github.com:ananthakumaran/pimacs.el.git"
             :rev :newest)
-       :commands (pi-chat))
+       :commands (pimacs-chat))
 
 
-File: pi.info,  Node: Usage,  Next: Sandbox,  Prev: Setup,  Up: Top
+File: pimacs.info,  Node: Usage,  Next: Sandbox,  Prev: Setup,  Up: Top
 
 3 Usage
 *******
 
-Run ‘M-x pi-chat’ from any file in your project to start a Pi chat
-session.  Use a prefix argument (‘C-u M-x pi-chat’) to start multiple
-chats on the same project.
+Run ‘M-x pimacs-chat’ from any file in your project to start a Pimacs
+chat session.  Use a prefix argument (‘C-u M-x pimacs-chat’) to start
+multiple chats on the same project.
 
    The chat buffer is read-only except for the prompt input area.  Use
 ‘RET’ to submit a prompt and ‘C-j’ to insert a newline.  Press ‘i’ from
@@ -96,7 +96,7 @@ anywhere in the chat buffer to move point to the prompt input area.
 * Images::
 
 
-File: pi.info,  Node: Slash Commands,  Next: File Name Completion,  Up: Usage
+File: pimacs.info,  Node: Slash Commands,  Next: File Name Completion,  Up: Usage
 
 3.1 Slash Commands
 ==================
@@ -106,9 +106,9 @@ completion in the prompt buffer.  Type ‘/’ and press ‘C-M-i’ (or any key
 bound to completion) to see available commands.
 
    In addition to the commands listed below, extension commands, prompt
-templates, and skills registered with the Pi agent can also be invoked
-via slash commands.  These are fetched automatically from the agent and
-included in the completion list.
+templates, and skills registered with the Pimacs agent can also be
+invoked via slash commands.  These are fetched automatically from the
+agent and included in the completion list.
 
    Angle brackets ‘<>’ denote required arguments, square brackets ‘[]’
 denote optional arguments.
@@ -122,14 +122,14 @@ Command            Arguments   Description
 ‘/copy’                        Copy last assistant message to clipboard.
 ‘/cycle-model’                 Cycle through available models.
 ‘/cycle-thinking-level’        Cycle through thinking levels.
-‘/exit’                        Quit pi.
+‘/exit’                        Quit pimacs.
 ‘/export’          ‘[file]’    Export session to HTML.
 ‘/fork’                        Create a new session from a previous user
                                message.
 ‘/model’                       Switch models.
 ‘/name’            ‘<name>’    Set session display name.
 ‘/new’                         Start a new session.
-‘/quit’                        Quit pi.
+‘/quit’                        Quit pimacs.
 ‘/reload’                      Reload extensions, skills and prompts.
 ‘/resume’                      Pick from previous sessions.
 ‘/session’                     Show session file, ID, messages, tokens,
@@ -141,17 +141,17 @@ Command            Arguments   Description
 ‘/set-thinking-level’          Set thinking level.
 
 
-File: pi.info,  Node: File Name Completion,  Next: Bash,  Prev: Slash Commands,  Up: Usage
+File: pimacs.info,  Node: File Name Completion,  Next: Bash,  Prev: Slash Commands,  Up: Usage
 
 3.2 File Name Completion
 ========================
 
 Type ‘@’ followed by a partial file path to trigger file name completion
 in the prompt buffer.  The completion backend is controlled by
-‘pi-file-completion-backend’.
+‘pimacs-file-completion-backend’.
 
 
-File: pi.info,  Node: Bash,  Next: Sending Context,  Prev: File Name Completion,  Up: Usage
+File: pimacs.info,  Node: Bash,  Next: Sending Context,  Prev: File Name Completion,  Up: Usage
 
 3.3 Bash
 ========
@@ -162,27 +162,27 @@ without adding it to the conversation context.
      ! echo "hello"
 
 
-File: pi.info,  Node: Sending Context,  Next: Images,  Prev: Bash,  Up: Usage
+File: pimacs.info,  Node: Sending Context,  Next: Images,  Prev: Bash,  Up: Usage
 
 3.4 Sending Context
 ===================
 
-You can send contextual information from any buffer to the Pi chat
+You can send contextual information from any buffer to the Pimacs chat
 prompt.
 
 Command                   Description
 --------------------------------------------------------------------------
-‘pi-send-region’          Append the selected region to the prompt
+‘pimacs-send-region’      Append the selected region to the prompt
                           input.
-‘pi-send-filename’        Append the current buffer's filename
+‘pimacs-send-filename’    Append the current buffer's filename
                           (prefixed with ‘@’) to the prompt input.
-‘pi-send-flycheck-errors’ Append the Flycheck errors at point to the
+‘pimacs-send-flycheck-errors’Append the Flycheck errors at point to the
                           prompt input.  Falls back to all current
                           errors in the buffer when there are none at
                           point.
 
 
-File: pi.info,  Node: Images,  Prev: Sending Context,  Up: Usage
+File: pimacs.info,  Node: Images,  Prev: Sending Context,  Up: Usage
 
 3.5 Images
 ==========
@@ -203,37 +203,38 @@ The following image formats are supported:
    • GIF
    • WebP
 
-   Drag an image file from your file manager and drop it into the Pi
+   Drag an image file from your file manager and drop it into the Pimacs
 chat buffer, or paste a supported image from the clipboard via
 ‘yank-media’.  To remove an attached image, click on the thumbnail with
 the mouse, or place point on it and press ‘backspace’ or ‘delete’.
 
 
-File: pi.info,  Node: Sandbox,  Next: How It Works,  Prev: Usage,  Up: Top
+File: pimacs.info,  Node: Sandbox,  Next: How It Works,  Prev: Usage,  Up: Top
 
 4 Sandbox
 *********
 
-To run Pi inside a sandbox, customize ‘pi-executable’ and ‘pi-flags’:
+To run Pimacs inside a sandbox, customize ‘pimacs-executable’ and
+‘pimacs-flags’:
 
-     (setq pi-executable "nono")
-     (setq pi-flags '("run" "--silent" "--profile" "pi" "--allow-cwd" "--" "pi"
+     (setq pimacs-executable "nono")
+     (setq pimacs-flags '("run" "--silent" "--profile" "pi" "--allow-cwd" "--" "pi"
                       "--tools" "read,bash,edit,write,grep,find,ls"))
 
 
-File: pi.info,  Node: How It Works,  Next: Keybindings,  Prev: Sandbox,  Up: Top
+File: pimacs.info,  Node: How It Works,  Next: Keybindings,  Prev: Sandbox,  Up: Top
 
 5 How It Works
 **************
 
-Emacs starts Pi in RPC mode (https://pi.dev/docs/latest/rpc).  In this
-setup, Pi handles the agent logic while Emacs provides the user
+Emacs starts Pimacs in RPC mode (https://pi.dev/docs/latest/rpc).  In
+this setup, Pimacs handles the agent logic while Emacs provides the user
 interface.  Some features, such as ‘/login’ and ‘/logout’, are not
 supported (https://github.com/earendil-works/pi/issues/885) because they
 are not currently exposed through the RPC API.
 
 
-File: pi.info,  Node: Keybindings,  Next: Custom Variables,  Prev: How It Works,  Up: Top
+File: pimacs.info,  Node: Keybindings,  Next: Custom Variables,  Prev: How It Works,  Up: Top
 
 6 Keybindings
 *************
@@ -243,62 +244,62 @@ File: pi.info,  Node: Keybindings,  Next: Custom Variables,  Prev: How It Works,
 
 Key            Command                Description
 ---------------------------------------------------------------------------
-‘RET’          ‘pi-visit-item’        Jump to the source location at
+‘RET’          ‘pimacs-visit-item’    Jump to the source location at
                                       point; with a prefix argument,
                                       open in another window
-‘C-g’          ‘pi-abort’             Abort the current operation
-‘TAB’, ‘C-i’   ‘pi-toggle-section’    Toggle visibility of the section
+‘C-g’          ‘pimacs-abort’         Abort the current operation
+‘TAB’, ‘C-i’   ‘pimacs-toggle-section’Toggle visibility of the section
                                       at point
-‘n’, ‘M-n’     ‘pi-goto-next-section’ Move to the next section
-‘N’            ‘pi-goto-next-user-message’Move to the next user message
-‘p’, ‘M-p’     ‘pi-goto-previous-section’Move to the previous section
-‘P’            ‘pi-goto-previous-user-message’Move to the previous user message
-‘l’, ‘M-g l’   ‘pi-goto-last-section’ Jump to the most recent section
-‘i’            ‘pi-focus-prompt’      Focus the prompt input field
-‘q’            ‘pi-quit-chat’         Quit the chat buffer
+‘n’, ‘M-n’     ‘pimacs-goto-next-section’Move to the next section
+‘N’            ‘pimacs-goto-next-user-message’Move to the next user message
+‘p’, ‘M-p’     ‘pimacs-goto-previous-section’Move to the previous section
+‘P’            ‘pimacs-goto-previous-user-message’Move to the previous user message
+‘l’, ‘M-g l’   ‘pimacs-goto-last-section’Jump to the most recent section
+‘i’            ‘pimacs-focus-prompt’  Focus the prompt input field
+‘q’            ‘pimacs-quit-chat’     Quit the chat buffer
 
 6.2 Prompt Input Keybindings
 ============================
 
 Key            Command                Description
 ---------------------------------------------------------------------------
-‘C-g’          ‘pi-abort’             Abort the current operation
-‘M-p’          ‘pi-previous-prompt’   Recall the previous prompt from
+‘C-g’          ‘pimacs-abort’         Abort the current operation
+‘M-p’          ‘pimacs-previous-prompt’Recall the previous prompt from
                                       history
-‘M-n’          ‘pi-next-prompt’       Recall the next prompt from
+‘M-n’          ‘pimacs-next-prompt’   Recall the next prompt from
                                       history
-‘C-r’          ‘pi-search-prompt’     Search prompt history
+‘C-r’          ‘pimacs-search-prompt’ Search prompt history
 ‘RET’          ‘widget-field-activate’Send the current prompt
-‘M-RET’        ‘pi-send-prompt-alternate’Send the prompt using the
+‘M-RET’        ‘pimacs-send-prompt-alternate’Send the prompt using the
                                       alternate streaming behavior
-‘M-g l’        ‘pi-goto-last-section’ Jump to the most recent section
+‘M-g l’        ‘pimacs-goto-last-section’Jump to the most recent section
 
 
-File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
+File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
 7 Custom Variables
 ******************
 
- -- User Option: pi-use-ansi-colors t
+ -- User Option: pimacs-use-ansi-colors t
 
      Whether to render ANSI colors in widget and status output.
 
- -- User Option: pi-file-completion-backend 'project
+ -- User Option: pimacs-file-completion-backend 'project
 
      Completion backend for prefixed file paths in prompts.  ‘project’
      uses ‘project-files’ to list files in the current project.  ‘file’
      uses ‘file-name-all-completions’ to list files under the project
      root.
 
- -- User Option: pi-prompt-history-max-size 500
+ -- User Option: pimacs-prompt-history-max-size 500
 
      Maximum number of prompt history entries to keep.
 
- -- User Option: pi-resume-max-sessions 100
+ -- User Option: pimacs-resume-max-sessions 100
 
      Maximum number of recent sessions to list when resuming a session.
 
- -- User Option: pi-prompt-streaming-behavior 'followUp
+ -- User Option: pimacs-prompt-streaming-behavior 'followUp
 
      Default streaming behavior for prompts.
 
@@ -309,28 +310,28 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      ‘followUp’: Wait until the agent finishes.  Message is delivered
      only when agent stops.
 
- -- User Option: pi-slash-commands
+ -- User Option: pimacs-slash-commands
 
-          '(("model" pi-select-model 0 "Switch models")
-            ("new" pi-new-session 0 "Start a new session")
-            ("reload" pi-reload 0 "Reload extensions, skills and prompts")
-            ("resume" pi-resume 0 "Pick from previous sessions")
-            ("compact" pi-compact 1 "Manually compact context, optionally with custom instructions")
-            ("set-auto-compaction" pi-set-auto-compaction 0 "Set auto compaction")
-            ("set-auto-retry" pi-set-auto-retry 0 "Set auto retry")
-            ("session" pi-session-stats 0 "Show session file, ID, messages, tokens, and cost")
-            ("name" pi-set-session-name 1 "Set session display name")
-            ("set-thinking-level" pi-set-thinking-level 0 "Set thinking level")
-            ("cycle-model" pi-cycle-model 0 "Cycle through available models")
-            ("cycle-thinking-level" pi-cycle-thinking-level 0 "Cycle through thinking levels")
-            ("set-steering-mode" pi-set-steering-mode 0 "Set steering mode")
-            ("set-follow-up-mode" pi-set-follow-up-mode 0 "Set follow-up mode")
-            ("fork" pi-fork 0 "Create a new session from a previous user message")
-            ("clone" pi-clone 0 "Duplicate the current active branch into a new session")
-            ("copy" pi-copy 0 "Copy last assistant message to clipboard")
-            ("export" pi-export 1 "Export session to HTML")
-            ("quit" pi-quit-chat 0 "Quit pi")
-            ("exit" pi-quit-chat 0 "Quit pi"))
+          '(("model" pimacs-select-model 0 "Switch models")
+            ("new" pimacs-new-session 0 "Start a new session")
+            ("reload" pimacs-reload 0 "Reload extensions, skills and prompts")
+            ("resume" pimacs-resume 0 "Pick from previous sessions")
+            ("compact" pimacs-compact 1 "Manually compact context, optionally with custom instructions")
+            ("set-auto-compaction" pimacs-set-auto-compaction 0 "Set auto compaction")
+            ("set-auto-retry" pimacs-set-auto-retry 0 "Set auto retry")
+            ("session" pimacs-session-stats 0 "Show session file, ID, messages, tokens, and cost")
+            ("name" pimacs-set-session-name 1 "Set session display name")
+            ("set-thinking-level" pimacs-set-thinking-level 0 "Set thinking level")
+            ("cycle-model" pimacs-cycle-model 0 "Cycle through available models")
+            ("cycle-thinking-level" pimacs-cycle-thinking-level 0 "Cycle through thinking levels")
+            ("set-steering-mode" pimacs-set-steering-mode 0 "Set steering mode")
+            ("set-follow-up-mode" pimacs-set-follow-up-mode 0 "Set follow-up mode")
+            ("fork" pimacs-fork 0 "Create a new session from a previous user message")
+            ("clone" pimacs-clone 0 "Duplicate the current active branch into a new session")
+            ("copy" pimacs-copy 0 "Copy last assistant message to clipboard")
+            ("export" pimacs-export 1 "Export session to HTML")
+            ("quit" pimacs-quit-chat 0 "Quit pimacs")
+            ("exit" pimacs-quit-chat 0 "Quit pimacs"))
 
      Alist mapping slash command names to command specs.
 
@@ -340,116 +341,118 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      arguments the command accepts, and DESCRIPTION is a short
      description string.
 
- -- User Option: pi-insert-tool-args-functions
+ -- User Option: pimacs-insert-tool-args-functions
 
-          '(("read" . pi--insert-read-args)
-            ("write" . pi--insert-write-args)
-            ("edit" . pi--insert-edit-args)
-            ("bash" . pi--insert-bash-args)
-            ("grep" . pi--insert-grep-args)
-            ("find" . pi--insert-find-args)
-            ("ls" . pi--insert-ls-args))
+          '(("read" . pimacs--insert-read-args)
+            ("write" . pimacs--insert-write-args)
+            ("edit" . pimacs--insert-edit-args)
+            ("bash" . pimacs--insert-bash-args)
+            ("grep" . pimacs--insert-grep-args)
+            ("find" . pimacs--insert-find-args)
+            ("ls" . pimacs--insert-ls-args))
 
      Alist mapping tool names to inserter functions.
 
      Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
      ARGS plist to insert formatted tool call arguments.
 
- -- User Option: pi-insert-tool-result-functions
+ -- User Option: pimacs-insert-tool-result-functions
 
-          '(("bash" . pi--insert-bash-result)
-            ("read" . pi--insert-read-result)
-            ("write" . pi--insert-write-result)
-            ("edit" . pi--insert-edit-result)
-            ("grep" . pi--insert-grep-result)
-            ("find" . pi--insert-find-result)
-            ("ls" . pi--insert-ls-result))
+          '(("bash" . pimacs--insert-bash-result)
+            ("read" . pimacs--insert-read-result)
+            ("write" . pimacs--insert-write-result)
+            ("edit" . pimacs--insert-edit-result)
+            ("grep" . pimacs--insert-grep-result)
+            ("find" . pimacs--insert-find-result)
+            ("ls" . pimacs--insert-ls-result))
 
      Alist mapping tool names to result inserter functions.
 
      Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
      (CONTENT DETAILS ARGS) to insert the tool execution result.
-     CONTENT is a list of content items.  Use ‘pi--insert-content’ to
-     render it, or ‘pi--content-text’ to extract text from content.
+     CONTENT is a list of content items.  Use ‘pimacs--insert-content’
+     to render it, or ‘pimacs--content-text’ to extract text from
+     content.
 
- -- User Option: pi-visit-tool-result-functions
+ -- User Option: pimacs-visit-tool-result-functions
 
-          '(("read" . pi--visit-read-result)
-            ("write" . pi--visit-write-result)
-            ("edit" . pi--visit-edit-result)
-            ("grep" . pi--visit-grep-result))
+          '(("read" . pimacs--visit-read-result)
+            ("write" . pimacs--visit-write-result)
+            ("edit" . pimacs--visit-edit-result)
+            ("grep" . pimacs--visit-grep-result))
 
      Alist mapping tool names to result visitor functions.
 
      Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
      (DETAILS ARGS) to visit the relevant location of the tool result.
 
- -- User Option: pi-visit-tool-call-functions
+ -- User Option: pimacs-visit-tool-call-functions
 
-          '(("read" . pi--visit-read-call)
-            ("write" . pi--visit-write-call)
-            ("edit" . pi--visit-edit-call))
+          '(("read" . pimacs--visit-read-call)
+            ("write" . pimacs--visit-write-call)
+            ("edit" . pimacs--visit-edit-call))
 
      Alist mapping tool names to call visitor functions.
 
      Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
      (ARGS) to visit the relevant location of the tool call.
 
- -- User Option: pi-insert-custom-message-functions '()
+ -- User Option: pimacs-insert-custom-message-functions '()
 
      Alist mapping custom message types to inserter functions.
 
      Each entry is (CUSTOM-TYPE .  FUNCTION) where FUNCTION is called
      with the message plist to insert the custom message content.
 
- -- User Option: pi-send-pop-to-chat t
+ -- User Option: pimacs-send-pop-to-chat t
 
      Whether to pop to the chat buffer after sending region, filename or
      errors.
 
- -- User Option: pi-sync-request-timeout 2
+ -- User Option: pimacs-sync-request-timeout 2
 
      The number of seconds to wait for a sync response.
 
- -- User Option: pi-executable "pi"
+ -- User Option: pimacs-executable "pi"
 
-     Pi command executable name.
+     Pimacs command executable name.
 
- -- User Option: pi-process-environment '()
+ -- User Option: pimacs-process-environment '()
 
-     List of extra environment variables to use when starting pi.
+     List of extra environment variables to use when starting pimacs.
 
- -- User Option: pi-flags '()
+ -- User Option: pimacs-flags '()
 
-     List of additional flags to provide when starting pi.
+     List of additional flags to provide when starting pimacs.
 
- -- User Option: pi-log-rpc nil
+ -- User Option: pimacs-log-rpc nil
 
-     When non-nil, log all RPC JSON to ‘pi-log-rpc-file’.
+     When non-nil, log all RPC JSON to ‘pimacs-log-rpc-file’.
 
- -- User Option: pi-log-rpc-file (expand-file-name "pi.el.log"
+ -- User Option: pimacs-log-rpc-file (expand-file-name "pimacs.el.log"
           (temporary-file-directory))
 
      File to write RPC JSON log entries to.
 
- -- User Option: pi-align-markdown-tables t
+ -- User Option: pimacs-align-markdown-tables t
 
      Whether to align markdown tables while rendering assistant output.
 
- -- User Option: pi-section-autohide-count 2
+ -- User Option: pimacs-section-autohide-count 2
 
      Automatically hide older chat sections beyond this count.  This
      helps reduce clutter by collapsing earlier responses when the
      conversation grows long.  When nil, auto hiding is disabled and no
      sections are hidden automatically.
 
- -- User Option: pi-section-padding "\n\n"
+ -- User Option: pimacs-section-padding "\n\n"
 
      String inserted between sections to control the visual gap.
      Increase or decrease this value to adjust spacing between sections.
 
- -- User Option: pi-section-visibility-indicators
-          '(pi-section-fringe-bitmap> . pi-section-fringe-bitmapv)
+ -- User Option: pimacs-section-visibility-indicators
+          '(pimacs-section-fringe-bitmap> .
+          pimacs-section-fringe-bitmapv)
 
      Fringe bitmaps used to indicate section visibility.
 
@@ -458,19 +461,19 @@ File: pi.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
 
 Tag Table:
-Node: Top730
-Node: Introduction980
-Node: Setup1229
-Node: Usage1804
-Node: Slash Commands2383
-Node: File Name Completion4612
-Node: Bash4932
-Node: Sending Context5195
-Node: Images5992
-Node: Sandbox6829
-Node: How It Works7191
-Node: Keybindings7637
-Node: Custom Variables9765
+Node: Top746
+Node: Introduction1012
+Node: Setup1269
+Node: Usage1884
+Node: Slash Commands2479
+Node: File Name Completion4724
+Node: Bash5052
+Node: Sending Context5319
+Node: Images6127
+Node: Sandbox6972
+Node: How It Works7358
+Node: Keybindings7816
+Node: Custom Variables9974
 
 End Tag Table
 

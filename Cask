@@ -4,7 +4,7 @@
 (source melpa)
 (source melpa-stable)
 
-(package-file "pi.el")
+(package-file "pimacs.el")
 
 (development
  (depends-on "undercover")

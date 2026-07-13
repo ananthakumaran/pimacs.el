@@ -1,4 +1,4 @@
-;;; pi-utils.el --- Utilities -*- lexical-binding: t; -*-
+;;; pimacs-utils.el --- Utilities -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2026 Anantha Kumaran.
 
@@ -18,7 +18,7 @@
 
 ;;; Commentary:
 
-;; Utility helpers shared by pi.el.
+;; Utility helpers shared by pimacs.el.
 
 ;;; Code:
 
@@ -28,19 +28,19 @@
 (require 'markdown-mode)
 (require 'diff-mode)
 
-(defcustom pi-align-markdown-tables t
+(defcustom pimacs-align-markdown-tables t
   "Whether to align markdown tables while rendering assistant output."
   :type 'boolean
-  :group 'pi)
+  :group 'pimacs)
 
-(defun pi--json-read-object ()
+(defun pimacs--json-read-object ()
   (json-parse-buffer :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
 
-(defun pi--json-encode (obj)
+(defun pimacs--json-encode (obj)
   "Encode OBJ into a JSON string.  JSON arrays must be represented with vectors."
   (json-serialize obj :null-object 'json-null :false-object 'json-false))
 
-(defun pi--format-number-short (n)
+(defun pimacs--format-number-short (n)
   "Format number N into a short human-readable string with K/M/B suffixes."
   (cond
    ((not (numberp n)) "?")
@@ -53,43 +53,43 @@
    (t
     (number-to-string n))))
 
-(defmacro pi--def-permanent-buffer-local (name &optional init-value)
+(defmacro pimacs--def-permanent-buffer-local (name &optional init-value)
   "Declare NAME as buffer local variable with optional INIT-VALUE."
   `(progn
      (defvar ,name ,init-value)
      (make-variable-buffer-local ',name)
      (put ',name 'permanent-local t)))
 
-(defun pi--join (x &optional join-char)
+(defun pimacs--join (x &optional join-char)
   (let ((join-char (or join-char "\n")))
     (cond
      ((stringp x) x)
-     ((proper-list-p x) (mapconcat (lambda (item) (pi--join item join-char)) x join-char))
-     ((consp x) (pi--join (cdr x) join-char))
+     ((proper-list-p x) (mapconcat (lambda (item) (pimacs--join item join-char)) x join-char))
+     ((consp x) (pimacs--join (cdr x) join-char))
      (t ""))))
 
-(defun pi--insert-error (text)
-  "Insert TEXT with `pi-error-face'."
-  (insert (propertize text 'face 'pi-error-face)))
+(defun pimacs--insert-error (text)
+  "Insert TEXT with `pimacs-error-face'."
+  (insert (propertize text 'face 'pimacs-error-face)))
 
-(defun pi--insert-file-link (path &optional suffix)
+(defun pimacs--insert-file-link (path &optional suffix)
   (widget-create 'file-link
                  :button-prefix ""
                  :button-suffix (or suffix "")
                  path))
 
-(defun pi--keyword-name (keyword)
+(defun pimacs--keyword-name (keyword)
   "Return the name of KEYWORD as a string without the leading colon."
   (substring (symbol-name keyword) 1))
 
-(defun pi--current-column-1-based ()
+(defun pimacs--current-column-1-based ()
   "Return the current column as a 1-based number."
   (1+ (current-column)))
 
-(defun pi--seconds-elapsed-since (time)
+(defun pimacs--seconds-elapsed-since (time)
   (time-to-seconds (time-subtract (current-time) time)))
 
-(defun pi--hash-remove-if (pred table)
+(defun pimacs--hash-remove-if (pred table)
   "Remove entries from TABLE for which PRED return non-nil.
 
 PRED is called with KEY VALUE."
@@ -99,27 +99,27 @@ PRED is called with KEY VALUE."
        (remhash k table)))
    table))
 
-(defun pi--file-at-point ()
+(defun pimacs--file-at-point ()
   (let ((ffap-url-regexp nil))
     (when-let ((file (ffap-file-at-point)))
       (when (file-exists-p file)
         file))))
 
-(defun pi--plist-merge (&rest plists)
+(defun pimacs--plist-merge (&rest plists)
   (let (result)
     (dolist (plist plists result)
       (while plist
         (setq result (plist-put result (car plist) (cadr plist))
               plist (cddr plist))))))
 
-(defun pi--alist-get-equal (key alist)
+(defun pimacs--alist-get-equal (key alist)
   "Like `alist-get' but compares with `equal' instead of `eq'."
   (alist-get key alist nil nil #'equal))
 
-(defun pi--sort-entries-by-key (entries)
+(defun pimacs--sort-entries-by-key (entries)
   (sort entries (lambda (a b) (string< (car a) (car b)))))
 
-(defun pi--completing-read (prompt collection)
+(defun pimacs--completing-read (prompt collection)
   (completing-read prompt
                    (lambda (string pred action)
                      (if (eq action 'metadata)
@@ -127,7 +127,7 @@ PRED is called with KEY VALUE."
                        (complete-with-action action collection string pred)))
                    nil t))
 
-(defun pi--read-option (options current prompt)
+(defun pimacs--read-option (options current prompt)
   (let* ((items (mapcar (lambda (opt)
                           (cons (cdr opt) (car opt)))
                         options))
@@ -144,10 +144,10 @@ PRED is called with KEY VALUE."
                             nil t nil nil default-display)))
     (when selected-display
       (let ((selected-keyword (alist-get selected-display items nil nil #'equal)))
-        (cons (pi--keyword-name selected-keyword)
+        (cons (pimacs--keyword-name selected-keyword)
               (cdr (assoc selected-keyword options)))))))
 
-(defun pi--get-line-contents (buffer line)
+(defun pimacs--get-line-contents (buffer line)
   (with-current-buffer buffer
     (save-excursion
       (save-restriction
@@ -158,7 +158,7 @@ PRED is called with KEY VALUE."
          (point)
          (line-end-position))))))
 
-(defun pi--align-markdown-tables ()
+(defun pimacs--align-markdown-tables ()
   (save-excursion
     (goto-char (point-min))
     (while (re-search-forward "|" nil t)
@@ -167,28 +167,28 @@ PRED is called with KEY VALUE."
         (markdown-table-align)
         (goto-char (markdown-table-end))))))
 
-(defun pi--render-markdown (text)
+(defun pimacs--render-markdown (text)
   (with-temp-buffer
     (insert text)
     (let ((inhibit-message t))
       (ignore-errors
         (delay-mode-hooks
           (gfm-view-mode))
-        (when pi-align-markdown-tables
+        (when pimacs-align-markdown-tables
           (condition-case nil
               (let ((inhibit-read-only t))
-                (pi--align-markdown-tables))
+                (pimacs--align-markdown-tables))
             (error nil)))
         (font-lock-ensure))
       (buffer-string))))
 
-(defun pi--render-content (filename content)
+(defun pimacs--render-content (filename content)
   (with-temp-buffer
     ;; Use a fake temp filename preserving extension only.
     (setq-local
      buffer-file-name
      (expand-file-name
-      (concat "pi-fontify"
+      (concat "pimacs-fontify"
               (when-let ((ext (file-name-extension filename t)))
                 ext))
       temporary-file-directory))
@@ -209,12 +209,12 @@ PRED is called with KEY VALUE."
     ;; Preserve text properties
     (buffer-string)))
 
-(defun pi--section-header (text)
+(defun pimacs--section-header (text)
   "Extract a short header from TEXT for use as section info."
   (when-let ((header (car (split-string text "\n" t))))
     (truncate-string-to-width (string-trim header) 80 nil nil t)))
 
-(defun pi--diff-overlay-to-text-properties ()
+(defun pimacs--diff-overlay-to-text-properties ()
   (dolist (ov (overlays-in (point-min) (point-max)))
     (when (eq (overlay-get ov 'diff-mode) 'fine)
       (put-text-property
@@ -223,7 +223,7 @@ PRED is called with KEY VALUE."
        'face
        (overlay-get ov 'face)))))
 
-(defun pi--render-diff (diff)
+(defun pimacs--render-diff (diff)
   (with-temp-buffer
     (insert diff)
     (delay-mode-hooks
@@ -233,9 +233,9 @@ PRED is called with KEY VALUE."
       (while (not (eobp))
         (diff-hunk-next)
         (diff-refine-hunk))
-      (pi--diff-overlay-to-text-properties))
+      (pimacs--diff-overlay-to-text-properties))
     (set-buffer-modified-p nil)
     (buffer-string)))
 
-(provide 'pi-utils)
-;;; pi-utils.el ends here
+(provide 'pimacs-utils)
+;;; pimacs-utils.el ends here

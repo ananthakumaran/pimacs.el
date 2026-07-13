@@ -1,4 +1,4 @@
-# Pi
+# Pimacs
 
 An Emacs client for [Pi Coding Agent](https://pi.dev/)
 
@@ -15,18 +15,18 @@ npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 pi
 ```
 
-### Install `pi.el`
+### Install `pimacs.el`
 
 ```elisp
-(use-package pi
+(use-package pimacs
   :ensure t
-  :vc (:url "git@github.com:ananthakumaran/pi.el.git"
+  :vc (:url "git@github.com:ananthakumaran/pimacs.el.git"
        :rev :newest)
-  :commands (pi-chat))
+  :commands (pimacs-chat))
 ```
 
 ## Usage
 
-Run `M-x pi-chat` from any file in your project to start a Pi chat
-session. Checkout [documentation](https://ananthakumaran.in/pi.el/)
+Run `M-x pimacs-chat` from any file in your project to start a Pimacs chat
+session. Checkout [documentation](https://ananthakumaran.in/pimacs.el/)
 for more details.
