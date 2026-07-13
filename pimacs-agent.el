@@ -152,8 +152,27 @@
 (defun pimacs--enough-response-p ()
   (goto-char (point-min))
   (save-excursion
-    (when (search-forward "{")
+    (when (search-forward "{" nil t)
       (search-forward "\n" nil t))))
+
+(defun pimacs--json-read-object-recover (raw-start)
+  "Parse one JSON RPC message at RAW-START, recovering from bad input.
+On parse error, repair the line via `pimacs--json-sanitize-surrogates'
+or drop it, always moving point past it so the stream is not wedged."
+  (condition-case err
+      (pimacs--json-read-object)
+    (error
+     (goto-char raw-start)
+     (let* ((line-end (line-end-position))
+            (raw (buffer-substring-no-properties raw-start line-end))
+            (repaired (pimacs--json-sanitize-surrogates raw))
+            (response (unless (equal repaired raw)
+                        (ignore-errors (pimacs--json-read-string repaired)))))
+       (unless response
+         (message "pimacs: dropped malformed RPC message: %s"
+                  (error-message-string err)))
+       (goto-char (min (1+ line-end) (point-max)))
+       response))))
 
 (defun pimacs--decode-response (process)
   (with-current-buffer (process-buffer process)
@@ -161,7 +180,7 @@
       (search-forward "{")
       (backward-char 1)
       (let* ((raw-start (point))
-             (response (pimacs--json-read-object)))
+             (response (pimacs--json-read-object-recover raw-start)))
         (when pimacs-log-rpc
           (pimacs--maybe-log-rpc "output" (buffer-substring-no-properties raw-start (point))))
         (delete-region (point-min) (point))

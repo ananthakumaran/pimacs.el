@@ -233,5 +233,48 @@
                    (marker-position (widget-get pimacs--prompt-widget :from))
                    (marker-position (widget-get pimacs--prompt-after-widget :from))))))))
 
+(ert-deftest pimacs--json-sanitize-surrogates-test ()
+  ;; lone surrogates replaced
+  (should (equal (pimacs--json-sanitize-surrogates "{\"a\":\"x\\ud83dy\"}")
+                 "{\"a\":\"x\\uFFFDy\"}"))
+  (should (equal (pimacs--json-sanitize-surrogates "{\"a\":\"x\\ude00y\"}")
+                 "{\"a\":\"x\\uFFFDy\"}"))
+  (should (equal (pimacs--json-sanitize-surrogates "{\"a\":\"\\uD83D\"}")
+                 "{\"a\":\"\\uFFFD\"}"))
+  (should (equal (pimacs--json-sanitize-surrogates "{\"a\":\"\\ud83d\\ud83d\"}")
+                 "{\"a\":\"\\uFFFD\\uFFFD\"}"))
+  ;; valid pairs and non-surrogate escapes preserved
+  (should (equal (pimacs--json-sanitize-surrogates "{\"a\":\"\\ud83d\\ude00\"}")
+                 "{\"a\":\"\\ud83d\\ude00\"}"))
+  (should (equal (pimacs--json-sanitize-surrogates "{\"a\":\"\\ud83d\\ude00\\ud83d\"}")
+                 "{\"a\":\"\\ud83d\\ude00\\uFFFD\"}"))
+  (should (equal (pimacs--json-sanitize-surrogates "{\"a\":\"\\ud7ff\\ue000\"}")
+                 "{\"a\":\"\\ud7ff\\ue000\"}"))
+  ;; sanitized output parses
+  (should (equal (plist-get (pimacs--json-read-string
+                             (pimacs--json-sanitize-surrogates "{\"a\":\"x\\ud83dy\"}"))
+                            :a)
+                 "x\uFFFDy")))
+
+(ert-deftest pimacs--decode-response-recovers-from-malformed-json ()
+  (let ((decoded '())
+        (native-comp-enable-subr-trampolines nil))
+    (with-temp-buffer
+      (let ((fake-buf (current-buffer)))
+        (cl-letf (((symbol-function 'process-buffer) (lambda (_p) fake-buf))
+                  ((symbol-function 'pimacs--dispatch) (lambda (r) (push r decoded))))
+          (insert "{\"id\":\"1\",\"type\":\"response\",\"success\":true}\n"
+                  ;; repairable
+                  "{\"id\":\"2\",\"type\":\"event\",\"text\":\"hi \\ud83d\"}\n"
+                  ;; dropped
+                  "{\"id\":\"3\",\"type\":\"event\",\"text\":\"broken\\uZZZZ\"}\n"
+                  "{\"id\":\"4\",\"type\":\"event\",\"text\":\"after\"}\n")
+          (pimacs--decode-response 'fake-process))))
+    (setq decoded (nreverse decoded))
+    (should (equal (length decoded) 3))
+    (should (equal (plist-get (nth 0 decoded) :id) "1"))
+    (should (equal (plist-get (nth 1 decoded) :text) "hi \uFFFD"))
+    (should (equal (plist-get (nth 2 decoded) :id) "4"))))
+
 ;;; pimacs-tests.el ends here
 

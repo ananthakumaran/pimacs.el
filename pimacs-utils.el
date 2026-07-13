@@ -36,6 +36,20 @@
 (defun pimacs--json-read-object ()
   (json-parse-buffer :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
 
+(defun pimacs--json-read-string (string)
+  "Parse STRING as JSON, using the same options as `pimacs--json-read-object'."
+  (json-parse-string string :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
+
+(defun pimacs--json-sanitize-surrogates (json)
+  "Replace unpaired UTF-16 surrogate escapes in JSON with \\uFFFD.
+The JSON parser rejects lone surrogates; valid pairs are preserved."
+  (replace-regexp-in-string
+   ;; valid pair (12 chars, kept) | lone surrogate (6 chars, replaced)
+   "\\\\u[dD][89abAB][0-9a-fA-F]\\{2\\}\\\\u[dD][c-fC-F][0-9a-fA-F]\\{2\\}\\|\\\\u[dD][89a-fA-F][0-9a-fA-F]\\{2\\}"
+   (lambda (match)
+     (if (= (length match) 12) match "\\uFFFD"))
+   json t t))
+
 (defun pimacs--json-encode (obj)
   "Encode OBJ into a JSON string.  JSON arrays must be represented with vectors."
   (json-serialize obj :null-object 'json-null :false-object 'json-false))
