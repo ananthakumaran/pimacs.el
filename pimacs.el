@@ -759,30 +759,30 @@ with the message plist to insert the custom message content."
          (pimacs--docontent (item (plist-get message :content))
            (pcase (plist-get item :type)
              ("thinking"
-              (let* ((content (list item))
-                     (section (or (gethash index pimacs--content-sections)
-                                  (pimacs-section--new-section 'thinking pimacs-section--root-section))))
+              (let ((content (list item)))
                 (pimacs--widget-save-excursion
-                  (pimacs-section--replace-section section
-                    (pimacs--insert-role-prefix role)
-                    (pimacs--insert-content content))
-                  (pimacs-section--set-info section (make-pimacs-section-assistant-info
-                                                     :header (pimacs--content-header content)
-                                                     :content content
-                                                     :type 'thinking)))))
+                  (let ((section
+                         (pimacs-section--create-or-replace-section (gethash index pimacs--content-sections) 'thinking pimacs-section--root-section
+                           (pimacs--insert-role-prefix role)
+                           (pimacs--insert-content content))))
+                    (pimacs-section--set-info section (make-pimacs-section-assistant-info
+                                                       :header (pimacs--content-header content)
+                                                       :content content
+                                                       :type 'thinking))))))
              ("text"
-              (let* ((content (list item))
-                     (section (or (gethash index pimacs--content-sections)
-                                  (pimacs-section--new-section 'assistant pimacs-section--root-section))))
+              (let ((content (list item)))
                 (pimacs--widget-save-excursion
-                  (pimacs-section--replace-section section
-                    (pimacs--insert-role-prefix role)
-                    (pimacs--insert-content content t))
-                  (pimacs-section--set-info section (make-pimacs-section-assistant-info
-                                                     :header (pimacs--content-header content)
-                                                     :content content
-                                                     :type 'text))))))
-           (setq index (1+ index)))))
+                  (let ((section
+                         (pimacs-section--create-or-replace-section (gethash index pimacs--content-sections) 'assistant pimacs-section--root-section
+                           (pimacs--insert-role-prefix role)
+                           (pimacs--insert-content content t))))
+                    (pimacs-section--set-info section (make-pimacs-section-assistant-info
+                                                       :header (pimacs--content-header content)
+                                                       :content content
+                                                       :type 'text)))))))
+           (setq index (1+ index))))
+       ;; Cleanup tracking state
+       (clrhash pimacs--content-sections))
       ("user"
        (pimacs--insert-user-message (plist-get message :content)))
       ("custom"
@@ -790,9 +790,7 @@ with the message plist to insert the custom message content."
     (when (and error-message (not (string-empty-p error-message)))
       (pimacs--widget-save-excursion
         (pimacs-section--create-section 'error pimacs-section--root-section
-          (pimacs--insert-error error-message))))
-    ;; Cleanup tracking state
-    (clrhash pimacs--content-sections)))
+          (pimacs--insert-error error-message))))))
 
 ;; read
 (defun pimacs--insert-read-args (args)

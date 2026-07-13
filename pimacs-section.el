@@ -205,6 +205,14 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
          (pimacs-section--update-visibility-indicator ,s))
        ,s)))
 
+(defmacro pimacs-section--create-or-replace-section (section type parent &rest body)
+  "Create or replace SECTION of TYPE under PARENT, inserting BODY."
+  (declare (indent 3)
+           (debug (symbolp symbolp symbolp body)))
+  `(if ,section
+       (pimacs-section--replace-section ,section ,@body)
+     (pimacs-section--create-section ,type ,parent ,@body)))
+
 (defun pimacs-section--delete-section (section)
   (let ((beg (pimacs-section-beginning section))
         (end (pimacs-section-end section))

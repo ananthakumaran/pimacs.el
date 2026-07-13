@@ -162,6 +162,29 @@
     (should (equal (pimacs--format-state) "Pimacs"))
     (should-not (spinner--active-p pimacs--spinner))))
 
+(ert-deftest pimacs--handle-message-end-creates-section-without-deltas ()
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (setq pimacs--content-sections (make-hash-table :test 'eql))
+    (setq pimacs--prompt-widget
+          (widget-create 'editable-field :format "%v" :value ""))
+    (widget-setup)
+
+    (pimacs--handle-message-end
+     '(:message (:role "assistant"
+                       :content ((:type "text" :text "Hello")))))
+
+    (let ((section (car (pimacs-section-children pimacs-section--root-section))))
+      (should (eq (pimacs-section-type section) 'assistant))
+      (should (equal (pimacs-section-assistant-info-content
+                      (pimacs-section-info section))
+                     '((:type "text" :text "Hello"))))
+      (should (string-match-p "assistant> Hello"
+                              (buffer-substring-no-properties
+                               (pimacs-section-beginning section)
+                               (pimacs-section-end section)))))
+    (should (= (hash-table-count pimacs--content-sections) 0))))
+
 (ert-deftest pimacs-clear-ui-keeps-sections-before-prompt-widgets ()
   (with-temp-buffer
     (pimacs-section--create-root-section)

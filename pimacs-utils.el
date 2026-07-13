@@ -113,7 +113,7 @@ PRED is called with KEY VALUE."
               plist (cddr plist))))))
 
 (defun pimacs--alist-get-equal (key alist)
-  "Like `alist-get' but compares with `equal' instead of `eq'."
+  "Return the value for KEY in ALIST, comparing keys with `equal'."
   (alist-get key alist nil nil #'equal))
 
 (defun pimacs--sort-entries-by-key (entries)
