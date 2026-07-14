@@ -36,6 +36,11 @@ test: compile
 integration: compile
 	@cask emacs --batch -L . -L test -l integration/pimacs-integration-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
 
+.PHONY: coverage
+coverage: export UNDERCOVER_FORCE=true
+coverage: export UNDERCOVER_CONFIG=("*.el" (:report-format text) (:exclude "*-tests.el"))
+coverage: test integration
+
 .PHONY: format
 format:
 	@cask emacs --batch -L . -l pimacs-utils.el -l pimacs-core.el -l pimacs.el -l pimacs-section.el -l pimacs-edit.el -l pimacs-agent.el -l pimacs-tests.el -l pimacs-section-tests.el -l integration/pimacs-integration-tests.el \

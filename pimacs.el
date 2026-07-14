@@ -502,12 +502,12 @@ with the message plist to insert the custom message content."
       (list (list :type "text" :text content))
     content))
 
-(defmacro pimacs--docontent (binding &rest body)
-  (declare (indent 1))
-  (let ((item-var (car binding))
-        (source-expr (cadr binding)))
-    `(dolist (,item-var (pimacs--content-normalize ,source-expr))
-       ,@body)))
+(defmacro pimacs--docontent (spec &rest body)
+  (declare (indent 1) (debug ((symbolp form) body)))
+  (let ((content (make-symbol "content")))
+    `(let ((,content ,(nth 1 spec)))
+       (dolist (,(car spec) (pimacs--content-normalize ,content))
+         ,@body))))
 
 (defun pimacs--content-header (content)
   (let ((content (pimacs--content-normalize content)))

@@ -27,13 +27,13 @@ jobs:
     - uses: conao3/setup-cask@master
 
     - name: Run tests
-      run: UNDERCOVER_FORCE=true make test
+      run: UNDERCOVER_FORCE=true UNDERCOVER_CONFIG='("*.el" (:report-format codecov) (:send-report nil) (:exclude "*-tests.el"))' make test
 
     - name: Run integration tests
       run: |
         npm install -g --ignore-scripts @earendil-works/pi-coding-agent
         cd integration/fixture && npm install && cd ../..
-        UNDERCOVER_FORCE=true make integration
+        UNDERCOVER_FORCE=true UNDERCOVER_CONFIG='("*.el" (:report-format codecov) (:send-report nil) (:exclude "*-tests.el"))' make integration
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7

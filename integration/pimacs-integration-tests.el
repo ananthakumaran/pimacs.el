@@ -11,10 +11,7 @@
 (package-initialize)
 
 (require 'undercover)
-(undercover "*.el"
-            (:report-format 'codecov)
-            (:send-report nil)
-            (:exclude "*-tests.el"))
+(undercover)
 
 (require 'pimacs)
 

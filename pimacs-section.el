@@ -163,7 +163,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
 
 (defmacro pimacs-section--create-section (type parent &rest body)
   (declare (indent 2)
-           (debug (symbolp symbolp body)))
+           (debug (form symbolp body)))
   (let ((s (make-symbol "*section*")))
     `(let* ((,s (pimacs-section--new-section ,type ,parent)))
        (pimacs-section--insert-section ,s
@@ -312,8 +312,7 @@ Return the first matching section, or nil if there is none."
 
 (defun pimacs-section--next-section (section)
   "Return the section that is after SECTION."
-  (pimacs-section--walk-sections section #'pimacs-section--next-section-step
-                                 (lambda (_section) t)))
+  (pimacs-section--walk-sections section #'pimacs-section--next-section-step #'always))
 
 (defun pimacs-section--next-section-of-type (section type)
   "Return the first section after SECTION whose type is TYPE."
@@ -360,8 +359,7 @@ Return the first matching section, or nil if there is none."
 
 (defun pimacs-section--prev-section (section)
   "Return the section that is before SECTION."
-  (pimacs-section--walk-sections section #'pimacs-section--prev-section-step
-                                 (lambda (_section) t)))
+  (pimacs-section--walk-sections section #'pimacs-section--prev-section-step #'always))
 
 (defun pimacs-section--prev-section-of-type (section type)
   "Return the first section before SECTION whose type is TYPE."
