@@ -189,6 +189,7 @@
   (with-temp-buffer
     (pimacs-section--create-root-section)
     (setq pimacs--tool-calls (make-hash-table :test 'equal))
+    (setq pimacs--content-sections (make-hash-table :test 'eql))
     (setq pimacs--prompt-before-widget
           (widget-create 'pimacs-item :face 'pimacs-widget-face pimacs--empty-widget-text))
     (setq pimacs--prompt-widget
