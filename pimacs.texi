@@ -81,9 +81,9 @@ from Emacs.
 @node Setup
 @chapter Setup
 
-@section Install the Pimacs Agent
+@section Install the Pi Agent
 
-First, install the Pimacs agent using npm:
+First, install the Pi agent using npm:
 
 @example
 npm install -g --ignore-scripts @@earendil-works/pi-coding-agent
@@ -136,9 +136,9 @@ support completion in the prompt buffer.  Type @kbd{/} and press
 @kbd{C-M-i} (or any key bound to completion) to see available commands.
 
 In addition to the commands listed below, extension commands, prompt
-templates, and skills registered with the Pimacs agent can also be
-invoked via slash commands.  These are fetched automatically from the
-agent and included in the completion list.
+templates, and skills registered with the Pi agent can also be invoked
+via slash commands.  These are fetched automatically from the agent
+and included in the completion list.
 
 Angle brackets @code{<>} denote required arguments, square brackets
 @code{[]} denote optional arguments.
@@ -285,7 +285,7 @@ component may also be a function that receives the current state plist.
 @node Sandbox
 @chapter Sandbox
 
-To run Pimacs inside a sandbox, customize @code{pimacs-executable} and
+To run Pi inside a sandbox, customize @code{pimacs-executable} and
 @code{pimacs-flags}:
 
 @lisp
@@ -297,8 +297,8 @@ To run Pimacs inside a sandbox, customize @code{pimacs-executable} and
 @node How It Works
 @chapter How It Works
 
-Emacs starts Pimacs in @uref{https://pi.dev/docs/latest/rpc, RPC mode}.
-In this setup, Pimacs handles the agent logic while Emacs provides the
+Emacs starts Pi in @uref{https://pi.dev/docs/latest/rpc, RPC mode}.
+In this setup, Pi handles the agent logic while Emacs provides the
 user interface. Some features, such as @code{/login} and
 @code{/logout}, are not
 @uref{https://github.com/earendil-works/pi/issues/885, supported}
@@ -531,7 +531,7 @@ The number of seconds to wait for a sync response.
 
 @defopt pimacs-executable @code{"pi"}
 
-Pimacs command executable name.
+Pi command executable name.
 @end defopt
 
 @defopt pimacs-process-environment @code{'()}

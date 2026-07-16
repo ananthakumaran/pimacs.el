@@ -1,4 +1,4 @@
-;;; pimacs.el --- Emacs Client for Pimacs -*- lexical-binding: t -*-
+;;; pimacs.el --- Emacs Client for Pi -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2026 Anantha Kumaran.
 
@@ -26,7 +26,7 @@
 
 ;;; Commentary:
 
-;; pimacs.el provides an Emacs client for interacting with Pimacs, an AI coding agent.
+;; pimacs.el provides an Emacs client for interacting with Pi, an AI coding agent.
 
 ;;; Code:
 
@@ -50,7 +50,7 @@
 (require 'mailcap)
 
 (defgroup pimacs nil
-  "Emacs client for Pimacs."
+  "Emacs client for Pi."
   :prefix "pimacs-"
   :group 'tools)
 

@@ -18,7 +18,7 @@
 
 ;;; Commentary:
 
-;; RPC client for communicating with the Pimacs coding agent process.
+;; RPC client for communicating with the Pi coding agent process.
 
 ;;; Code:
 
@@ -28,7 +28,7 @@
 (require 'pimacs-core)
 
 (defvar pimacs--minimum-version "0.80.3"
-  "The minimum supported Pimacs agent version.")
+  "The minimum supported Pi agent version.")
 
 (defcustom pimacs-sync-request-timeout 2
   "The number of seconds to wait for a sync response."
@@ -36,7 +36,7 @@
   :group 'pimacs)
 
 (defcustom pimacs-executable "pi"
-  "Pimacs command executable name."
+  "Pi command executable name."
   :type 'string
   :group 'pimacs)
 
@@ -193,7 +193,7 @@
 (defun pimacs--check-agent-version (version)
   (unless (version-list-<= (version-to-list pimacs--minimum-version)
                            (version-to-list version))
-    (error "Pimacs agent version %s is older than minimum supported version %s"
+    (error "Pi agent version %s is older than minimum supported version %s"
            version pimacs--minimum-version)))
 
 (defun pimacs--start-agent (key)

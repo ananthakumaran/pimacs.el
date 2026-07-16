@@ -51,10 +51,10 @@ File: pimacs.info,  Node: Setup,  Next: Usage,  Prev: Introduction,  Up: Top
 2 Setup
 *******
 
-2.1 Install the Pimacs Agent
-============================
+2.1 Install the Pi Agent
+========================
 
-First, install the Pimacs agent using npm:
+First, install the Pi agent using npm:
 
      npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
@@ -107,9 +107,9 @@ completion in the prompt buffer.  Type ‘/’ and press ‘C-M-i’ (or any key
 bound to completion) to see available commands.
 
    In addition to the commands listed below, extension commands, prompt
-templates, and skills registered with the Pimacs agent can also be
-invoked via slash commands.  These are fetched automatically from the
-agent and included in the completion list.
+templates, and skills registered with the Pi agent can also be invoked
+via slash commands.  These are fetched automatically from the agent and
+included in the completion list.
 
    Angle brackets ‘<>’ denote required arguments, square brackets ‘[]’
 denote optional arguments.
@@ -234,7 +234,7 @@ File: pimacs.info,  Node: Sandbox,  Next: How It Works,  Prev: Usage,  Up: Top
 4 Sandbox
 *********
 
-To run Pimacs inside a sandbox, customize ‘pimacs-executable’ and
+To run Pi inside a sandbox, customize ‘pimacs-executable’ and
 ‘pimacs-flags’:
 
      (setq pimacs-executable "nono")
@@ -247,8 +247,8 @@ File: pimacs.info,  Node: How It Works,  Next: Keybindings,  Prev: Sandbox,  Up:
 5 How It Works
 **************
 
-Emacs starts Pimacs in RPC mode (https://pi.dev/docs/latest/rpc).  In
-this setup, Pimacs handles the agent logic while Emacs provides the user
+Emacs starts Pi in RPC mode (https://pi.dev/docs/latest/rpc).  In this
+setup, Pi handles the agent logic while Emacs provides the user
 interface.  Some features, such as ‘/login’ and ‘/logout’, are not
 supported (https://github.com/earendil-works/pi/issues/885) because they
 are not currently exposed through the RPC API.
@@ -435,7 +435,7 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
  -- User Option: pimacs-executable "pi"
 
-     Pimacs command executable name.
+     Pi command executable name.
 
  -- User Option: pimacs-process-environment '()
 
@@ -527,17 +527,17 @@ Tag Table:
 Node: Top746
 Node: Introduction1012
 Node: Setup1269
-Node: Usage1884
-Node: Slash Commands2495
-Node: File Name Completion4740
-Node: Bash5068
-Node: Sending Context5335
-Node: Images6143
-Node: State Lines7008
-Node: Sandbox7696
-Node: How It Works8082
-Node: Keybindings8540
-Node: Custom Variables10698
+Node: Usage1872
+Node: Slash Commands2483
+Node: File Name Completion4724
+Node: Bash5052
+Node: Sending Context5319
+Node: Images6127
+Node: State Lines6992
+Node: Sandbox7680
+Node: How It Works8062
+Node: Keybindings8512
+Node: Custom Variables10670
 
 End Tag Table
 
