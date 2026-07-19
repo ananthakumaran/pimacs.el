@@ -14,6 +14,22 @@
 
 (require 'pimacs)
 
+(ert-deftest pimacs-chat--transient-defaults-root-to-project-root ()
+  (let ((prefix (transient-prefix :command 'pimacs-test)))
+    (cl-letf (((symbol-function 'pimacs--project-root)
+               (lambda () "/tmp/project/")))
+      (pimacs-chat--transient-init-value prefix))
+    (should (equal (oref prefix value) '("--root=/tmp/project/")))))
+
+(ert-deftest pimacs-chat--start-uses-transient-name-and-root ()
+  (let (arguments)
+    (cl-letf (((symbol-function 'transient-args)
+               (lambda (_prefix) '("--name=session" "--root=/tmp/root")))
+              ((symbol-function 'pimacs-chat--create)
+               (lambda (&rest args) (setq arguments args))))
+      (pimacs-chat--start))
+    (should (equal arguments '("session" "/tmp/root")))))
+
 (ert-deftest pimacs--parse-slash-command ()
   (should (equal (pimacs--parse-slash-command "/model") '(pimacs-select-model . nil)))
   (should (equal (pimacs--parse-slash-command "/new") '(pimacs-new-session . nil)))

@@ -4,9 +4,9 @@
 
 ;; Author: Anantha kumaran <ananthakumaran@gmail.com>
 ;; URL: https://github.com/ananthakumaran/pimacs.el
-;; Version: 0.1
+;; Version: 0.2.0
 ;; Keywords: convenience processes
-;; Package-Requires: ((emacs "28.1") (compat "31.0") (markdown-mode "2.8") (timeout "2.1.7") (pcre2el "1.12") (spinner "1.7"))
+;; Package-Requires: ((emacs "28.1") (compat "31.0") (markdown-mode "2.8") (timeout "2.1.7") (pcre2el "1.12") (spinner "1.7") (transient "0.3.7"))
 
 ;; This program is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -48,6 +48,7 @@
 (require 'imenu)
 (require 'seq)
 (require 'mailcap)
+(require 'transient)
 
 (defgroup pimacs nil
   "Emacs client for Pi."
@@ -2385,31 +2386,62 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (pimacs--update-header-line)
   (pimacs--fetch-commands))
 
-;;;###autoload
-(defun pimacs-chat (&optional name)
-  "Start a chat window with optional session NAME."
-  (interactive
-   (list (when current-prefix-arg
-           (read-string "Session name: "))))
-  (let* ((root (pimacs--project-root))
-         (key (if name
-                  (md5 (concat (pimacs--project-root) name))
-                (pimacs--project-key)))
-         (pimacs--project-key key))
-    (unless (pimacs--current-agent)
-      (pimacs--start-agent key))
-    (let ((chat-buffer (or (pimacs--current-chat)
-                           (progn
+(defun pimacs-chat--read-root (prompt _initial-input _history)
+  (read-directory-name prompt default-directory nil t))
+
+(defun pimacs-chat--transient-init-value (obj)
+  (oset obj value (list (concat "--root=" (pimacs--project-root)))))
+
+(defun pimacs-chat--start ()
+  "Start the chat configured by the active transient."
+  (interactive)
+  (let ((args (transient-args 'pimacs-chat--transient)))
+    (pimacs-chat--create (transient-arg-value "--name=" args)
+                         (transient-arg-value "--root=" args))))
+
+(transient-define-prefix pimacs-chat--transient ()
+  "Configure and start a Pimacs chat."
+  :init-value #'pimacs-chat--transient-init-value
+  [["Options"
+    ("n" "Session name" "--name=")
+    ("r" "Root directory" "--root=" :always-read t :reader pimacs-chat--read-root)]
+   ["Actions"
+    ("RET" "Start chat" pimacs-chat--start)]])
+
+(defun pimacs-chat--create (name root)
+  (let* ((explicit-root root)
+         (root (if explicit-root
+                   (file-name-as-directory (expand-file-name explicit-root))
+                 (pimacs--project-root)))
+         (key (if (or name explicit-root)
+                  (md5 (concat root (or name "")))
+                (pimacs--project-key))))
+    (let ((pimacs--project-root root)
+          (pimacs--project-key key))
+      (unless (pimacs--current-agent)
+        (pimacs--start-agent key))
+      (let ((chat-buffer (or (pimacs--current-chat)
                              (let ((buffer (generate-new-buffer (pimacs--chat-buffer-name name))))
                                (with-current-buffer buffer
                                  (setq-local pimacs--project-key key)
+                                 (setq-local pimacs--project-root root)
+                                 (setq-local default-directory root)
                                  (puthash key buffer pimacs--chats)
                                  (pimacs-chat-mode)
-                                 (setq-local default-directory root)
                                  (when name
                                    (pimacs-set-session-name name)))
-                               buffer)))))
-      (pop-to-buffer chat-buffer))))
+                               buffer))))
+        (pop-to-buffer chat-buffer)))))
+
+;;;###autoload
+(defun pimacs-chat (&optional name root)
+  "Start a chat window with optional session NAME at ROOT.
+
+With a prefix argument, show a transient for setting NAME and ROOT."
+  (interactive)
+  (if current-prefix-arg
+      (pimacs-chat--transient)
+    (pimacs-chat--create name root)))
 
 (defun pimacs-toggle-chat ()
   "Toggle chat window."

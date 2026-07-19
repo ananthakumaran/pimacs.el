@@ -80,8 +80,10 @@ File: pimacs.info,  Node: Usage,  Next: Sandbox,  Prev: Setup,  Up: Top
 *******
 
 Run ‘M-x pimacs-chat’ from any file in your project to start a Pimacs
-chat session.  Use a prefix argument (‘C-u M-x pimacs-chat’) to start
-multiple chats on the same project.
+chat session.  Use a prefix argument (‘C-u M-x pimacs-chat’) to open a
+transient where you can set a session name and root directory.  Setting
+a root directory starts the chat there instead of using ‘project.el’ to
+find the project root.
 
    The chat buffer is read-only except for the prompt input area.  Use
 ‘RET’ to submit a prompt and ‘C-j’ to insert a newline.  Press ‘i’ from
@@ -528,16 +530,16 @@ Node: Top746
 Node: Introduction1012
 Node: Setup1269
 Node: Usage1872
-Node: Slash Commands2483
-Node: File Name Completion4724
-Node: Bash5052
-Node: Sending Context5319
-Node: Images6127
-Node: State Lines6992
-Node: Sandbox7680
-Node: How It Works8062
-Node: Keybindings8512
-Node: Custom Variables10670
+Node: Slash Commands2619
+Node: File Name Completion4860
+Node: Bash5188
+Node: Sending Context5455
+Node: Images6263
+Node: State Lines7128
+Node: Sandbox7816
+Node: How It Works8198
+Node: Keybindings8648
+Node: Custom Variables10806
 
 End Tag Table
 
