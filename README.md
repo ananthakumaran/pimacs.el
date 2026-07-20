@@ -1,5 +1,7 @@
 # Pimacs
 
+[![codecov](https://codecov.io/gh/ananthakumaran/pimacs.el/graph/badge.svg?token=JOXNJXK8OH)](https://codecov.io/gh/ananthakumaran/pimacs.el)
+
 An Emacs client for [Pi Coding Agent](https://pi.dev/)
 
 ![screenshot](docs/screenshot.png)
