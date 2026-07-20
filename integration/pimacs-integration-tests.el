@@ -156,6 +156,10 @@
   (pimacs-send-prompt prompt)
   (pimacs-drain-process-output))
 
+(defun pimacs-assert-prompt (buffer expected)
+  (with-current-buffer buffer
+    (should (equal (widget-value pimacs--prompt-widget) expected))))
+
 (defmacro pimacs-with-minibuffer-input (input &rest body)
   (declare (indent 1))
   `(let ((executing-kbd-macro t)
@@ -313,6 +317,80 @@
             (end (point-max)))
         (pimacs-send-region start end)))
     (pimacs-send-prompt-and-wait (widget-value pimacs--prompt-widget))))
+
+(ert-deftest pimacs-send-selects-enclosing-chat ()
+  (pimacs-with-silenced-integration-messages
+    (let* ((parent-root (file-name-as-directory (make-temp-file "pimacs-parent-" t)))
+           (child-root (file-name-as-directory (expand-file-name "child" parent-root)))
+           (child-file (expand-file-name "child-file.el" child-root))
+           (parent-file (expand-file-name "parent-file.el" parent-root))
+           (outside-file (make-temp-file "pimacs-outside-"))
+           (default-directory parent-root)
+           (pimacs-process-environment
+            (list (concat "FIXTURE_SCENARIO=insert-region")
+                  (concat "PI_CODING_AGENT_DIR=" pimacs-project-agent-directory)
+                  (concat "FIXTURE_MODE=" (pimacs-fixture-mode))))
+           (pimacs-flags
+            (list "--tools" "read,bash,edit,write,grep,find,ls"
+                  "--extension" (expand-file-name "fixture" pimacs-integration-directory)))
+           (pimacs-send-pop-to-chat nil)
+           parent-chat child-chat child-source parent-source outside-source)
+      (unwind-protect
+          (progn
+            (make-directory child-root)
+            (with-temp-file child-file
+              (insert "child region\n"))
+            (with-temp-file parent-file
+              (insert "parent region\n"))
+
+            (pimacs-chat "parent" parent-root)
+            (setq parent-chat (pimacs--current-chat))
+            (pimacs-chat "child" child-root)
+            (setq child-chat (pimacs--current-chat))
+            (sleep-for 2)
+            (with-current-buffer parent-chat
+              (pimacs--force-update-header-line))
+            (with-current-buffer child-chat
+              (pimacs--force-update-header-line))
+
+            (setq child-source (find-file-noselect child-file))
+            (with-current-buffer child-source
+              (setq-local pimacs--project-key nil)
+              (pimacs-with-minibuffer-input (kbd "child TAB RET")
+                (pimacs-send-filename))
+              (should (eq pimacs--project-key
+                          (buffer-local-value 'pimacs--project-key child-chat)))
+              (goto-char (point-min))
+              (pimacs-send-region (point-min) (line-end-position)))
+            (pimacs-assert-prompt child-chat
+                                  "@child-file.el\n@child-file.el#L1-1\nchild region")
+            (pimacs-assert-prompt parent-chat "")
+
+            (setq parent-source (find-file-noselect parent-file))
+            (with-current-buffer parent-source
+              (setq-local pimacs--project-key nil)
+              (pimacs-send-filename)
+              (should (eq pimacs--project-key
+                          (buffer-local-value 'pimacs--project-key parent-chat))))
+            (pimacs-assert-prompt parent-chat "@parent-file.el")
+
+            (setq outside-source (find-file-noselect outside-file))
+            (with-current-buffer outside-source
+              (setq-local pimacs--project-key nil)
+              (let ((err (should-error (pimacs-send-filename))))
+                (should (string-match-p "Chat doesn.?t exist, start a new chat using M-x pimacs-chat"
+                                        (error-message-string err))))))
+        (dolist (source (list child-source parent-source outside-source))
+          (when (buffer-live-p source)
+            (kill-buffer source)))
+        (dolist (chat (list child-chat parent-chat))
+          (when (buffer-live-p chat)
+            (with-current-buffer chat
+              (ignore-errors (pimacs-quit-chat)))))
+        (when (file-exists-p outside-file)
+          (delete-file outside-file))
+        (when (file-exists-p parent-root)
+          (delete-directory parent-root t))))))
 
 (ert-deftest pimacs-reload ()
   (pimacs-with-integration-project "reload"
