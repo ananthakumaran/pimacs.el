@@ -44,13 +44,8 @@
   (file-name-nondirectory (directory-file-name (pimacs--project-root))))
 
 (defun pimacs--agent-buffer-name ()
-  (format "*pimacs-agent:%s*" (pimacs--project-key)))
+  (format "*pimacs-agent:%s*" pimacs--project-key))
 
-(defun pimacs--project-key ()
-  "Unique key for the current project, used for internal hash tables."
-  (or
-   pimacs--project-key
-   (md5 (pimacs--project-root))))
 
 (provide 'pimacs-core)
 

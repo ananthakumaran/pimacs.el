@@ -412,7 +412,8 @@ with the message plist to insert the custom message content."
 (defmacro pimacs--with-chat-buffer (&rest body)
   "Execute BODY in the current chat buffer."
   (declare (indent 0))
-  `(let ((buffer (pimacs--current-chat)))
+  `(let ((buffer (or (pimacs--current-chat)
+                     (pimacs--select-relevant-chat))))
      (if buffer
          (with-current-buffer buffer
            (progn ,@body))
@@ -420,7 +421,54 @@ with the message plist to insert the custom message content."
 
 
 (defun pimacs--current-chat ()
-  (gethash (pimacs--project-key) pimacs--chats))
+  (gethash pimacs--project-key pimacs--chats))
+
+(defun pimacs--relevant-chat-candidates ()
+  (let ((path (expand-file-name (or buffer-file-name default-directory)))
+        candidates)
+    (maphash
+     (lambda (key agent)
+       (let ((root (process-get agent 'project-root))
+             (chat (gethash key pimacs--chats)))
+         (when (and (process-live-p agent)
+                    (buffer-live-p chat)
+                    root
+                    (file-in-directory-p path root))
+           (push (cons key chat) candidates))))
+     pimacs--agents)
+    candidates))
+
+(defun pimacs--chat-session-choice-label (chat root)
+  (with-current-buffer chat
+    (let* ((name (plist-get pimacs--header-line-state :sessionName))
+           (session-id (pimacs--plist-get pimacs--header-line-state :sessionStats :sessionId))
+           (short-id (pimacs--short-uuid session-id)))
+      (pimacs--join (list (and (stringp name) name) (format "(%s)" root) short-id) " "))))
+
+(defun pimacs--select-relevant-chat ()
+  (let ((candidates (pimacs--relevant-chat-candidates)))
+    (cond
+     ((null candidates) nil)
+     ((null (cdr candidates))
+      (let ((candidate (car candidates)))
+        (setq-local pimacs--project-key (car candidate))
+        (cdr candidate)))
+     (t
+      (let* ((choices
+              (sort
+               (mapcar
+                (lambda (candidate)
+                  (let* ((key (car candidate))
+                         (agent (gethash key pimacs--agents))
+                         (root (process-get agent 'project-root))
+                         (chat (cdr candidate)))
+                    (cons (pimacs--chat-session-choice-label chat root) candidate)))
+                candidates)
+               (lambda (a b) (string< (car a) (car b)))))
+             (selected (completing-read "Pimacs session: " choices nil t))
+             (candidate (cdr (assoc selected choices))))
+        (setq-local pimacs--project-key (car candidate))
+        (cdr candidate))))))
 
 ;;; Completion
 
@@ -1413,7 +1461,7 @@ with the message plist to insert the custom message content."
   (pimacs--recenter-chat))
 
 (defun pimacs--cleanup-chat-buffer ()
-  (let ((project-key (pimacs--project-key)))
+  (let ((project-key pimacs--project-key))
     (remhash project-key pimacs--chats)
     (pimacs--hash-remove-if (lambda (k _v) (equal (car k) project-key)) pimacs--event-listeners)
     (ignore-errors
@@ -1605,32 +1653,34 @@ If `pimacs-prompt-streaming-behavior' is `followUp', use `steer' and vice versa.
     (let ((buffer (pimacs--current-chat)))
       (when buffer (pop-to-buffer buffer)))))
 
-(defun pimacs--project-relative-name ()
-  (let ((root (pimacs--project-root)))
-    (file-relative-name buffer-file-name root)))
+(defun pimacs--project-relative-name (filename)
+  (file-relative-name filename (pimacs--project-root)))
 
 (defun pimacs-send-region (start end)
   "Append the region delimited by START and END to the pimacs prompt input."
   (interactive "r")
-  (let* ((string (buffer-substring-no-properties start end))
-         (header (when buffer-file-name
-                   (let* ((relative (pimacs--project-relative-name))
-                          (line-start (line-number-at-pos start))
-                          (line-end (line-number-at-pos end)))
-                     (format "@%s#L%d-%d\n" relative line-start line-end))))
-         (full-string (if header (concat header string) string)))
-    (pimacs--prompt-append full-string)
+  (let ((filename buffer-file-name)
+        (string (buffer-substring-no-properties start end))
+        (line-start (line-number-at-pos start))
+        (line-end (line-number-at-pos end)))
+    (pimacs--with-chat-buffer
+      (let* ((header (when filename
+                       (format "@%s#L%d-%d\n"
+                               (pimacs--project-relative-name filename)
+                               line-start line-end)))
+             (full-string (if header (concat header string) string)))
+        (pimacs--prompt-append full-string)))
     (deactivate-mark)
     (pimacs--pop-to-chat)))
 
 (defun pimacs-send-filename ()
   "Append the current buffer's filename to the pimacs prompt input."
   (interactive)
-  (when buffer-file-name
-    (let* ((relative (pimacs--project-relative-name))
-           (header (format "@%s" relative)))
-      (pimacs--prompt-append header)
-      (pimacs--pop-to-chat))))
+  (when-let ((filename buffer-file-name))
+    (pimacs--with-chat-buffer
+      (pimacs--prompt-append
+       (format "@%s" (pimacs--project-relative-name filename))))
+    (pimacs--pop-to-chat)))
 
 (declare-function flycheck-overlay-errors-at "ext:flycheck")
 (declare-function flycheck-error-line "ext:flycheck")
@@ -1644,24 +1694,26 @@ If `pimacs-prompt-streaming-behavior' is `followUp', use `steer' and vice versa.
   "Append flycheck errors at point to the pimacs prompt input."
   (interactive)
   (let ((errors (or (flycheck-overlay-errors-at (point))
-                    flycheck-current-errors)))
-    (when (and errors buffer-file-name)
-      (let* ((relative (pimacs--project-relative-name))
-             (error-lines
-              (mapconcat
-               (lambda (err)
-                 (let* ((level (flycheck-error-level err))
-                        (message (flycheck-error-message err))
-                        (header (format "@%s#%s" relative (flycheck-error-format-position err)))
-                        (line (pimacs--get-line-contents (flycheck-error-buffer err) (flycheck-error-line err))))
-                   (format "%s\n%s\n%s: %s"
-                           header
-                           line
-                           (capitalize (symbol-name level))
-                           message)))
-               errors "\n")))
-        (pimacs--prompt-append error-lines)
-        (pimacs--pop-to-chat)))))
+                    flycheck-current-errors))
+        (filename buffer-file-name))
+    (when (and errors filename)
+      (pimacs--with-chat-buffer
+        (let* ((relative (pimacs--project-relative-name filename))
+               (error-lines
+                (mapconcat
+                 (lambda (err)
+                   (let* ((level (flycheck-error-level err))
+                          (message (flycheck-error-message err))
+                          (header (format "@%s#%s" relative (flycheck-error-format-position err)))
+                          (line (pimacs--get-line-contents (flycheck-error-buffer err) (flycheck-error-line err))))
+                     (format "%s\n%s\n%s: %s"
+                             header
+                             line
+                             (capitalize (symbol-name level))
+                             message)))
+                 errors "\n")))
+          (pimacs--prompt-append error-lines))))
+    (pimacs--pop-to-chat)))
 
 (defun pimacs-abort ()
   "Abort the current agent operation."
@@ -1974,9 +2026,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                                (formatted-time (if ts
                                                    (format-time-string "%F %R" ts)
                                                  ""))
-                               (short-id (substring (pimacs-session-choice-id s) -8))
-                               (short-parent (when-let ((pid (pimacs-session-choice-parent-id s)))
-                                               (substring pid -8))))
+                               (short-id (pimacs--short-uuid (pimacs-session-choice-id s)))
+                               (short-parent (pimacs--short-uuid (pimacs-session-choice-parent-id s))))
                           (cons (format "%s  %s  %s%s%s" short-id formatted-time
                                         (if (pimacs-session-choice-name s)
                                             (format "[%s] " (pimacs-session-choice-name s))
@@ -2413,9 +2464,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
          (root (if explicit-root
                    (file-name-as-directory (expand-file-name explicit-root))
                  (pimacs--project-root)))
-         (key (if (or name explicit-root)
-                  (md5 (concat root (or name "")))
-                (pimacs--project-key))))
+         (key (md5 (concat root (or name "")))))
     (let ((pimacs--project-root root)
           (pimacs--project-key key))
       (unless (pimacs--current-agent)
@@ -2488,7 +2537,7 @@ If non-nil, call CB after the session refresh finishes."
      (pimacs--on-response-success-callback resp
        (let* ((data (plist-get resp :data))
               (session-file (plist-get data :sessionFile))
-              (project-key (pimacs--project-key))
+              (project-key pimacs--project-key)
               (chat-buffer (current-buffer)))
          (run-at-time
           0 nil

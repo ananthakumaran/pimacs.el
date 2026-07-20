@@ -78,7 +78,7 @@
 (defvar pimacs--request-counter 0)
 
 (defun pimacs--current-agent ()
-  (gethash (pimacs--project-key) pimacs--agents))
+  (gethash pimacs--project-key pimacs--agents))
 
 (defun pimacs--next-request-id ()
   (number-to-string (cl-incf pimacs--request-counter)))
@@ -96,7 +96,7 @@
       (remhash request-id pimacs--response-callbacks))))
 
 (defun pimacs--dispatch-event (event)
-  (let ((key (pimacs--project-key)))
+  (let ((key pimacs--project-key))
     (when-let (all-listener (gethash (cons key t) pimacs--event-listeners))
       (with-current-buffer (car all-listener)
         (apply (cdr all-listener) (list event))))
@@ -106,7 +106,7 @@
 
 (defun pimacs--set-event-listener (name listener)
   "Set event listener NAME for all events.  LISTENER is the callback."
-  (puthash (cons (pimacs--project-key) name) (cons (current-buffer) listener) pimacs--event-listeners))
+  (puthash (cons pimacs--project-key name) (cons (current-buffer) listener) pimacs--event-listeners))
 
 (defun pimacs--dispatch (response)
   (cl-case (intern (plist-get response :type))

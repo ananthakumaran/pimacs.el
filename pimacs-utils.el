@@ -53,6 +53,10 @@
    (t
     (number-to-string n))))
 
+(defun pimacs--short-uuid (uuid)
+  (when (stringp uuid)
+    (substring uuid -8)))
+
 (defmacro pimacs--def-permanent-buffer-local (name &optional init-value)
   "Declare NAME as buffer local variable with optional INIT-VALUE."
   `(progn
