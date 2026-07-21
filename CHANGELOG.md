@@ -4,6 +4,7 @@
 
 ### Added
 
+- `pimacs-switch-session` switches between active chats.
 - Send commands select an active chat by enclosing project root, prompting when ambiguous.
 - Start chats from any directory using the `C-u` prefix for `pimacs-chat`,
   which opens a transient for selecting a session name and root

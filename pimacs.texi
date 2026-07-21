@@ -114,7 +114,8 @@ Run @kbd{M-x pimacs-chat} from any file in your project to start a Pimacs chat
 session.  Use a prefix argument (@kbd{C-u M-x pimacs-chat}) to open a
 transient where you can set a session name and root directory.  Setting a root
 directory starts the chat there instead of using @code{project.el} to find the
-project root.
+project root.  Run @kbd{M-x pimacs-switch-session} to switch between any
+active chat sessions.
 
 The chat buffer is read-only except for the prompt input area.  Use
 @kbd{RET} to submit a prompt and @kbd{C-j} to insert a newline.  Press

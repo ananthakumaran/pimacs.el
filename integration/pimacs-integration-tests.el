@@ -356,7 +356,7 @@
             (setq child-source (find-file-noselect child-file))
             (with-current-buffer child-source
               (setq-local pimacs--project-key nil)
-              (pimacs-with-minibuffer-input (kbd "child TAB RET")
+              (pimacs-with-minibuffer-input (kbd "child RET")
                 (pimacs-send-filename))
               (should (eq pimacs--project-key
                           (buffer-local-value 'pimacs--project-key child-chat)))

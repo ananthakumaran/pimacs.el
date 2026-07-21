@@ -423,52 +423,71 @@ with the message plist to insert the custom message content."
 (defun pimacs--current-chat ()
   (gethash pimacs--project-key pimacs--chats))
 
-(defun pimacs--relevant-chat-candidates ()
-  (let ((path (expand-file-name (or buffer-file-name default-directory)))
-        candidates)
+(defun pimacs--active-chat-candidates ()
+  (let (candidates)
     (maphash
      (lambda (key agent)
-       (let ((root (process-get agent 'project-root))
-             (chat (gethash key pimacs--chats)))
+       (when-let ((chat (gethash key pimacs--chats)))
          (when (and (process-live-p agent)
-                    (buffer-live-p chat)
-                    root
-                    (file-in-directory-p path root))
+                    (buffer-live-p chat))
            (push (cons key chat) candidates))))
      pimacs--agents)
     candidates))
 
-(defun pimacs--chat-session-choice-label (chat root)
+(defun pimacs--relevant-chat-candidates ()
+  (let ((path (expand-file-name (or buffer-file-name default-directory))))
+    (seq-filter
+     (lambda (candidate)
+       (when-let* ((agent (gethash (car candidate) pimacs--agents))
+                   (root (process-get agent 'project-root)))
+         (file-in-directory-p path root)))
+     (pimacs--active-chat-candidates))))
+
+(defun pimacs--chat-session-choice-label (chat &optional include-id)
   (with-current-buffer chat
     (let* ((name (plist-get pimacs--header-line-state :sessionName))
            (session-id (pimacs--plist-get pimacs--header-line-state :sessionStats :sessionId))
            (short-id (pimacs--short-uuid session-id)))
-      (pimacs--join (list (and (stringp name) name) (format "(%s)" root) short-id) " "))))
+      (if (and (stringp name) (not (string-empty-p name)))
+          (if (and include-id short-id)
+              (concat name " " short-id)
+            name)
+        (or short-id "unknown")))))
+
+(defun pimacs--select-chat (candidates prompt)
+  (cond
+   ((null candidates) nil)
+   ((null (cdr candidates)) (car candidates))
+   (t
+    (let* ((labels
+            (mapcar (lambda (candidate)
+                      (cons (pimacs--chat-session-choice-label (cdr candidate)) candidate))
+                    candidates))
+           (choices
+            (sort
+             (mapcar
+              (lambda (label)
+                (if (> (cl-count (car label) labels :key #'car :test #'equal) 1)
+                    (cons (pimacs--chat-session-choice-label (cdr (cdr label)) t) (cdr label))
+                  label))
+              labels)
+             (lambda (a b) (string< (car a) (car b)))))
+           (annotation-function
+            (lambda (label)
+              (when-let* ((candidate (cdr (assoc label choices)))
+                          (agent (gethash (car candidate) pimacs--agents))
+                          (root (process-get agent 'project-root)))
+                (concat "  " (propertize (expand-file-name root) 'face 'dired-directory)))))
+           (completion-extra-properties
+            `(:annotation-function ,annotation-function))
+           (selected (completing-read prompt choices nil t)))
+      (cdr (assoc selected choices))))))
 
 (defun pimacs--select-relevant-chat ()
-  (let ((candidates (pimacs--relevant-chat-candidates)))
-    (cond
-     ((null candidates) nil)
-     ((null (cdr candidates))
-      (let ((candidate (car candidates)))
-        (setq-local pimacs--project-key (car candidate))
-        (cdr candidate)))
-     (t
-      (let* ((choices
-              (sort
-               (mapcar
-                (lambda (candidate)
-                  (let* ((key (car candidate))
-                         (agent (gethash key pimacs--agents))
-                         (root (process-get agent 'project-root))
-                         (chat (cdr candidate)))
-                    (cons (pimacs--chat-session-choice-label chat root) candidate)))
-                candidates)
-               (lambda (a b) (string< (car a) (car b)))))
-             (selected (completing-read "Pimacs session: " choices nil t))
-             (candidate (cdr (assoc selected choices))))
-        (setq-local pimacs--project-key (car candidate))
-        (cdr candidate))))))
+  (when-let ((candidate (pimacs--select-chat (pimacs--relevant-chat-candidates)
+                                             "Pimacs session: ")))
+    (setq-local pimacs--project-key (car candidate))
+    (cdr candidate)))
 
 ;;; Completion
 
@@ -2491,6 +2510,14 @@ With a prefix argument, show a transient for setting NAME and ROOT."
   (if current-prefix-arg
       (pimacs-chat--transient)
     (pimacs-chat--create name root)))
+
+(defun pimacs-switch-session ()
+  "Switch to another active Pimacs chat session."
+  (interactive)
+  (if-let ((candidate (pimacs--select-chat (pimacs--active-chat-candidates)
+                                           "Switch to Pimacs session: ")))
+      (pop-to-buffer (cdr candidate))
+    (user-error "No active Pimacs sessions")))
 
 (defun pimacs-toggle-chat ()
   "Toggle chat window."

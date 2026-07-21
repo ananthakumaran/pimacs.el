@@ -30,6 +30,40 @@
       (pimacs-chat--start))
     (should (equal arguments '("session" "/tmp/root")))))
 
+(ert-deftest pimacs--select-chat-appends-id-to-duplicate-names ()
+  (let ((first (generate-new-buffer " *pimacs-session-1*"))
+        (second (generate-new-buffer " *pimacs-session-2*"))
+        (unnamed (generate-new-buffer " *pimacs-session-3*"))
+        (unique (generate-new-buffer " *pimacs-session-4*"))
+        labels selected)
+    (unwind-protect
+        (progn
+          (with-current-buffer first
+            (setq pimacs--header-line-state
+                  '(:sessionName "shared" :sessionStats (:sessionId "00000000-11111111"))))
+          (with-current-buffer second
+            (setq pimacs--header-line-state
+                  '(:sessionName "shared" :sessionStats (:sessionId "00000000-22222222"))))
+          (with-current-buffer unnamed
+            (setq pimacs--header-line-state
+                  '(:sessionStats (:sessionId "00000000-33333333"))))
+          (with-current-buffer unique
+            (setq pimacs--header-line-state
+                  '(:sessionName "unique" :sessionStats (:sessionId "00000000-44444444"))))
+          (cl-letf (((symbol-function 'completing-read)
+                     (lambda (_prompt choices &rest _)
+                       (setq labels (mapcar #'car choices))
+                       "shared 22222222")))
+            (setq selected
+                  (pimacs--select-chat
+                   `(("first" . ,first) ("second" . ,second)
+                     ("unnamed" . ,unnamed) ("unique" . ,unique))
+                   "Session: ")))
+          (should (equal labels '("33333333" "shared 11111111" "shared 22222222" "unique")))
+          (should (eq (cdr selected) second)))
+      (dolist (buffer (list first second unnamed unique))
+        (kill-buffer buffer)))))
+
 (ert-deftest pimacs--parse-slash-command ()
   (should (equal (pimacs--parse-slash-command "/model") '(pimacs-select-model . nil)))
   (should (equal (pimacs--parse-slash-command "/new") '(pimacs-new-session . nil)))
