@@ -31,6 +31,14 @@
   (let ((err (should-error (pimacs--format-state-line '(:spacer :spacer)))))
     (should (string-match-p "only one.*:spacer" (error-message-string err)))))
 
+(ert-deftest pimacs--format-state-line-session-name-falls-back-to-short-id ()
+  (should (equal (pimacs--format-state-line-session-name
+                  '(:sessionName "named" :sessionStats (:sessionId "12345678-abcdefgh")))
+                 "named"))
+  (should (equal (pimacs--format-state-line-session-name
+                  '(:sessionStats (:sessionId "12345678-abcdefgh")))
+                 "abcdefgh")))
+
 (ert-deftest pimacs--format-state-line-spinner ()
   (cl-letf (((symbol-function 'spinner-print) (lambda (_spinner) "spinner")))
     (should (equal (pimacs--format-state-line-spinner

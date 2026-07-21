@@ -154,7 +154,11 @@ See `pimacs-header-line-format' for available components."
   (pimacs--format-state-line-value (plist-get state :thinkingLevel)))
 
 (defun pimacs--format-state-line-session-name (state)
-  (pimacs--format-state-line-value (plist-get state :sessionName)))
+  (let ((name (plist-get state :sessionName)))
+    (pimacs--format-state-line-value
+     (if (and (stringp name) (not (string-empty-p name)))
+         name
+       (pimacs--short-uuid (pimacs--plist-get state :sessionStats :sessionId))))))
 
 (defun pimacs--format-state-line-message-count (state)
   (pimacs--format-state-line-value (plist-get state :messageCount)))
