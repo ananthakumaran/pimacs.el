@@ -363,8 +363,12 @@
               (should (eq major-mode 'pimacs-list-sessions-mode))
               (pimacs-check-tape "send-selects-enclosing-chat-sessions" ".txt"
                                  (buffer-substring (point-min) (point-max)))
-              (pimacs-check-tape "send-selects-enclosing-chat-sessions" "-header.txt"
-                                 (substring-no-properties (nth 2 header-line-format))))
+              (pimacs-check-tape
+               "send-selects-enclosing-chat-sessions" "-header.txt"
+               (substring-no-properties
+                (if (stringp header-line-format)
+                    header-line-format
+                  (nth 2 header-line-format)))))
 
             (setq child-source (find-file-noselect child-file))
             (with-current-buffer child-source
