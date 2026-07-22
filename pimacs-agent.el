@@ -124,7 +124,8 @@
     (pimacs--maybe-log-rpc "input" encoded-command)
     (process-send-string (pimacs--current-agent) payload)
     (when callback
-      (puthash request-id (cons (current-buffer) callback) pimacs--response-callbacks))))
+      (puthash request-id (cons (current-buffer) callback) pimacs--response-callbacks))
+    request-id))
 
 (defun pimacs--send-command-sync (name args)
   (let* ((start-time (current-time))
