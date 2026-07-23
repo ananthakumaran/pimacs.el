@@ -48,6 +48,7 @@
                    (const :tag "Output tokens" :output_tokens)
                    (const :tag "Cache-read tokens" :cache_read_tokens)
                    (const :tag "Cache-write tokens" :cache_write_tokens)
+                   (const :tag "Total cache hit percent" :cache_hit_percent)
                    (const :tag "Total tokens" :total_tokens)
                    (const :tag "Session cost" :cost)
                    (const :tag "Context usage" :context_usage)
@@ -89,6 +90,7 @@ Session statistics keywords:
 `:output_tokens'            Output token count.
 `:cache_read_tokens'        Cache-read token count.
 `:cache_write_tokens'       Cache-write token count.
+`:cache_hit_percent'        Total cache hit percentage.
 `:total_tokens'             Total token count.
 `:cost'                     Session cost.
 `:context_usage'            Context tokens and context window.
@@ -215,6 +217,22 @@ See `pimacs-header-line-format' for available components."
 (defun pimacs--format-state-line-cache-write-tokens (state)
   (pimacs--format-state-line-value (pimacs--plist-get state :sessionStats :tokens :cacheWrite)))
 
+(defun pimacs--format-state-line-cache-hit-percent (state)
+  (let* ((input (pimacs--plist-get state :sessionStats :tokens :input))
+         (cache-read (pimacs--plist-get state :sessionStats :tokens :cacheRead))
+         (cache-write (pimacs--plist-get state :sessionStats :tokens :cacheWrite)))
+    (if (and (numberp input) (numberp cache-read) (numberp cache-write))
+        (let ((total (+ input cache-read cache-write)))
+          (if (> total 0)
+              (concat (string-trim-right
+                       (string-trim-right
+                        (format "%.1f" (* 100.0 (/ (float cache-read) total)))
+                        "0+")
+                       "[.]")
+                      "%%")
+            "?"))
+      "?")))
+
 (defun pimacs--format-state-line-total-tokens (state)
   (pimacs--format-state-line-value (pimacs--plist-get state :sessionStats :tokens :total)))
 
@@ -258,6 +276,7 @@ See `pimacs-header-line-format' for available components."
     (:output_tokens . pimacs--format-state-line-output-tokens)
     (:cache_read_tokens . pimacs--format-state-line-cache-read-tokens)
     (:cache_write_tokens . pimacs--format-state-line-cache-write-tokens)
+    (:cache_hit_percent . pimacs--format-state-line-cache-hit-percent)
     (:total_tokens . pimacs--format-state-line-total-tokens)
     (:cost . pimacs--format-state-line-cost)
     (:agent_state . pimacs--format-state-line-agent-state)
