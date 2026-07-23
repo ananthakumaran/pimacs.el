@@ -24,6 +24,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'compat)
 
 (defcustom pimacs-section-autohide-count 2
   "Automatically hide older chat sections beyond this count.
