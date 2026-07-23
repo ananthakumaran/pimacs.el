@@ -127,7 +127,6 @@
   "Face used for extension status."
   :group 'pimacs)
 
-
 (defcustom pimacs-use-ansi-colors t
   "Whether to render ANSI colors in widget and status output."
   :type 'boolean
@@ -150,8 +149,6 @@
   "Maximum number of recent sessions to list when resuming a session."
   :type 'integer
   :group 'pimacs)
-
-
 
 (defcustom pimacs-prompt-streaming-behavior 'followUp
   "Default streaming behavior for prompts.
@@ -265,13 +262,17 @@ with the message plist to insert the custom message content."
   :type 'boolean
   :group 'pimacs)
 
+(defcustom pimacs-chat-keep-input-at-bottom t
+  "Whether to keep the input area at the bottom as new chat content is added."
+  :type 'boolean
+  :group 'pimacs)
+
 (defvar-local pimacs--project-file-cache nil)
 
 (defun pimacs-clear-project-file-cache ()
   "Clear the project file cache."
   (interactive)
   (setq pimacs--project-file-cache nil))
-
 
 ;;; Widget
 
@@ -297,7 +298,6 @@ with the message plist to insert the custom message content."
     (goto-char (widget-field-text-end widget))
     (when-let (window (get-buffer-window (current-buffer) t))
       (set-window-point window (widget-field-text-end widget)))))
-
 
 (defmacro pimacs--on-response-success (response &rest body)
   (declare (indent 1))
@@ -326,12 +326,10 @@ with the message plist to insert the custom message content."
              (pimacs--insert-error (format "%s cancelled." ,operation))))
        ,@body)))
 
-
 ;;; State management
 
 (cl-defstruct pimacs-tool-call
   call-section result-section prev-text tool-name args)
-
 
 (pimacs--def-permanent-buffer-local pimacs--prompt-widget nil)
 (pimacs--def-permanent-buffer-local pimacs--attached-images (vector))
@@ -384,14 +382,14 @@ with the message plist to insert the custom message content."
         (setq pimacs--prompt-history-index 0)
         (pimacs-focus-prompt)))))
 
-
 (defun pimacs--chat-buffer-name (&optional title)
   (if title
       (format "*pimacs-chat:%s:%s*" (pimacs--project-name) title)
     (format "*pimacs-chat:%s*" (pimacs--project-name))))
 
 (defun pimacs--recenter-chat ()
-  (when-let (window (get-buffer-window (current-buffer) t))
+  (when-let ((window (and pimacs-chat-keep-input-at-bottom
+                          (get-buffer-window (current-buffer) t))))
     (with-selected-window window
       (recenter (- -1 scroll-margin (pimacs--widget-lines pimacs--prompt-widget) (pimacs--extra-widget-lines))))))
 
@@ -419,12 +417,6 @@ with the message plist to insert the custom message content."
          (with-current-buffer buffer
            (progn ,@body))
        (error "Chat doesn't exist, start a new chat using M-x pimacs-chat"))))
-
-
-
-
-
-
 
 ;;; Completion
 
@@ -750,7 +742,6 @@ with the message plist to insert the custom message content."
                          :tool-name tool-name
                          :args args)
                         pimacs--tool-calls)))))))))
-
 
 (defun pimacs--handle-message-end (event)
   (let* ((message (plist-get event :message))
@@ -1423,7 +1414,6 @@ with the message plist to insert the custom message content."
     (ignore-errors
       (pimacs--kill-agent))))
 
-
 ;;; Commands
 
 (defun pimacs--parse-slash-command (prompt)
@@ -1498,7 +1488,6 @@ with the message plist to insert the custom message content."
              "prompt" args
              (pimacs--on-response-success-callback resp
                (pimacs--clear-prompt prompt))))))))))
-
 
 (defun pimacs-send-prompt-alternate (&optional prompt)
   "Send PROMPT with the alternative streaming behavior.
@@ -2230,7 +2219,6 @@ summarization."
            (mapcar (lambda (c) (cons (plist-get c :name) c))
                    (plist-get (plist-get resp :data) :commands))))))
 
-
 (defun pimacs--visit-file (result &optional other-window)
   (let ((file (plist-get result :file))
         (line (plist-get result :line))
@@ -2447,14 +2435,6 @@ With a prefix argument, show a transient for setting NAME and ROOT."
   (if current-prefix-arg
       (pimacs-chat--transient)
     (pimacs-chat--create name root)))
-
-
-
-
-
-
-
-
 
 (defun pimacs-toggle-chat ()
   "Toggle chat window."

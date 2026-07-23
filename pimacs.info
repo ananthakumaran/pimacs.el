@@ -448,6 +448,11 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      Whether to pop to the chat buffer after sending region, filename or
      errors.
 
+ -- User Option: pimacs-chat-keep-input-at-bottom t
+
+     Whether to keep the input area at the bottom as new chat content is
+     added.
+
  -- User Option: pimacs-list-sessions-table
 
           '(("Session" . (:session_name face font-lock-function-name-face))

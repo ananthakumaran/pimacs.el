@@ -111,7 +111,6 @@ See `pimacs-header-line-format' for available components."
   :type pimacs--state-line-format-type
   :group 'pimacs)
 
-
 (pimacs--def-permanent-buffer-local pimacs--header-line-state nil)
 (pimacs--def-permanent-buffer-local pimacs--agent-state nil)
 (pimacs--def-permanent-buffer-local pimacs--spinner nil)

@@ -100,7 +100,6 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
              (equal (car prefix) (car list))
              (pimacs-section--prefix-p (cdr prefix) (cdr list))))))
 
-
 (cl-defstruct pimacs-section
   parent children beginning end type visibility info padding)
 
@@ -516,7 +515,6 @@ EVENT is the mouse event that triggered the toggle."
 	(pimacs-section--set-visibility section :hide))
       (forward-line 1))))
 
-
 (defmacro pimacs-section--section-case (&rest clauses)
   "Make different action depending of current section.
 
@@ -542,7 +540,6 @@ otherwise it return t."
                              (or (progn ,@body)
                                  t))))
                        clauses)))))
-
 
 (defun pimacs-demo ()
   "Create a demo buffer with nested pimacs sections."

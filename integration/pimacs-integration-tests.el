@@ -422,7 +422,6 @@
     (sleep-for 3)
     (pimacs-send-prompt-and-wait "hello")))
 
-
 (ert-deftest pimacs-extension-ui ()
   (pimacs-with-integration-project "extension-ui"
     (setq-local pimacs-header-line-format

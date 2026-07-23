@@ -45,7 +45,6 @@
 (defun pimacs--agent-buffer-name ()
   (format "*pimacs-agent:%s*" pimacs--project-key))
 
-
 (provide 'pimacs-core)
 
 ;;; pimacs-core.el ends here

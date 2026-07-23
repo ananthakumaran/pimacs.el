@@ -540,6 +540,11 @@ with the message plist to insert the custom message content.
 Whether to pop to the chat buffer after sending region, filename or errors.
 @end defopt
 
+@defopt pimacs-chat-keep-input-at-bottom @code{t}
+
+Whether to keep the input area at the bottom as new chat content is added.
+@end defopt
+
 @defopt pimacs-list-sessions-table
 
 @lisp

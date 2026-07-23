@@ -77,7 +77,6 @@
                   (goto-char (pimacs-section-beginning section))
                   (line-end-position)))))
 
-
 ;; ─── Basic section creation ────────────────────────────────────────────
 
 (ert-deftest pimacs-section-create-root ()
@@ -112,7 +111,6 @@
       (should (equal (pimacs-section-visibility child) pimacs-section--visibility-default))
       (should (eq (pimacs-section-visibility child) :autoshow)))))
 
-
 ;; ─── pimacs-section--insert-section ─────────────────────────────────────────────────
 
 (ert-deftest pimacs-section-insert-sets-beginning-and-end ()
@@ -143,7 +141,6 @@
       (should (>= (pimacs-section-end build) (pimacs-section-end compile)))
       (should (>= (pimacs-section-end pimacs-section--root-section) (pimacs-section-end build))))))
 
-
 ;; ─── pimacs-section--append-section ─────────────────────────────────────────────────
 
 (ert-deftest pimacs-section-append-extends-existing ()
@@ -165,7 +162,6 @@
         (insert "extra line\n"))
       (goto-char (point-max))
       (should (eq (get-text-property (1- (point)) 'pimacs-section) log)))))
-
 
 ;; ─── pimacs-section--replace-section ────────────────────────────────────────────────
 
@@ -231,7 +227,6 @@
         (insert "  [-] Tests\n"))
       (should (null (pimacs-section-children tests))))))
 
-
 ;; ─── pimacs-section--current-section / pimacs-section--section-at ────────────────────────────────
 
 (ert-deftest pimacs-section--section-at-returns-correct-section ()
@@ -257,7 +252,6 @@
     (forward-line 17)
     (should (eq (pimacs-section-type (pimacs-section--current-section)) 'worker-log))))
 
-
 ;; ─── pimacs-section--section-path ───────────────────────────────────────────────────
 
 (ert-deftest pimacs-section--section-path-root ()
@@ -274,7 +268,6 @@
     (let ((s (pimacs-section--current-section)))
       (should (equal (pimacs-section--section-path s)
                      '(build test unit-tests))))))
-
 
 ;; ─── pimacs-section--find-section ───────────────────────────────────────────────────
 
@@ -295,7 +288,6 @@
     (let* ((root pimacs-section--root-section)
            (found (pimacs-section--find-section '() root)))
       (should (eq found root)))))
-
 
 ;; ─── pimacs-section--next-section / pimacs-section--prev-section ─────────────────────────────────
 
@@ -532,7 +524,6 @@
       (should (null (pimacs-section-children pimacs-section--root-section)))
       (should (equal (buffer-string) "")))))
 
-
 ;; ─── pimacs-section--update-section-end ─────────────────────────────────────────────
 
 (ert-deftest pimacs-section--update-section-end-expands ()
@@ -578,7 +569,6 @@
         (set-marker m 5)
         (pimacs-section--update-section-end child m)
         (should (= (pimacs-section-end child) 20))))))
-
 
 ;; ─── pimacs-section--set-visibility / pimacs-toggle-section ─────────────────────
 
@@ -678,7 +668,6 @@
         (should (pimacs-section-tests--visibility-indicator-overlay parent))
         (pimacs-section--delete-section child)
         (should (pimacs-section-tests--visibility-indicator-overlay parent))))))
-
 
 ;; ─── pimacs-section-autohide ───────────────────────────────────────────────
 

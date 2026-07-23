@@ -63,7 +63,6 @@
   (when pimacs-log-rpc
     (write-region (concat "{\"type\": \"" type "\", \"message\": " json "}\n") nil pimacs-log-rpc-file t 'inhibit-message)))
 
-
 (defun pimacs--response-success-p (response)
   (and response
        (plist-get response :success)
@@ -223,7 +222,6 @@
       (process-put process 'project-name (pimacs--project-name))
       (puthash key process pimacs--agents)
       (message "(%s) pimacs agent started successfully." (pimacs--project-name)))))
-
 
 (defun pimacs--agent-add-cleanup (process fn)
   "Register FN as a cleanup callback for PROCESS.
