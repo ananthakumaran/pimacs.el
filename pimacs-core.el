@@ -21,11 +21,22 @@
 
 ;;; Code:
 
+(defgroup pimacs nil
+  "Emacs client for Pi."
+  :prefix "pimacs-"
+  :group 'tools)
+
 (require 'pimacs-utils)
 (require 'project)
 
+(defcustom pimacs-use-ansi-colors t
+  "Whether to render ANSI colors in widget and status output."
+  :type 'boolean
+  :group 'pimacs)
+
 (pimacs--def-permanent-buffer-local pimacs--project-root nil)
 (pimacs--def-permanent-buffer-local pimacs--project-key nil)
+(pimacs--def-permanent-buffer-local pimacs--status-texts nil)
 
 (defun pimacs--project-root ()
   (or

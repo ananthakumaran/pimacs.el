@@ -31,10 +31,10 @@
 (require 'pimacs-utils)
 
 (defcustom pimacs-list-sessions-table
-  '(("Session" . (:session_name face font-lock-function-name-face))
+  '(("Session" . (:session_name face font-lock-type-face))
     ("Provider" . :provider)
     ("Model" . :model)
-    ("State" . (:agent_state face font-lock-keyword-face))
+    ("State" . (:agent_state face font-lock-constant-face))
     ("Context" . (:context_usage face shadow))
     ("Messages" . :total_messages)
     ("Cost" . (:cost face shadow))

@@ -59,3 +59,22 @@
                    " spinner"))
     (should (equal (pimacs--format-state-line-spinner '(:spinner spinner))
                    ""))))
+
+(ert-deftest pimacs--format-state-line-cache-hit-percent-uses-literal-percent ()
+  (should (equal (pimacs--format-state-line-cache-hit-percent
+                  '(:sessionStats (:tokens (:input 50 :cacheRead 50 :cacheWrite 0))))
+                 "50%")))
+
+(ert-deftest pimacs--format-state-line-status-component ()
+  (let ((pimacs--status-texts (make-hash-table :test 'equal)))
+    (puthash "xyz-status" "ready\nnow" pimacs--status-texts)
+    (should (equal (pimacs--format-state-line '((:status "xyz-status")))
+                   "ready now"))
+    (should (equal (pimacs--format-state-line '((:status "missing-status")))
+                   ""))
+    (puthash "percent-status" "50% ready" pimacs--status-texts)
+    (let ((value (pimacs--format-state-line
+                  '((:status "percent-status" face font-lock-warning-face)))))
+      (should (equal value "50%% ready"))
+      (should (eq (get-text-property 2 'face value)
+                  'font-lock-warning-face)))))

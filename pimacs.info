@@ -232,6 +232,21 @@ following components.
    See ‘pimacs-header-line-format’ for available components.  A
 component may also be a function that receives the current state plist.
 
+   Extension status text can be placed in either state line with a
+‘(:status STATUS-KEY ...)’ component.  STATUS-KEY is the key used by the
+extension's status update.  Text properties after the key customize the
+status at that placement.
+
+     (setq pimacs-header-line-format
+           '(:context_usage " " (:status "xyz-status" face font-lock-warning-face)
+             :spacer :model))
+
+   By default, status text also appears beside the prompt.  To display a
+status only in a state line, add its key to
+‘pimacs-status-widget-hidden-keys’.
+
+     (setq pimacs-status-widget-hidden-keys '("xyz-status"))
+
 
 File: pimacs.info,  Node: Managing Sessions,  Prev: State Lines,  Up: Usage
 
@@ -319,9 +334,13 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 7 Custom Variables
 ******************
 
- -- User Option: pimacs-use-ansi-colors t
+ -- User Option: pimacs-status-widget-hidden-keys nil
 
-     Whether to render ANSI colors in widget and status output.
+     Status keys to hide from the default status widget.
+
+     Hidden statuses remain available to ‘(:status STATUS-KEY ...)’
+     components in ‘pimacs-header-line-format’ and
+     ‘pimacs-mode-line-format’.
 
  -- User Option: pimacs-file-completion-backend 'project
 
@@ -455,10 +474,10 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
  -- User Option: pimacs-list-sessions-table
 
-          '(("Session" . (:session_name face font-lock-function-name-face))
+          '(("Session" . (:session_name face font-lock-type-face))
             ("Provider" . :provider)
             ("Model" . :model)
-            ("State" . (:agent_state face font-lock-keyword-face))
+            ("State" . (:agent_state face font-lock-constant-face))
             ("Context" . (:context_usage face shadow))
             ("Messages" . :total_messages)
             ("Cost" . (:cost face shadow))
@@ -501,6 +520,10 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
      File to write RPC JSON log entries to.
 
+ -- User Option: pimacs-use-ansi-colors t
+
+     Whether to render ANSI colors in widget and status output.
+
  -- User Option: pimacs-header-line-format '(:context_usage " ("
           :compaction_mode ")" :spacer "(" :provider ") " :model " • "
           :thinking_level)
@@ -510,7 +533,11 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      Strings are displayed literally.  Functions are called with the
      state plist and their returned values are displayed.  A keyword
      component can include text properties using ‘propertize’ syntax.
-     For example: "‘(:model face font-lock-function-name-face)’".
+     For example: "‘(:model face font-lock-function-name-face)’".  A
+     status component has form ‘(:status STATUS-KEY PROPERTY VALUE...)’;
+     it displays the text set by an extension with STATUS-KEY and
+     accepts optional text properties.  For example: ‘(:status
+     "xyz-status" face font-lock-warning-face)’.
 
      The following keywords are replaced with state information.
 
@@ -535,6 +562,9 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      UI keywords: ‘:agent_state’ Current agent state.  ‘:spinner’ Active
      agent spinner.  ‘:spacer’ Space that right-aligns all following
      entries.
+
+     Status components: ‘(:status STATUS-KEY ...)’ Extension status text
+     for STATUS-KEY.
 
      Use at most one ‘:spacer’.
 
@@ -582,11 +612,11 @@ Node: Bash5303
 Node: Sending Context5570
 Node: Images6378
 Node: State Lines7243
-Node: Managing Sessions7957
-Node: Sandbox8550
-Node: How It Works8932
-Node: Keybindings9382
-Node: Custom Variables11540
+Node: Managing Sessions8571
+Node: Sandbox9164
+Node: How It Works9546
+Node: Keybindings9996
+Node: Custom Variables12154
 
 End Tag Table
 

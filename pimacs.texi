@@ -286,6 +286,24 @@ defcustoms.  Both accept strings and state components; use
 See @code{pimacs-header-line-format} for available components.  A
 component may also be a function that receives the current state plist.
 
+Extension status text can be placed in either state line with a
+@code{(:status STATUS-KEY ...)} component.  STATUS-KEY is the key used by
+the extension's status update.  Text properties after the key customize the
+status at that placement.
+
+@example
+(setq pimacs-header-line-format
+      '(:context_usage " " (:status "xyz-status" face font-lock-warning-face)
+        :spacer :model))
+@end example
+
+By default, status text also appears beside the prompt.  To display a status
+only in a state line, add its key to @code{pimacs-status-widget-hidden-keys}.
+
+@example
+(setq pimacs-status-widget-hidden-keys '("xyz-status"))
+@end example
+
 @node Managing Sessions
 @section Managing Sessions
 
@@ -392,9 +410,12 @@ in another window
 
 @c custom-variables-start
 
-@defopt pimacs-use-ansi-colors @code{t}
+@defopt pimacs-status-widget-hidden-keys @code{nil}
 
-Whether to render ANSI colors in widget and status output.
+Status keys to hide from the default status widget.
+
+Hidden statuses remain available to @code{(:status STATUS-KEY ...)} components
+in @code{pimacs-header-line-format} and @code{pimacs-mode-line-format}.
 @end defopt
 
 @defopt pimacs-file-completion-backend @code{'project}
@@ -548,10 +569,10 @@ Whether to keep the input area at the bottom as new chat content is added.
 @defopt pimacs-list-sessions-table
 
 @lisp
-'(("Session" . (:session_name face font-lock-function-name-face))
+'(("Session" . (:session_name face font-lock-type-face))
   ("Provider" . :provider)
   ("Model" . :model)
-  ("State" . (:agent_state face font-lock-keyword-face))
+  ("State" . (:agent_state face font-lock-constant-face))
   ("Context" . (:context_usage face shadow))
   ("Messages" . :total_messages)
   ("Cost" . (:cost face shadow))
@@ -602,6 +623,11 @@ When non-nil, log all RPC JSON to @code{pimacs-log-rpc-file}.
 File to write RPC JSON log entries to.
 @end defopt
 
+@defopt pimacs-use-ansi-colors @code{t}
+
+Whether to render ANSI colors in widget and status output.
+@end defopt
+
 @defopt pimacs-header-line-format @code{'(:context_usage " (" :compaction_mode ")" :spacer "(" :provider ") " :model " • " :thinking_level)}
 
 Format of the Pimacs chat header line.
@@ -609,7 +635,10 @@ Format of the Pimacs chat header line.
 Strings are displayed literally.  Functions are called with the state
 plist and their returned values are displayed.  A keyword component can
 include text properties using @code{propertize} syntax.  For example:
-"@code{(:model face font-lock-function-name-face)}".
+"@code{(:model face font-lock-function-name-face)}".  A status component has
+form @code{(:status STATUS-KEY PROPERTY VALUE...)}; it displays the text set
+by an extension with STATUS-KEY and accepts optional text properties.
+For example: @code{(:status "xyz-status" face font-lock-warning-face)}.
 
 The following keywords are replaced with state information.
 
@@ -644,6 +673,9 @@ UI keywords:
 @code{:agent_state}              Current agent state.
 @code{:spinner}                  Active agent spinner.
 @code{:spacer}                   Space that right-aligns all following entries.
+
+Status components:
+@code{(:status STATUS-KEY ...)}  Extension status text for STATUS-KEY.
 
 Use at most one @code{:spacer}.
 @end defopt

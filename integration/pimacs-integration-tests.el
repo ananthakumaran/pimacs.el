@@ -82,8 +82,12 @@
          (pimacs--force-update-header-line)
          (pimacs-check-tape ,scenario ".txt"
                             (buffer-substring (point-min) (point-max)))
-         (pimacs-check-tape ,scenario "-header.txt"
-                            (pimacs--format-state-line pimacs-header-line-format)))
+         (pimacs-check-tape
+          ,scenario "-header.txt"
+          (replace-regexp-in-string
+           "%%" "%"
+           (pimacs--format-state-line pimacs-header-line-format)
+           t t)))
 
        (pimacs-quit-chat))))
 

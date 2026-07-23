@@ -49,15 +49,10 @@
 (require 'mailcap)
 (require 'transient)
 
-(defgroup pimacs nil
-  "Emacs client for Pi."
-  :prefix "pimacs-"
-  :group 'tools)
-
+(require 'pimacs-core)
+(require 'pimacs-utils)
 (require 'pimacs-section)
 (require 'pimacs-edit)
-(require 'pimacs-utils)
-(require 'pimacs-core)
 (require 'pimacs-agent)
 (require 'pimacs-state-line)
 (require 'pimacs-session)
@@ -127,9 +122,12 @@
   "Face used for extension status."
   :group 'pimacs)
 
-(defcustom pimacs-use-ansi-colors t
-  "Whether to render ANSI colors in widget and status output."
-  :type 'boolean
+(defcustom pimacs-status-widget-hidden-keys nil
+  "Status keys to hide from the default status widget.
+
+Hidden statuses remain available to `(:status STATUS-KEY ...)' components
+in `pimacs-header-line-format' and `pimacs-mode-line-format'."
+  :type '(repeat string)
   :group 'pimacs)
 
 (defcustom pimacs-file-completion-backend 'project
@@ -338,7 +336,6 @@ with the message plist to insert the custom message content."
 (pimacs--def-permanent-buffer-local pimacs--prompt-after-widget nil)
 (pimacs--def-permanent-buffer-local pimacs--prompt-widget-lines nil)
 (pimacs--def-permanent-buffer-local pimacs--status-widget nil)
-(pimacs--def-permanent-buffer-local pimacs--status-widget-texts nil)
 (pimacs--def-permanent-buffer-local pimacs--content-sections nil)
 (pimacs--def-permanent-buffer-local pimacs--tool-calls nil)
 (pimacs--def-permanent-buffer-local pimacs--cleanup-callback-fn nil)
@@ -1209,20 +1206,22 @@ with the message plist to insert the custom message content."
 
 (defun pimacs--update-status-widget ()
   (let (entries)
-    (when pimacs--status-widget-texts
+    (when pimacs--status-texts
       (maphash (lambda (key text)
-                 (push (cons key text) entries))
-               pimacs--status-widget-texts))
+                 (unless (member key pimacs-status-widget-hidden-keys)
+                   (push (cons key text) entries)))
+               pimacs--status-texts))
     (widget-value-set pimacs--status-widget
                       (pimacs--widget-ensure-trailing-newline
-                       (pimacs--join (pimacs--sort-entries-by-key entries) " ")))))
+                       (pimacs--join (pimacs--sort-entries-by-key entries) " ")))
+    (force-mode-line-update)))
 
 (defun pimacs--handle-set-status (event)
   (let* ((status-key (plist-get event :statusKey))
          (status-text (plist-get event :statusText)))
     (if (or (not status-text) (string-empty-p status-text))
-        (remhash status-key pimacs--status-widget-texts)
-      (puthash status-key status-text pimacs--status-widget-texts))
+        (remhash status-key pimacs--status-texts)
+      (puthash status-key status-text pimacs--status-texts))
     (pimacs--update-status-widget)))
 
 (defun pimacs--handle-set-editor-text (event)
@@ -1995,8 +1994,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
 (defun pimacs--clear-session-widgets ()
   (when pimacs--prompt-widget-lines
     (clrhash pimacs--prompt-widget-lines))
-  (when pimacs--status-widget-texts
-    (clrhash pimacs--status-widget-texts))
+  (when pimacs--status-texts
+    (clrhash pimacs--status-texts))
   (pimacs--update-prompt-widgets)
   (pimacs--update-status-widget))
 
@@ -2363,7 +2362,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (setq pimacs--prompt-after-widget (widget-create 'pimacs-item :face 'pimacs-widget-face pimacs--empty-widget-text))
   (setq pimacs--prompt-widget-lines (make-hash-table :test 'equal))
   (setq pimacs--status-widget (widget-create 'pimacs-item :face 'pimacs-status-face pimacs--empty-widget-text))
-  (setq pimacs--status-widget-texts (make-hash-table :test 'equal))
+  (setq pimacs--status-texts (make-hash-table :test 'equal))
   (setq-local dnd-protocol-alist
               (cons '("^file:" . pimacs--dnd-handler)
                     dnd-protocol-alist))

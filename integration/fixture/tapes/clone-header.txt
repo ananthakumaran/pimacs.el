@@ -1,1 +1,1 @@
-tokens=4720/21808 cache=1000/0 hit=17.5%%                                 cost=0
+tokens=4720/21808 cache=1000/0 hit=17.5%                                  cost=0

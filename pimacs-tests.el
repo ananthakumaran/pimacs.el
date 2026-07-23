@@ -169,12 +169,17 @@
   (with-temp-buffer
     (setq pimacs--status-widget
           (widget-create 'pimacs-item :face 'pimacs-status-face pimacs--empty-widget-text))
-    (setq pimacs--status-widget-texts (make-hash-table :test 'equal))
+    (setq pimacs--status-texts (make-hash-table :test 'equal))
 
     (pimacs--handle-set-status '(:statusKey "status-b" :statusText "Status B"))
     (pimacs--handle-set-status '(:statusKey "status-a" :statusText "Status\nA"))
 
-    (should (equal (widget-value pimacs--status-widget) "Status\nA Status B\n"))))
+    (should (equal (widget-value pimacs--status-widget) "Status\nA Status B\n"))
+
+    (let ((pimacs-status-widget-hidden-keys '("status-a")))
+      (pimacs--update-status-widget)
+      (should (equal (widget-value pimacs--status-widget) "Status B\n"))
+      (should (equal (gethash "status-a" pimacs--status-texts) "Status\nA")))))
 
 (ert-deftest pimacs--handle-agent-state-formats-parallel-tools ()
   (with-temp-buffer
@@ -246,7 +251,7 @@
     (setq pimacs--prompt-widget-lines (make-hash-table :test 'equal))
     (setq pimacs--status-widget
           (widget-create 'pimacs-item :face 'pimacs-status-face pimacs--empty-widget-text))
-    (setq pimacs--status-widget-texts (make-hash-table :test 'equal))
+    (setq pimacs--status-texts (make-hash-table :test 'equal))
     (widget-setup)
 
     (cl-labels ((insert-section ()
