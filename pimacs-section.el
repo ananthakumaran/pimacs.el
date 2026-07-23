@@ -418,6 +418,12 @@ Return the first matching section, or nil if there is none."
   (and (display-graphic-p)
        pimacs-section-visibility-indicators))
 
+(defun pimacs-section--ancestors-visible-p (section)
+  (let ((parent (pimacs-section-parent section)))
+    (or (null parent)
+        (and (pimacs-section--visible-p parent)
+             (pimacs-section--ancestors-visible-p parent)))))
+
 (defun pimacs-section--update-visibility-indicator (section)
   (when (pimacs-section-parent section)
     (let ((beg (pimacs-section-beginning section))
@@ -427,16 +433,22 @@ Return the first matching section, or nil if there is none."
       (dolist (ov (overlays-in beg eol))
         (when (overlay-get ov 'pimacs-section-visibility-indicator)
           (delete-overlay ov)))
-      (when-let ((indicator (pimacs-section--visibility-indicator)))
-        (let ((ov (make-overlay beg eol nil t))
-              (bitmap (if (pimacs-section--hidden-p section)
-                          (car indicator)
-                        (cdr indicator))))
-          (overlay-put ov 'evaporate t)
-          (overlay-put ov 'pimacs-section-visibility-indicator t)
-          (overlay-put ov 'before-string
-                       (propertize "fringe" 'display
-                                   `(left-fringe ,bitmap fringe))))))))
+      (when (pimacs-section--ancestors-visible-p section)
+        (when-let ((indicator (pimacs-section--visibility-indicator)))
+          (let ((ov (make-overlay beg eol nil t))
+                (bitmap (if (pimacs-section--hidden-p section)
+                            (car indicator)
+                          (cdr indicator))))
+            (overlay-put ov 'evaporate t)
+            (overlay-put ov 'pimacs-section-visibility-indicator t)
+            (overlay-put ov 'before-string
+                         (propertize "fringe" 'display
+                                     `(left-fringe ,bitmap fringe)))))))))
+
+(defun pimacs-section--update-descendant-visibility-indicators (section)
+  (dolist (child (pimacs-section-children section))
+    (pimacs-section--update-visibility-indicator child)
+    (pimacs-section--update-descendant-visibility-indicators child)))
 
 (defun pimacs-section--set-visibility (section visibility)
   "Set the visibility state of SECTION.
@@ -471,7 +483,8 @@ VISIBILITY can be one of:
   (when (pimacs-section--visible-p section)
     (dolist (child (pimacs-section-children section))
       (pimacs-section--set-visibility child
-                                      (pimacs-section-visibility child)))))
+                                      (pimacs-section-visibility child))))
+  (pimacs-section--update-descendant-visibility-indicators section))
 
 (defun pimacs-toggle-section ()
   "Toggle visibility of current section."
@@ -541,11 +554,22 @@ otherwise it return t."
                                  t))))
                        clauses)))))
 
-(defun pimacs-demo ()
-  "Create a demo buffer with nested pimacs sections."
+(defvar-keymap pimacs-section-demo-mode-map
+  :doc "Keymap for `pimacs-section-demo-mode'."
+  :parent special-mode-map
+  "TAB" #'pimacs-toggle-section
+  "C-i" #'pimacs-toggle-section)
+
+(define-derived-mode pimacs-section-demo-mode special-mode "Pimacs Section Demo"
+  "Major mode for the Pimacs section demo."
+  (setq-local buffer-read-only t))
+
+(defun pimacs-section-demo ()
+  "Create a demo buffer with nested Pimacs sections."
   (interactive)
-  (let ((buf (get-buffer-create "*pimacs-demo*")))
+  (let ((buf (get-buffer-create "*pimacs-section-demo*")))
     (with-current-buffer buf
+      (pimacs-section-demo-mode)
       (setq buffer-read-only nil)
       (erase-buffer)
       (let* ((pimacs-section-padding "\n")
@@ -558,15 +582,16 @@ otherwise it return t."
              (logs (pimacs-section--new-section 'logs root))
              (server-log (pimacs-section--new-section 'server-log logs))
              (worker-log (pimacs-section--new-section 'worker-log logs))
-             (deploy (pimacs-section--new-section 'deploy root)))
+             (deploy (pimacs-section--new-section 'deploy root))
+             (deploy-result (pimacs-section--new-section 'deploy-result deploy)))
         (pimacs-section--insert-section build
-          (insert "[-] Build\n"))
+          (insert "[-] Build"))
         (pimacs-section--insert-section compile
           (insert "  [-] Compile\n")
           (insert "      Compiling foo.c\n")
           (insert "      Compiling bar.c\n"))
         (pimacs-section--insert-section tests
-          (insert "  [-] Tests\n"))
+          (insert "  [-] Tests"))
         (pimacs-section--insert-section unit-tests
           (insert "      [-] Unit Tests\n")
           (insert "          test-auth ... ok\n")
@@ -575,7 +600,7 @@ otherwise it return t."
           (insert "      [-] Integration Tests\n")
           (insert "          api-flow ... running\n"))
         (pimacs-section--insert-section logs
-          (insert "[-] Logs\n"))
+          (insert "[-] Logs"))
         (pimacs-section--insert-section server-log
           (insert "  [-] Server\n")
           (insert "      Listening on :8080\n")
@@ -585,7 +610,8 @@ otherwise it return t."
           (insert "      Job started\n")
           (insert "      Job completed\n"))
         (pimacs-section--insert-section deploy
-          (insert "[-] Deploy\n")
+          (insert "[-] Deploy"))
+        (pimacs-section--insert-section deploy-result
           (insert "    Uploading artifacts...\n")
           (insert "    Restarting services...\n"))
         (pimacs-section--append-section server-log

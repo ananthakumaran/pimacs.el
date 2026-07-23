@@ -647,6 +647,22 @@
           (insert "[-] Leaf\n"))
         (should (pimacs-section-tests--visibility-indicator-overlay leaf))))))
 
+(ert-deftest pimacs-section--hidden-parent-hides-child-fringe-indicator ()
+  (cl-letf (((symbol-function 'display-graphic-p)
+             (lambda (&optional _frame) t)))
+    (pimacs-with-root-section
+      (let* ((parent (pimacs-section--new-section 'parent pimacs-section--root-section))
+             (child (pimacs-section--new-section 'child parent)))
+        (pimacs-section--insert-section parent
+          (insert "[-] Parent\n"))
+        (pimacs-section--insert-section child
+          (insert "  [-] Child\n"))
+        (should (pimacs-section-tests--visibility-indicator-overlay child))
+        (pimacs-section--set-visibility parent :hide)
+        (should-not (pimacs-section-tests--visibility-indicator-overlay child))
+        (pimacs-section--set-visibility parent :show)
+        (should (pimacs-section-tests--visibility-indicator-overlay child))))))
+
 (ert-deftest pimacs-section--visibility-indicator-skips-root ()
   (cl-letf (((symbol-function 'display-graphic-p)
              (lambda (&optional _frame) t)))
