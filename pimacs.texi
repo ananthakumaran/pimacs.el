@@ -633,6 +633,7 @@ Session statistics keywords:
 @code{:output_tokens}            Output token count.
 @code{:cache_read_tokens}        Cache-read token count.
 @code{:cache_write_tokens}       Cache-write token count.
+@code{:cache_hit_percent}        Total cache hit percentage.
 @code{:total_tokens}             Total token count.
 @code{:cost}                     Session cost.
 @code{:context_usage}            Context tokens and context window.

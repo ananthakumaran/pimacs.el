@@ -235,6 +235,7 @@
     (setq-local pimacs-header-line-format
                 '("tokens=" :input_tokens "/" :output_tokens
                   " cache=" :cache_read_tokens "/" :cache_write_tokens
+                  " hit=" :cache_hit_percent
                   :spacer
                   "cost=" :cost))
     (pimacs-send-prompt-and-wait "/name clone-test")
