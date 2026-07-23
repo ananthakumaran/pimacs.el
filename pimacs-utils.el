@@ -52,6 +52,13 @@
    (t
     (number-to-string n))))
 
+(defun pimacs--format-number-fixed (number decimal-places)
+  (string-trim-right
+   (string-trim-right
+    (format (format "%%.%df" decimal-places) number)
+    "0+")
+   "[.]"))
+
 (defun pimacs--short-uuid (uuid)
   (when (stringp uuid)
     (substring uuid -8)))

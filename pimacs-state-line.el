@@ -224,11 +224,8 @@ See `pimacs-header-line-format' for available components."
     (if (and (numberp input) (numberp cache-read) (numberp cache-write))
         (let ((total (+ input cache-read cache-write)))
           (if (> total 0)
-              (concat (string-trim-right
-                       (string-trim-right
-                        (format "%.1f" (* 100.0 (/ (float cache-read) total)))
-                        "0+")
-                       "[.]")
+              (concat (pimacs--format-number-fixed
+                       (* 100.0 (/ (float cache-read) total)) 1)
                       "%%")
             "?"))
       "?")))
@@ -239,9 +236,7 @@ See `pimacs-header-line-format' for available components."
 (defun pimacs--format-state-line-cost (state)
   (let ((cost (pimacs--plist-get state :sessionStats :cost)))
     (if (numberp cost)
-        (string-trim-right
-         (string-trim-right (format "%.6f" cost) "0+")
-         "[.]")
+        (pimacs--format-number-fixed cost 6)
       (pimacs--format-state-line-value cost))))
 
 (defun pimacs--format-state-line-agent-state (state)

@@ -526,7 +526,8 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
      Total message count.  ‘:input_tokens’ Input token count.
      ‘:output_tokens’ Output token count.  ‘:cache_read_tokens’
      Cache-read token count.  ‘:cache_write_tokens’ Cache-write token
-     count.  ‘:total_tokens’ Total token count.  ‘:cost’ Session cost.
+     count.  ‘:cache_hit_percent’ Total cache hit percentage.
+     ‘:total_tokens’ Total token count.  ‘:cost’ Session cost.
      ‘:context_usage’ Context tokens and context window.
      ‘:context_tokens’ Context token count.  ‘:context_window’ Context
      window size.
