@@ -414,33 +414,6 @@ Maximum number of prompt history entries to keep.
 Maximum number of recent sessions to list when resuming a session.
 @end defopt
 
-@defopt pimacs-list-sessions-table
-
-@lisp
-'(("Session" . (:session_name face font-lock-function-name-face))
-  ("Provider" . :provider)
-  ("Model" . :model)
-  ("State" . (:agent_state face font-lock-keyword-face))
-  ("Context" . (:context_usage face shadow))
-  ("Messages" . :total_messages)
-  ("Cost" . (:cost face shadow))
-  ("Project" . (:project_root face shadow)))
-@end lisp
-
-Columns displayed by @code{pimacs-list-sessions}.
-
-Each entry is (HEADER . COMPONENT).  COMPONENT uses the same format as an
-entry in @code{pimacs-header-line-format}.
-@end defopt
-
-@defopt pimacs-list-sessions-sort-key @code{'("Session" . nil)}
-
-Initial sort order for @code{pimacs-list-sessions}.
-
-The car is a header from @code{pimacs-list-sessions-table}.  A non-nil cdr sorts
-in descending order.
-@end defopt
-
 @defopt pimacs-prompt-streaming-behavior @code{'followUp}
 
 Default streaming behavior for prompts.
@@ -565,6 +538,33 @@ with the message plist to insert the custom message content.
 @defopt pimacs-send-pop-to-chat @code{t}
 
 Whether to pop to the chat buffer after sending region, filename or errors.
+@end defopt
+
+@defopt pimacs-list-sessions-table
+
+@lisp
+'(("Session" . (:session_name face font-lock-function-name-face))
+  ("Provider" . :provider)
+  ("Model" . :model)
+  ("State" . (:agent_state face font-lock-keyword-face))
+  ("Context" . (:context_usage face shadow))
+  ("Messages" . :total_messages)
+  ("Cost" . (:cost face shadow))
+  ("Project" . (:project_root face shadow)))
+@end lisp
+
+Columns displayed by @code{pimacs-list-sessions}.
+
+Each entry is (HEADER . COMPONENT).  COMPONENT uses the same format as an
+entry in @code{pimacs-header-line-format}.
+@end defopt
+
+@defopt pimacs-list-sessions-sort-key @code{'("Session" . nil)}
+
+Initial sort order for @code{pimacs-list-sessions}.
+
+The car is a header from @code{pimacs-list-sessions-table}.  A non-nil cdr sorts
+in descending order.
 @end defopt
 
 @defopt pimacs-sync-request-timeout @code{2}

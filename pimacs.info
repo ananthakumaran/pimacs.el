@@ -338,29 +338,6 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
      Maximum number of recent sessions to list when resuming a session.
 
- -- User Option: pimacs-list-sessions-table
-
-          '(("Session" . (:session_name face font-lock-function-name-face))
-            ("Provider" . :provider)
-            ("Model" . :model)
-            ("State" . (:agent_state face font-lock-keyword-face))
-            ("Context" . (:context_usage face shadow))
-            ("Messages" . :total_messages)
-            ("Cost" . (:cost face shadow))
-            ("Project" . (:project_root face shadow)))
-
-     Columns displayed by ‘pimacs-list-sessions’.
-
-     Each entry is (HEADER .  COMPONENT). COMPONENT uses the same format
-     as an entry in ‘pimacs-header-line-format’.
-
- -- User Option: pimacs-list-sessions-sort-key '("Session" . nil)
-
-     Initial sort order for ‘pimacs-list-sessions’.
-
-     The car is a header from ‘pimacs-list-sessions-table’.  A non-nil
-     cdr sorts in descending order.
-
  -- User Option: pimacs-prompt-streaming-behavior 'followUp
 
      Default streaming behavior for prompts.
@@ -470,6 +447,29 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
      Whether to pop to the chat buffer after sending region, filename or
      errors.
+
+ -- User Option: pimacs-list-sessions-table
+
+          '(("Session" . (:session_name face font-lock-function-name-face))
+            ("Provider" . :provider)
+            ("Model" . :model)
+            ("State" . (:agent_state face font-lock-keyword-face))
+            ("Context" . (:context_usage face shadow))
+            ("Messages" . :total_messages)
+            ("Cost" . (:cost face shadow))
+            ("Project" . (:project_root face shadow)))
+
+     Columns displayed by ‘pimacs-list-sessions’.
+
+     Each entry is (HEADER .  COMPONENT). COMPONENT uses the same format
+     as an entry in ‘pimacs-header-line-format’.
+
+ -- User Option: pimacs-list-sessions-sort-key '("Session" . nil)
+
+     Initial sort order for ‘pimacs-list-sessions’.
+
+     The car is a header from ‘pimacs-list-sessions-table’.  A non-nil
+     cdr sorts in descending order.
 
  -- User Option: pimacs-sync-request-timeout 2
 
