@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pimacs Changelog</title>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.slate.min.css">
+  <link rel="stylesheet" href="global.css">
+</head>
+<body>
+<main class="container">
+<h1 id="changelog">Changelog</h1>
+<h2 id="unreleased">Unreleased</h2>
+<h3 id="added">Added</h3>
+<ul>
+<li>Extension status text can be placed in header and mode lines with
+<code>(:status STATUS-KEY ...)</code>, including per-placement face
+customization. Status keys can be hidden from the prompt status widget
+with <code>pimacs-status-widget-hidden-keys</code>.</li>
+<li><code>pimacs-list-sessions</code> displays active chats in a
+sortable tabulated list. Its columns and initial sort order are
+configurable with <code>pimacs-list-sessions-table</code> and
+<code>pimacs-list-sessions-sort-key</code>.</li>
+<li>The <code>:project_root</code> state-line component displays the
+project root directory.</li>
+<li><code>pimacs-switch-session</code> switches between active
+chats.</li>
+<li>Send commands select an active chat by enclosing project root,
+prompting when ambiguous.</li>
+<li>Start chats from any directory using the <code>C-u</code> prefix for
+<code>pimacs-chat</code>, which opens a transient for selecting a
+session name and root directory.</li>
+</ul>
+<h2 id="v010---2026-07-19">v0.1.0 - 2026-07-19</h2>
+<h3 id="added-1">Added</h3>
+<ul>
+<li>Configurable header and mode-line status formats via
+<code>pimacs-header-line-format</code> and
+<code>pimacs-mode-line-format</code>.</li>
+</ul>
+</main>
+</body>
+</html>
