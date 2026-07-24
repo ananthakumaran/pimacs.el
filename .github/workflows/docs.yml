@@ -18,8 +18,8 @@ jobs:
       with:
         node-version: '22'
 
-    - name: Install texinfo
-      run: sudo apt-get update && sudo apt-get install -y texinfo
+    - name: Install documentation dependencies
+      run: sudo apt-get update && sudo apt-get install -y pandoc texinfo
 
     - uses: purcell/setup-emacs@master
       with:

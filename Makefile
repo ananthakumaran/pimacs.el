@@ -112,7 +112,23 @@ define ESCRIPT
                         (let ((inhibit-message t))
                           (indent-region (point-min) (point-max)))
                         (string-trim (buffer-string))))
-                     (doc (replace-regexp-in-string "`\\([^']*\\)'" "@code{\\1}" (cadr (cddr sexp)))))
+                     (raw-doc (cadr (cddr sexp)))
+                     (doc (replace-regexp-in-string "`\\([^']*\\)'" "@code{\\1}" raw-doc))
+                     (doc
+                      (replace-regexp-in-string
+                       "^@code{[^}\n]+}[ \t][ \t]+[^\n]*\n\\(?:@code{[^}\n]+}[ \t][ \t]+[^\n]*\n\\)+"
+                       (lambda (block)
+                         (save-match-data
+                           (with-temp-buffer
+                             (insert block)
+                             (goto-char (point-min))
+                             (while (re-search-forward "^@code{\\([^}\n]+\\)}[ \t][ \t]+\\([^\n]*\\)" nil t)
+                               (replace-match (format "@item %s\n%s"
+                                                      (match-string 1)
+                                                      (match-string 2))
+                                              t t))
+                             (concat "@table @code\n" (buffer-string) "@end table\n"))))
+                       doc)))
                 (if (string-match-p "\n" default-str)
                     (princ (format "@defopt %s\n\n@lisp\n%s\n@end lisp\n\n%s\n@end defopt\n\n" name default-str doc))
                   (princ (format "@defopt %s @code{%s}\n\n%s\n@end defopt\n\n" name default-str doc)))))
@@ -135,7 +151,7 @@ docs-lint:
 	  --eval "(checkdoc-file \"pimacs-session.el\")" 2>&1 | grep '^pimacs[.-]' | grep -v 'All variables and subroutines might as well have a documentation string' || true
 
 .PHONY: docs
-docs: docs/index.html
+docs: docs/index.html docs/changelog.html
 
 pimacs.info: Makefile pimacs.texi $(PIMACS_DOC_SOURCES)
 	@ruby -e 'txt = IO.read("pimacs.texi").split("@c custom-variables-start")[0] + "@c custom-variables-start\n\n" + `$(EMACS) -Q --batch --eval "$$ESCRIPT"` + "@c custom-variables-end" + IO.read("pimacs.texi").split("@c custom-variables-end")[1]; File.write("pimacs.texi", txt)'
@@ -143,6 +159,13 @@ pimacs.info: Makefile pimacs.texi $(PIMACS_DOC_SOURCES)
 
 docs/index.html: pimacs.info
 	@makeinfo -D 'VERSION $(PIMACS_VERSION)' --no-number-sections --html --no-split -o $@ pimacs.texi
+
+docs/changelog.html: CHANGELOG.md docs/changelog-head.html docs/changelog-template.html docs/global.css
+	@pandoc --from=gfm --to=html5 --standalone \
+	  --metadata title="Pimacs Changelog" \
+	  --template=docs/changelog-template.html \
+	  --include-in-header=docs/changelog-head.html --css=global.css \
+	  --output=$@ $<
 
 define run-verify-task
 	@printf '%s\n' 'make $(1)'

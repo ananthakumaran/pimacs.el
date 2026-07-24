@@ -1,6 +1,6 @@
 :root {
     --pico-font-size: 100%;
-
+}
 
 body {
     max-width: 60rem;
@@ -31,4 +31,17 @@ div.example pre {
 .hljs {
     background: var(--pico-code-background-color);
     color: var(--pico-code-color);
+}
+
+dl.table {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+}
+
+dl.table dt,
+dl.table dd,
+dl.table dd > p {
+    margin: 0;
 }

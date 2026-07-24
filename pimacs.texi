@@ -1,7 +1,7 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename pimacs.info
-@settitle Pimacs User Manual @value{VERSION}
+@settitle Pimacs User Manual v@value{VERSION}
 @c %**end of header
 
 @copying
@@ -57,9 +57,9 @@ hljs.highlightAll();
 @end direntry
 
 @node Top
-@top Pimacs User Manual @value{VERSION}
+@top Pimacs User Manual v@value{VERSION}
 
-Pimacs is an Emacs client for Pi Coding Agent.
+Pimacs is an Emacs client for @uref{https://pi.dev/, Pi Coding Agent}.  For release history, see the @uref{changelog.html, changelog}.
 
 @menu
 * Introduction::
@@ -89,11 +89,7 @@ First, install the Pi agent using npm:
 npm install -g --ignore-scripts @@earendil-works/pi-coding-agent
 @end example
 
-Then start Pimacs and run @code{/login} to configure your provider:
-
-@example
-pi
-@end example
+Pimacs does not yet support authentication configuration.  To configure your provider, run @code{pi} in a terminal, then run @code{/login} in Pi.
 
 @section Install @code{pimacs.el}
 
@@ -643,36 +639,68 @@ For example: @code{(:status "xyz-status" face font-lock-warning-face)}.
 The following keywords are replaced with state information.
 
 Session state keywords:
-@code{:model}                    Model identifier.
-@code{:provider}                 Model provider.
-@code{:thinking_level}           Thinking level.
-@code{:session_name}             Session name.
-@code{:project_root}             Project root directory.
-@code{:compaction_mode}          @code{auto} or @code{manual}.
-@code{:message_count}            Message count.
-@code{:pending_message_count}    Pending message count.
+@table @code
+@item :model
+Model identifier.
+@item :provider
+Model provider.
+@item :thinking_level
+Thinking level.
+@item :session_name
+Session name.
+@item :project_root
+Project root directory.
+@item :compaction_mode
+@code{auto} or @code{manual}.
+@item :message_count
+Message count.
+@item :pending_message_count
+Pending message count.
+@end table
 
 Session statistics keywords:
-@code{:user_messages}            User message count.
-@code{:assistant_messages}       Assistant message count.
-@code{:tool_calls}               Tool call count.
-@code{:tool_results}             Tool result count.
-@code{:total_messages}           Total message count.
-@code{:input_tokens}             Input token count.
-@code{:output_tokens}            Output token count.
-@code{:cache_read_tokens}        Cache-read token count.
-@code{:cache_write_tokens}       Cache-write token count.
-@code{:cache_hit_percent}        Total cache hit percentage.
-@code{:total_tokens}             Total token count.
-@code{:cost}                     Session cost.
-@code{:context_usage}            Context tokens and context window.
-@code{:context_tokens}           Context token count.
-@code{:context_window}           Context window size.
+@table @code
+@item :user_messages
+User message count.
+@item :assistant_messages
+Assistant message count.
+@item :tool_calls
+Tool call count.
+@item :tool_results
+Tool result count.
+@item :total_messages
+Total message count.
+@item :input_tokens
+Input token count.
+@item :output_tokens
+Output token count.
+@item :cache_read_tokens
+Cache-read token count.
+@item :cache_write_tokens
+Cache-write token count.
+@item :cache_hit_percent
+Total cache hit percentage.
+@item :total_tokens
+Total token count.
+@item :cost
+Session cost.
+@item :context_usage
+Context tokens and context window.
+@item :context_tokens
+Context token count.
+@item :context_window
+Context window size.
+@end table
 
 UI keywords:
-@code{:agent_state}              Current agent state.
-@code{:spinner}                  Active agent spinner.
-@code{:spacer}                   Space that right-aligns all following entries.
+@table @code
+@item :agent_state
+Current agent state.
+@item :spinner
+Active agent spinner.
+@item :spacer
+Space that right-aligns all following entries.
+@end table
 
 Status components:
 @code{(:status STATUS-KEY ...)}  Extension status text for STATUS-KEY.

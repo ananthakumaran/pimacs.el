@@ -20,10 +20,11 @@ END-INFO-DIR-ENTRY
 
 File: pimacs.info,  Node: Top,  Next: Introduction,  Up: (dir)
 
-Pimacs User Manual 0.2.0
-************************
+Pimacs User Manual v0.2.0
+*************************
 
-Pimacs is an Emacs client for Pi Coding Agent.
+Pimacs is an Emacs client for Pi Coding Agent (https://pi.dev/).  For
+release history, see the changelog (changelog.html).
 
 * Menu:
 
@@ -58,9 +59,9 @@ First, install the Pi agent using npm:
 
      npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 
-   Then start Pimacs and run ‘/login’ to configure your provider:
-
-     pi
+   Pimacs does not yet support authentication configuration.  To
+configure your provider, run ‘pi’ in a terminal, then run ‘/login’ in
+Pi.
 
 2.2 Install ‘pimacs.el’
 =======================
@@ -541,27 +542,63 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
      The following keywords are replaced with state information.
 
-     Session state keywords: ‘:model’ Model identifier.  ‘:provider’
-     Model provider.  ‘:thinking_level’ Thinking level.  ‘:session_name’
-     Session name.  ‘:project_root’ Project root directory.
-     ‘:compaction_mode’ ‘auto’ or ‘manual’.  ‘:message_count’ Message
-     count.  ‘:pending_message_count’ Pending message count.
+     Session state keywords:
+     ‘:model’
+          Model identifier.
+     ‘:provider’
+          Model provider.
+     ‘:thinking_level’
+          Thinking level.
+     ‘:session_name’
+          Session name.
+     ‘:project_root’
+          Project root directory.
+     ‘:compaction_mode’
+          ‘auto’ or ‘manual’.
+     ‘:message_count’
+          Message count.
+     ‘:pending_message_count’
+          Pending message count.
 
-     Session statistics keywords: ‘:user_messages’ User message count.
-     ‘:assistant_messages’ Assistant message count.  ‘:tool_calls’ Tool
-     call count.  ‘:tool_results’ Tool result count.  ‘:total_messages’
-     Total message count.  ‘:input_tokens’ Input token count.
-     ‘:output_tokens’ Output token count.  ‘:cache_read_tokens’
-     Cache-read token count.  ‘:cache_write_tokens’ Cache-write token
-     count.  ‘:cache_hit_percent’ Total cache hit percentage.
-     ‘:total_tokens’ Total token count.  ‘:cost’ Session cost.
-     ‘:context_usage’ Context tokens and context window.
-     ‘:context_tokens’ Context token count.  ‘:context_window’ Context
-     window size.
+     Session statistics keywords:
+     ‘:user_messages’
+          User message count.
+     ‘:assistant_messages’
+          Assistant message count.
+     ‘:tool_calls’
+          Tool call count.
+     ‘:tool_results’
+          Tool result count.
+     ‘:total_messages’
+          Total message count.
+     ‘:input_tokens’
+          Input token count.
+     ‘:output_tokens’
+          Output token count.
+     ‘:cache_read_tokens’
+          Cache-read token count.
+     ‘:cache_write_tokens’
+          Cache-write token count.
+     ‘:cache_hit_percent’
+          Total cache hit percentage.
+     ‘:total_tokens’
+          Total token count.
+     ‘:cost’
+          Session cost.
+     ‘:context_usage’
+          Context tokens and context window.
+     ‘:context_tokens’
+          Context token count.
+     ‘:context_window’
+          Context window size.
 
-     UI keywords: ‘:agent_state’ Current agent state.  ‘:spinner’ Active
-     agent spinner.  ‘:spacer’ Space that right-aligns all following
-     entries.
+     UI keywords:
+     ‘:agent_state’
+          Current agent state.
+     ‘:spinner’
+          Active agent spinner.
+     ‘:spacer’
+          Space that right-aligns all following entries.
 
      Status components: ‘(:status STATUS-KEY ...)’ Extension status text
      for STATUS-KEY.
@@ -603,20 +640,20 @@ File: pimacs.info,  Node: Custom Variables,  Prev: Keybindings,  Up: Top
 
 Tag Table:
 Node: Top746
-Node: Introduction1024
-Node: Setup1281
-Node: Usage1884
-Node: Slash Commands2734
-Node: File Name Completion4975
-Node: Bash5303
-Node: Sending Context5570
-Node: Images6378
-Node: State Lines7243
-Node: Managing Sessions8571
-Node: Sandbox9164
-Node: How It Works9546
-Node: Keybindings9996
-Node: Custom Variables12154
+Node: Introduction1102
+Node: Setup1359
+Node: Usage2030
+Node: Slash Commands2880
+Node: File Name Completion5121
+Node: Bash5449
+Node: Sending Context5716
+Node: Images6524
+Node: State Lines7389
+Node: Managing Sessions8717
+Node: Sandbox9310
+Node: How It Works9692
+Node: Keybindings10142
+Node: Custom Variables12300
 
 End Tag Table
 
