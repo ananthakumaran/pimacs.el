@@ -58,6 +58,7 @@
 (require 'pimacs-agent)
 (require 'pimacs-state-line)
 (require 'pimacs-session)
+(require 'pimacs-search)
 
 (defface pimacs-chat-role-face
   '((t :inherit font-lock-builtin-face))
