@@ -180,20 +180,6 @@ Set this to nil to disable fringe indicators."
   "Face applied to session sections."
   :group 'pimacs)
 
-(defface pimacs-section-search-control-face
-  '((t))
-  "Face applied to search control sections."
-  :group 'pimacs)
-
-(defface pimacs-section-search-info-face
-  '((t :inherit pimacs-section-info-face))
-  "Face applied to search information sections."
-  :group 'pimacs)
-
-(defface pimacs-section-search-session-face
-  '((t :inherit pimacs-section-session-face))
-  "Face applied to search session sections."
-  :group 'pimacs)
 
 (defcustom pimacs-section-type-faces
   '((root . pimacs-section-root-face)
@@ -213,9 +199,6 @@ Set this to nil to disable fringe indicators."
     (select . pimacs-section-select-face)
     (confirm . pimacs-section-confirm-face)
     (input . pimacs-section-input-face)
-    (search-control . pimacs-section-search-control-face)
-    (search-info . pimacs-section-search-info-face)
-    (search-session . pimacs-section-search-session-face)
     (session . pimacs-section-session-face))
   "Faces prepended to content in sections of each type."
   :type '(repeat (cons (symbol :tag "Section type")
@@ -350,6 +333,11 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
       (pimacs-section--add-child parent s))
     s))
 
+(defun pimacs-section--section-body-end (section)
+  (if-let ((child (car (pimacs-section-children section))))
+      (pimacs-section-beginning child)
+    (pimacs-section-end section)))
+
 (defun pimacs-section--create-root-section ()
   (when pimacs-section--root-section
     (error "Root section already exists"))
@@ -450,6 +438,38 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
          (pimacs-section--update-visibility-indicator ,s))
        ,s)))
 
+(defmacro pimacs-section--replace-section-body (section &rest body)
+  (declare (indent 1)
+           (debug (symbolp body)))
+  (let ((s (make-symbol "*section*"))
+        (body-beginning (make-symbol "*body-beginning*"))
+        (body-end (make-symbol "*body-end*"))
+        (padding-beginning (make-symbol "*padding-beginning*"))
+        (body-is-section (make-symbol "*body-is-section*")))
+    `(let* ((,s ,section)
+            (,body-end (pimacs-section--section-body-end ,s))
+            (,body-is-section (= ,body-end (pimacs-section-end ,s))))
+       (delete-region (pimacs-section-beginning ,s) ,body-end)
+       (goto-char (pimacs-section-beginning ,s))
+       (setf (pimacs-section-beginning ,s) (point-marker))
+       (let ((,body-beginning (point)))
+         ,@body
+         (let ((,padding-beginning (point)))
+           (insert (pimacs-section-padding ,s))
+           (remove-text-properties ,padding-beginning (point)
+                                   '(face nil pimacs-section-face-order nil)))
+         (pimacs-section--apply-face ,s ,body-beginning (point)))
+       (setf (pimacs-section-beginning ,s)
+             (pimacs-section--advance-pointer-maker
+              (pimacs-section-beginning ,s)))
+       (when ,body-is-section
+         (pimacs-section--update-section-end ,s (point-marker)))
+       (pimacs-section--propertize-section ,s (point))
+       (if (pimacs-section--hidden-p ,s)
+           (pimacs-section--set-visibility ,s (pimacs-section-visibility ,s))
+         (pimacs-section--update-visibility-indicator ,s))
+       ,s)))
+
 (defmacro pimacs-section--create-or-replace-section (section type parent &rest body)
   "Create or replace SECTION of TYPE under PARENT, inserting BODY."
   (declare (indent 3)
@@ -479,10 +499,10 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
           (pimacs-section--set-visibility section (pimacs-section-visibility section)))))
     (pimacs-section--update-section-end (pimacs-section-parent section) end)))
 
-(defun pimacs-section--propertize-section (section)
+(defun pimacs-section--propertize-section (section &optional end)
   "Add text-property needed for SECTION."
   (put-text-property (pimacs-section-beginning section)
-                     (pimacs-section-end section)
+                     (or end (pimacs-section-end section))
                      'pimacs-section section))
 
 (defun pimacs-section--find-section (path top)

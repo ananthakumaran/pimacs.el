@@ -227,6 +227,65 @@
         (insert "  [-] Tests\n"))
       (should (null (pimacs-section-children tests))))))
 
+
+;; ─── pimacs-section--replace-section-body ───────────────────────────────────────────
+
+(ert-deftest pimacs-section-replace-body-preserves-children ()
+  (pimacs-with-root-section
+    (let* ((parent (pimacs-section--new-section 'parent pimacs-section--root-section))
+           (first (pimacs-section--new-section 'first parent))
+           (second (pimacs-section--new-section 'second parent)))
+      (pimacs-section--insert-section parent
+        (insert "old title\n"))
+      (pimacs-section--insert-section first
+        (insert "first child\n"))
+      (pimacs-section--insert-section second
+        (insert "second child\n"))
+      (pimacs-section--replace-section-body parent
+        (insert "new title\n"))
+      (should (equal (pimacs-section-children parent) (list first second)))
+      (should (equal (buffer-string)
+                     "new title\nfirst child\nsecond child\n"))
+      (should (= (pimacs-section--section-body-end parent)
+                 (pimacs-section-beginning first)))
+      (goto-char (pimacs-section-beginning parent))
+      (should (eq (pimacs-section--current-section) parent))
+      (should (eq (pimacs-section--next-target-at-point) first))
+      (goto-char (pimacs-section-beginning first))
+      (should (eq (pimacs-section--previous-target-at-point) parent))
+      (goto-char (pimacs-section-beginning first))
+      (should (eq (pimacs-section--current-section) first))
+      (should (eq (pimacs-section-parent first) parent))
+      (should (eq (get-text-property (point) 'pimacs-section) first)))))
+
+(ert-deftest pimacs-section-replace-body-updates-leaf-end ()
+  (pimacs-with-root-section
+    (let ((section (pimacs-section--new-section 'leaf pimacs-section--root-section)))
+      (pimacs-section--insert-section section
+        (insert "old"))
+      (pimacs-section--replace-section-body section
+        (insert "replacement"))
+      (should (equal (buffer-string) "replacement"))
+      (should (= (pimacs-section-end section) (point-max)))
+      (goto-char (point-min))
+      (should (eq (pimacs-section--current-section) section)))))
+
+(ert-deftest pimacs-section-replace-body-preserves-hidden-children ()
+  (pimacs-with-root-section
+    (let* ((parent (pimacs-section--new-section 'parent pimacs-section--root-section))
+           (child (pimacs-section--new-section 'child parent)))
+      (pimacs-section--insert-section parent
+        (insert "old title\n"))
+      (pimacs-section--insert-section child
+        (insert "child\n"))
+      (pimacs-section--set-visibility parent :hide)
+      (pimacs-section--replace-section-body parent
+        (insert "new title\n"))
+      (should (pimacs-section--hidden-p parent))
+      (should (eq (car (pimacs-section-children parent)) child))
+      (pimacs-section--set-visibility parent :show)
+      (should (equal (buffer-string) "new title\nchild\n")))))
+
 ;; ─── pimacs-section--current-section / pimacs-section--section-at ────────────────────────────────
 
 (ert-deftest pimacs-section--section-at-returns-correct-section ()

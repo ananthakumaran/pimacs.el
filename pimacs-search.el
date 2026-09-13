@@ -23,8 +23,11 @@
 
 (require 'cl-lib)
 (require 'json)
+(require 'parse-time)
 (require 'pimacs-core)
+(require 'pimacs-utils)
 (require 'pimacs-section)
+(require 'pimacs-ui)
 
 (defcustom pimacs-search-rg-executable "rg"
   "Ripgrep executable used for historical session searches."
@@ -77,8 +80,15 @@ def accepted:
 select(.type == \"match\")
 | .data as $match
 | ($match.lines.text | fromjson) as $entry
-| select($entry | accepted)
-| {path: $match.path.text, offset: $match.absolute_offset, entry: $entry}
+| if $entry.type == \"session\" then
+    {kind: \"session\", path: $match.path.text, id: $entry.id, cwd: $entry.cwd, timestamp: $entry.timestamp}
+  elif $entry.type == \"session_info\" then
+    {kind: \"session-info\", path: $match.path.text, name: $entry.name}
+  elif ($entry | accepted) then
+    {kind: \"entry\", path: $match.path.text, offset: $match.absolute_offset, entry: $entry}
+  else
+    empty
+  end
 ")
 
 (defconst pimacs-search--buffer-name "*Pimacs Session Search*")
@@ -89,13 +99,14 @@ select(.type == \"match\")
 (defvar-local pimacs-search--pipeline-process nil)
 (defvar-local pimacs-search--generation 0)
 (defvar-local pimacs-search--partial-output "")
+(defvar-local pimacs-search--render-context nil)
 (defconst pimacs-search--render-batch-size 25)
 (defvar-local pimacs-search--entry-queue nil)
 (defvar-local pimacs-search--entry-queue-tail nil)
 (defvar-local pimacs-search--drain-timer nil)
 (defvar-local pimacs-search--rendered-count 0)
 (defvar-local pimacs-search--session-sections nil)
-(defvar-local pimacs-search--result-count 0)
+(defvar-local pimacs-search--session-metadata nil)
 (defvar-local pimacs-search--parse-error nil)
 
 (defvar-keymap pimacs-search-mode-map
@@ -127,6 +138,13 @@ select(.type == \"match\")
 (define-derived-mode pimacs-search-mode special-mode "Pimacs Search"
   "Major mode for browsing historical Pi session search results."
   (setq-local truncate-lines t)
+  (setq-local bidi-paragraph-direction 'left-to-right)
+  (setq-local bidi-inhibit-bpa t)
+  (setq-local buffer-undo-list t)
+  (font-lock-mode -1)
+  (visual-line-mode -1)
+  (when (bound-and-true-p display-line-numbers-mode)
+    (display-line-numbers-mode -1))
   (setq-local pimacs-section-autohide-count nil))
 
 (defface pimacs-search-control-face
@@ -338,6 +356,7 @@ select(.type == \"match\")
     (let ((root (pimacs-section--create-root-section)))
       (setq pimacs-search--request (pimacs-search--default-request))
       (setq pimacs-search--session-sections (make-hash-table :test 'equal))
+      (setq pimacs-search--session-metadata (make-hash-table :test 'equal))
       (setq pimacs-search--controls-section
             (pimacs-section--create-section 'search-control root
               (pimacs-search--insert-controls)))
@@ -362,6 +381,9 @@ select(.type == \"match\")
 (cl-defstruct pimacs-search-request
   directory scope query search-type case context filters project-root)
 
+(cl-defstruct pimacs-search-render-context
+  regexp ignore-case before after)
+
 (defun pimacs-search--project-session-directory (directory project-root)
   (let* ((project-root (directory-file-name (expand-file-name project-root)))
          (path (replace-regexp-in-string "\\`[/\\\\]+" "" project-root))
@@ -375,7 +397,7 @@ select(.type == \"match\")
    :query ""
    :search-type 'string
    :case 'smart
-   :context nil
+   :context '(1 . 1)
    :filters (copy-sequence pimacs-search--default-filters)
    :project-root (pimacs--project-root)))
 
@@ -404,8 +426,11 @@ select(.type == \"match\")
      ('ignore '("--ignore-case"))
      (_ (error "Unknown search case: %S"
                (pimacs-search-request-case request))))
-   (list "--"
+   (list "-e"
          (pimacs-search-request-query request)
+         "-e" "\"type\":\"session\""
+         "-e" "\"type\":\"session_info\""
+         "--"
          (pimacs-search--request-directory request))))
 
 (defun pimacs-search--jq-arguments (request)
@@ -478,7 +503,8 @@ select(.type == \"match\")
                       (pimacs-section-children pimacs-section--root-section)))
       (when (eq (pimacs-section-type section) 'search-session)
         (pimacs-section--delete-section section)))
-    (setq pimacs-search--session-sections (make-hash-table :test 'equal))))
+    (setq pimacs-search--session-sections (make-hash-table :test 'equal)
+          pimacs-search--session-metadata (make-hash-table :test 'equal))))
 
 (defun pimacs-search--reset-stream-state ()
   (when (timerp pimacs-search--drain-timer)
@@ -488,7 +514,7 @@ select(.type == \"match\")
         pimacs-search--entry-queue-tail nil
         pimacs-search--drain-timer nil
         pimacs-search--rendered-count 0
-        pimacs-search--result-count 0
+        pimacs-search--render-context nil
         pimacs-search--parse-error nil))
 
 (defun pimacs-search--cancel-pipeline ()
@@ -500,40 +526,270 @@ select(.type == \"match\")
   (setq pimacs-search--pipeline-process nil))
 
 
+(defun pimacs-search--session-short-id (path)
+  (or (plist-get (gethash path pimacs-search--session-metadata) :id)
+      (when (string-match "_\\(.+\\)\\'" (file-name-base path))
+        (match-string 1 (file-name-base path)))
+      "unknown"))
+
+(defun pimacs-search--format-session-timestamp (timestamp)
+  (when (stringp timestamp)
+    (condition-case nil
+        (format-time-string "%F %R" (parse-iso8601-time-string timestamp))
+      (error nil))))
+
+(defun pimacs-search--insert-session-info (path)
+  (let* ((metadata (gethash path pimacs-search--session-metadata))
+         (name (plist-get metadata :name))
+         (id (pimacs-search--session-short-id path))
+         (timestamp (pimacs-search--format-session-timestamp
+                     (plist-get metadata :timestamp)))
+         (cwd (plist-get metadata :cwd)))
+    (insert (propertize (if (and (stringp name) (> (length name) 0))
+                            name
+                          (pimacs--short-uuid id))
+                        'face 'font-lock-type-face))
+    (when timestamp
+      (insert "  " timestamp))
+    (when (stringp cwd)
+      (insert "  "
+              (propertize (abbreviate-file-name cwd)
+                          'face 'dired-directory)))))
+
+(defun pimacs-search--render-session-heading (path section)
+  (pimacs-section--replace-section-body section
+    (pimacs-search--insert-session-info path)))
+
+(defun pimacs-search--update-session-metadata (record)
+  (let* ((path (plist-get record :path))
+         (metadata (copy-sequence (gethash path pimacs-search--session-metadata))))
+    (pcase (plist-get record :kind)
+      ("session"
+       (setq metadata (plist-put metadata :id (plist-get record :id))
+             metadata (plist-put metadata :cwd (plist-get record :cwd))
+             metadata (plist-put metadata :timestamp (plist-get record :timestamp))))
+      ("session-info"
+       (setq metadata (plist-put metadata :name (plist-get record :name)))))
+    (puthash path metadata pimacs-search--session-metadata)
+    (when-let ((section (gethash path pimacs-search--session-sections)))
+      (pimacs-search--render-session-heading path section))))
+
 (defun pimacs-search--session-section (path)
   (or (gethash path pimacs-search--session-sections)
       (let ((section
-             (pimacs-section--create-section
-                 'search-session pimacs-section--root-section
-               (insert (abbreviate-file-name path)))))
+             (pimacs-section--new-section
+              'search-session pimacs-section--root-section :padding "\n")))
+        (pimacs-section--insert-section section
+          (pimacs-search--insert-session-info path))
         (puthash path section pimacs-search--session-sections)
         section)))
 
-(defun pimacs-search--entry-section-type (entry)
-  (pcase (plist-get entry :type)
-    ("message"
-     (pcase (plist-get (plist-get entry :message) :role)
-       ("user" 'user)
-       ("assistant" 'assistant)
-       ("toolResult" 'tool-result)
-       ("bashExecution" 'bash)
-       (_ 'info)))
-    ("compaction" 'compact)
-    (_ 'info)))
+(defun pimacs-search--plain-text (content)
+  (cond
+   ((stringp content) content)
+   ((listp content)
+    (mapconcat
+     (lambda (item)
+       (if (equal (plist-get item :type) "text")
+           (or (plist-get item :text) "")
+         ""))
+     content ""))
+   (t "")))
 
-(defun pimacs-search--render-entry (result)
-  (let* ((session (pimacs-search--session-section (plist-get result :path)))
-         (entry (plist-get result :entry))
-         (type (pimacs-search--entry-section-type entry)))
-    (pimacs-section--create-section type session
-      (insert (format "%s @ %d" type (plist-get result :offset))))))
+(defun pimacs-search--make-preview-regexp (request)
+  (let ((query (pimacs-search-request-query request)))
+    (pcase (pimacs-search-request-search-type request)
+      ('string (pimacs--grep-pattern-regexp query t))
+      ('words (concat "\\_<" (pimacs--grep-pattern-regexp query t) "\\_>"))
+      ('regexp (pimacs--grep-pattern-regexp query nil)))))
+
+(defun pimacs-search--make-preview-ignore-case-p (request)
+  (pcase (pimacs-search-request-case request)
+    ('smart (not (string-match-p "[[:upper:]]"
+                                 (pimacs-search-request-query request))))
+    ('sensitive nil)
+    ('ignore t)))
+
+(defun pimacs-search--prepare-render-context ()
+  (let* ((request pimacs-search--request)
+         (context (or (pimacs-search-request-context request) '(0 . 0))))
+    (setq pimacs-search--render-context
+          (make-pimacs-search-render-context
+           :regexp (pimacs-search--make-preview-regexp request)
+           :ignore-case (pimacs-search--make-preview-ignore-case-p request)
+           :before (car context)
+           :after (cdr context)))))
+
+(defun pimacs-search--merge-line-ranges (ranges)
+  (let (merged)
+    (dolist (range ranges)
+      (if (and merged (<= (car range) (1+ (cdr (car merged)))))
+          (setcdr (car merged) (max (cdr (car merged)) (cdr range)))
+        (push range merged)))
+    (nreverse merged)))
+
+(defun pimacs-search--preview-ranges (lines render-context)
+  (let (ranges)
+    (when-let ((regexp (pimacs-search-render-context-regexp render-context)))
+      (let ((case-fold-search
+             (pimacs-search-render-context-ignore-case render-context)))
+        (dotimes (index (length lines))
+          (when (string-match-p regexp (aref lines index))
+            (push (cons index index) ranges)))))
+    (when ranges
+      (let* ((before (pimacs-search-render-context-before render-context))
+             (after (pimacs-search-render-context-after render-context))
+             (line-count (length lines)))
+        (pimacs-search--merge-line-ranges
+         (mapcar (lambda (range)
+                   (cons (max 0 (- (car range) before))
+                         (min (1- line-count) (+ (cdr range) after))))
+                 (nreverse ranges)))))))
+
+(defun pimacs-search--insert-text-preview (lines ranges render-context)
+  (let ((first t))
+    (dolist (range ranges)
+      (unless first
+        (insert "\n…\n"))
+      (let ((beginning (point)))
+        (cl-loop for index from (car range) to (cdr range)
+                 do (insert (aref lines index))
+                 unless (= index (cdr range))
+                 do (insert "\n"))
+        (pimacs--fontify-grep-matches
+         beginning
+         (point)
+         (pimacs-search-render-context-regexp render-context)
+         (pimacs-search-render-context-ignore-case render-context)))
+      (setq first nil))))
+
+(defun pimacs-search--render-text-entry (result role text render-context)
+  (let* ((lines (vconcat (split-string text "\n" nil)))
+         (ranges (pimacs-search--preview-ranges lines render-context)))
+    (when ranges
+      (let ((session (pimacs-search--session-section (plist-get result :path))))
+        (let ((entry-section
+               (pimacs-section--new-section 'search-entry session :padding "\n")))
+          (pimacs-section--insert-section entry-section
+            (when role
+              (pimacs-ui--insert-role-prefix role))
+            (pimacs-search--insert-text-preview lines ranges render-context)))
+        t))))
+
+(defun pimacs-search--render-content-entry (result role content render-context)
+  (let ((text (pimacs-search--plain-text content)))
+    (unless (string-empty-p text)
+      (pimacs-search--render-text-entry result role text render-context))))
+
+(defun pimacs-search--message-content-items (message type)
+  (let ((content (plist-get message :content)))
+    (and (listp content)
+         (cl-remove-if-not (lambda (item)
+                             (equal (plist-get item :type) type))
+                           content))))
+
+(defun pimacs-search--json-string (value)
+  (condition-case nil
+      (json-serialize value)
+    (error (format "%s" value))))
+
+(defun pimacs-search--render-tool-call-entry (result item render-context)
+  (let* ((name (or (plist-get item :name) "unknown"))
+         (arguments (plist-get item :arguments))
+         (text (concat (propertize (format "%s " name)
+                                   'face 'pimacs-tool-name-face)
+                       (if arguments
+                           (pimacs-search--json-string arguments)
+                         ""))))
+    (pimacs-search--render-text-entry result nil text render-context)))
+
+(defun pimacs-search--render-assistant-entry (result entry render-context)
+  (let* ((message (plist-get entry :message))
+         (filters (pimacs-search-request-filters pimacs-search--request))
+         rendered)
+    (when (memq 'assistant filters)
+      (setq rendered
+            (or (pimacs-search--render-content-entry
+                 result "assistant" (plist-get message :content) render-context)
+                rendered)))
+    (when (memq 'thinking filters)
+      (dolist (item (pimacs-search--message-content-items message "thinking"))
+        (setq rendered
+              (or (pimacs-search--render-text-entry
+                   result "assistant" (plist-get item :thinking) render-context)
+                  rendered))))
+    (when (memq 'tool-call filters)
+      (dolist (item (pimacs-search--message-content-items message "toolCall"))
+        (setq rendered
+              (or (pimacs-search--render-tool-call-entry result item render-context)
+                  rendered))))
+    rendered))
+
+(defun pimacs-search--render-tool-result-entry (result entry render-context)
+  (let* ((message (plist-get entry :message))
+         (text (pimacs-search--plain-text (plist-get message :content))))
+    (unless (string-empty-p text)
+      (pimacs-search--render-text-entry
+       result nil text render-context))))
+
+(defun pimacs-search--render-bash-entry (result entry render-context)
+  (let* ((message (plist-get entry :message))
+         (command (or (plist-get message :command) ""))
+         (output (pimacs-search--plain-text (plist-get message :output)))
+         (text (concat (propertize "bash " 'face 'pimacs-tool-name-face)
+                       command
+                       (unless (string-empty-p output)
+                         (concat "\n" output)))))
+    (pimacs-search--render-text-entry result nil text render-context)))
+
+(defun pimacs-search--render-compaction-entry (result entry render-context)
+  (let ((summary (plist-get entry :summary))
+        (tokens-before (plist-get entry :tokensBefore)))
+    (when (stringp summary)
+      (pimacs-search--render-text-entry
+       result "assistant"
+       (concat (when tokens-before
+                 (format "Compacted from %s tokens\n" tokens-before))
+               summary)
+       render-context))))
+
+(defun pimacs-search--render-entry (result render-context)
+  (let* ((entry (plist-get result :entry))
+         (message (plist-get entry :message)))
+    (pcase (plist-get entry :type)
+      ("message"
+       (pcase (plist-get message :role)
+         ("user"
+          (when (memq 'user (pimacs-search-request-filters pimacs-search--request))
+            (pimacs-search--render-content-entry
+             result "user" (plist-get message :content) render-context)))
+         ("assistant"
+          (pimacs-search--render-assistant-entry result entry render-context))
+         ("toolResult"
+          (when (memq 'tool-result (pimacs-search-request-filters pimacs-search--request))
+            (pimacs-search--render-tool-result-entry result entry render-context)))
+         ("bashExecution"
+          (when (memq 'bash (pimacs-search-request-filters pimacs-search--request))
+            (pimacs-search--render-bash-entry result entry render-context)))))
+      ("compaction"
+       (when (memq 'compact (pimacs-search-request-filters pimacs-search--request))
+         (pimacs-search--render-compaction-entry result entry render-context))))))
+
+
+(defun pimacs-search--render-record (record render-context)
+  (pcase (plist-get record :kind)
+    ((or "session" "session-info")
+     (pimacs-search--update-session-metadata record)
+     nil)
+    ("entry"
+     (pimacs-search--render-entry record render-context))))
 
 (defun pimacs-search--update-status ()
   (unless pimacs-search--parse-error
     (pimacs-search--set-status
      (format "%s: %d matches in %d sessions%s"
              (if pimacs-search--pipeline-process "Searching" "Finished")
-             pimacs-search--result-count
+             pimacs-search--rendered-count
              (hash-table-count pimacs-search--session-sections)
              (if pimacs-search--entry-queue "…" ".")))))
 
@@ -559,6 +815,7 @@ select(.type == \"match\")
       (when (= generation pimacs-search--generation)
         (setq pimacs-search--drain-timer nil)
         (let ((count 0)
+              (render-context pimacs-search--render-context)
               (inhibit-read-only t))
           (save-excursion
             (while (and pimacs-search--entry-queue
@@ -566,8 +823,8 @@ select(.type == \"match\")
               (let ((entry (pop pimacs-search--entry-queue)))
                 (unless pimacs-search--entry-queue
                   (setq pimacs-search--entry-queue-tail nil))
-                (pimacs-search--render-entry entry)
-                (cl-incf pimacs-search--rendered-count)
+                (when (pimacs-search--render-record entry render-context)
+                  (cl-incf pimacs-search--rendered-count))
                 (cl-incf count))))
           (when pimacs-search--entry-queue
             (pimacs-search--schedule-drain))
@@ -578,8 +835,7 @@ select(.type == \"match\")
     (condition-case error-data
         (progn
           (pimacs-search--enqueue-entry
-           (json-parse-string line :object-type 'plist :array-type 'list))
-          (cl-incf pimacs-search--result-count))
+           (json-parse-string line :object-type 'plist :array-type 'list)))
       (error
        (setq pimacs-search--parse-error
              (error-message-string error-data))))))
@@ -626,6 +882,7 @@ select(.type == \"match\")
   (pimacs-search--cancel-pipeline)
   (cl-incf pimacs-search--generation)
   (pimacs-search--reset-stream-state)
+  (pimacs-search--prepare-render-context)
   (pimacs-search--reset-results)
   (let ((buffer (current-buffer))
         (generation pimacs-search--generation))

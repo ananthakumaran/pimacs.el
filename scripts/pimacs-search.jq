@@ -26,5 +26,12 @@ def accepted:
 select(.type == "match")
 | .data as $match
 | ($match.lines.text | fromjson) as $entry
-| select($entry | accepted)
-| {path: $match.path.text, offset: $match.absolute_offset, entry: $entry}
+| if $entry.type == "session" then
+    {kind: "session", path: $match.path.text, id: $entry.id, cwd: $entry.cwd, timestamp: $entry.timestamp}
+  elif $entry.type == "session_info" then
+    {kind: "session-info", path: $match.path.text, name: $entry.name}
+  elif ($entry | accepted) then
+    {kind: "entry", path: $match.path.text, offset: $match.absolute_offset, entry: $entry}
+  else
+    empty
+  end
