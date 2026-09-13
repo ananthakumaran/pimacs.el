@@ -35,7 +35,7 @@
   :type 'string
   :group 'pimacs)
 
-(defcustom pimacs-search-default-folder
+(defcustom pimacs-search-default-directory
   (expand-file-name "sessions/" "~/.pi/agent/")
   "Default directory containing Pi session directories."
   :type 'directory
@@ -85,19 +85,62 @@ select(.type == \"match\")
 (defvar-local pimacs-search--controls-section nil)
 (defvar-local pimacs-search--status-section nil)
 (defvar-local pimacs-search--results-section nil)
+(defvar-local pimacs-search--request nil)
 
 (define-derived-mode pimacs-search-mode special-mode "Pimacs Search"
   "Major mode for browsing historical Pi session search results."
   (setq-local truncate-lines t))
+
+(defun pimacs-search--insert-control (label value action)
+  (insert label ": ")
+  (insert-text-button value 'action action 'follow-link t)
+  (insert "\n"))
+
+(defun pimacs-search--insert-controls ()
+  (let ((request pimacs-search--request))
+    (insert (propertize "Session Search" 'face 'bold) "\n")
+    (pimacs-search--insert-control
+     "Query"
+     (or (pimacs-search-request-query request) "<empty>")
+     #'pimacs-search--edit-query)
+    (pimacs-search--insert-control
+     "Directory"
+     (abbreviate-file-name
+      (pimacs-search-request-directory request))
+     #'pimacs-search--edit-directory)))
+
+(defun pimacs-search--render-controls ()
+  (let ((inhibit-read-only t))
+    (pimacs-section--replace-section pimacs-search--controls-section
+      (pimacs-search--insert-controls))))
+
+(defun pimacs-search--edit-query (&optional _button)
+  "Edit the session search query."
+  (interactive)
+  (setf (pimacs-search-request-query pimacs-search--request)
+        (read-string "Search query: "
+                     (pimacs-search-request-query pimacs-search--request)))
+  (pimacs-search--render-controls))
+
+(defun pimacs-search--edit-directory (&optional _button)
+  "Edit the session directory to search."
+  (interactive)
+  (setf (pimacs-search-request-directory pimacs-search--request)
+        (expand-file-name
+         (read-directory-name
+          "Session directory: "
+          (pimacs-search-request-directory pimacs-search--request))))
+  (pimacs-search--render-controls))
 
 (defun pimacs-search--initialize-buffer ()
   (let ((inhibit-read-only t))
     (erase-buffer)
     (setq pimacs-section--root-section nil)
     (let ((root (pimacs-section--create-root-section)))
+      (setq pimacs-search--request (pimacs-search--default-request))
       (setq pimacs-search--controls-section
-            (pimacs-section--create-section 'custom root
-              (insert (propertize "Session Search" 'face 'bold))))
+            (pimacs-section--create-section 'input root
+              (pimacs-search--insert-controls)))
       (setq pimacs-search--status-section
             (pimacs-section--create-section 'info root
               (insert "No search started.")))
@@ -119,17 +162,17 @@ select(.type == \"match\")
   (pop-to-buffer (pimacs-search--buffer)))
 
 (cl-defstruct pimacs-search-request
-  folder scope query filters project-root)
+  directory scope query filters project-root)
 
-(defun pimacs-search--project-session-directory (folder project-root)
+(defun pimacs-search--project-session-directory (directory project-root)
   (let* ((project-root (directory-file-name (expand-file-name project-root)))
          (path (replace-regexp-in-string "\\`[/\\\\]+" "" project-root))
          (path (replace-regexp-in-string "[:/\\\\]" "-" path)))
-    (expand-file-name (format "--%s--" path) folder)))
+    (expand-file-name (format "--%s--" path) directory)))
 
 (defun pimacs-search--default-request ()
   (make-pimacs-search-request
-   :folder (expand-file-name pimacs-search-default-folder)
+   :directory (expand-file-name pimacs-search-default-directory)
    :scope 'current-project
    :query ""
    :filters (copy-sequence pimacs-search--default-filters)
@@ -139,9 +182,9 @@ select(.type == \"match\")
   (pcase (pimacs-search-request-scope request)
     ('current-project
      (pimacs-search--project-session-directory
-      (pimacs-search-request-folder request)
+      (pimacs-search-request-directory request)
       (pimacs-search-request-project-root request)))
-    ('all-projects (pimacs-search-request-folder request))
+    ('all-projects (pimacs-search-request-directory request))
     (_ (error "Unknown search scope: %S"
               (pimacs-search-request-scope request)))))
 
