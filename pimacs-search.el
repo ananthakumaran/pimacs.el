@@ -87,9 +87,35 @@ select(.type == \"match\")
 (defvar-local pimacs-search--results-section nil)
 (defvar-local pimacs-search--request nil)
 
+(defvar-keymap pimacs-search-mode-map
+  :parent special-mode-map
+  "<left-fringe> <mouse-1>" #'pimacs-mouse-toggle-section
+  "<left-fringe> <mouse-2>" #'pimacs-mouse-toggle-section
+  "TAB" #'pimacs-toggle-section
+  "C-i" #'pimacs-toggle-section
+  "<backtab>" #'pimacs-search-cycle-sections
+  "1" #'pimacs-section-show-level-1
+  "2" #'pimacs-section-show-level-2
+  "3" #'pimacs-section-show-level-3
+  "M-1" #'pimacs-section-show-level-1-all
+  "M-2" #'pimacs-section-show-level-2-all
+  "M-3" #'pimacs-section-show-level-3-all
+  "n" #'pimacs-goto-next-section
+  "M-n" #'pimacs-goto-next-section
+  "p" #'pimacs-goto-previous-section
+  "M-p" #'pimacs-goto-previous-section
+  "M-g l" #'pimacs-goto-last-section
+  "l" #'pimacs-goto-last-section)
+
+(defun pimacs-search-cycle-sections ()
+  "Cycle visibility of all sections in the current search buffer."
+  (interactive)
+  (pimacs-section--cycle-global))
+
 (define-derived-mode pimacs-search-mode special-mode "Pimacs Search"
   "Major mode for browsing historical Pi session search results."
-  (setq-local truncate-lines t))
+  (setq-local truncate-lines t)
+  (setq-local pimacs-section-autohide-count nil))
 
 (defface pimacs-search-control-face
   '((t :underline t))
