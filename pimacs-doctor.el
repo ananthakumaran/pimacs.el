@@ -61,14 +61,15 @@
 (defun pimacs-doctor--insert-pi-status ()
   (insert (propertize "Pi\n" 'face 'bold))
   (if-let ((executable (pimacs-doctor--executable)))
-      (let ((pimacs-executable executable))
+      (let ((pimacs-executable executable)
+            (display-executable (abbreviate-file-name executable)))
         (condition-case err
             (let* ((version (pimacs--agent-version))
                    (compatible (pimacs--agent-version-compatible-p version)))
               (pimacs-doctor--insert-status
                compatible
                (format "%s %s (minimum %s)"
-                       executable version pimacs--minimum-version))
+                       display-executable version pimacs--minimum-version))
               (unless compatible
                 (insert-text-button "Install or upgrade Pi"
                                     'action #'pimacs-doctor--install-pi)
@@ -76,11 +77,12 @@
           (error
            (pimacs-doctor--insert-status
             nil (format "%s is available, but its version could not be determined: %s"
-                        executable (error-message-string err)))
+                        display-executable (error-message-string err)))
            (insert-text-button "Install or upgrade Pi"
                                'action #'pimacs-doctor--install-pi)
            (insert "\n"))))
-    (pimacs-doctor--insert-status nil (format "%s was not found" pimacs-executable))
+    (pimacs-doctor--insert-status nil (format "%s was not found"
+                                              (abbreviate-file-name pimacs-executable)))
     (insert-text-button "Install or upgrade Pi"
                         'action #'pimacs-doctor--install-pi)
     (insert "\n"))

@@ -31,10 +31,10 @@
   (let ((err (should-error (pimacs--format-state-line '(:spacer :spacer)))))
     (should (string-match-p "only one.*:spacer" (error-message-string err)))))
 
-(ert-deftest pimacs--format-state-line-includes-project-root ()
-  (let ((pimacs--project-root "/tmp/project/"))
+(ert-deftest pimacs--format-state-line-abbreviates-project-root ()
+  (let ((pimacs--project-root (expand-file-name "pimacs-project/" "~")))
     (should (equal (pimacs--format-state-line '(:project_root))
-                   "/tmp/project/"))))
+                   "~/pimacs-project/"))))
 
 (ert-deftest pimacs--format-state-line-session-name-falls-back-to-short-id ()
   (should (equal (pimacs--format-state-line-session-name

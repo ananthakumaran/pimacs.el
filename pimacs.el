@@ -1185,7 +1185,7 @@ with the message plist to insert the custom message content."
         (limit (plist-get args :limit)))
     (insert (propertize (format "/%s/" pattern) 'face 'font-lock-string-face))
     (when path
-      (insert (format " in %s" path)))
+      (insert (format " in %s" (abbreviate-file-name path))))
     (when glob
       (insert (format " (%s)" glob)))
     (when ignore-case
@@ -1300,7 +1300,7 @@ with the message plist to insert the custom message content."
         (limit (plist-get args :limit)))
     (insert (propertize (format "/%s/" pattern) 'face 'font-lock-string-face))
     (when path
-      (insert (format " in %s" path)))
+      (insert (format " in %s" (abbreviate-file-name path))))
     (when limit
       (insert (format " limit %d" limit)))))
 
@@ -1310,7 +1310,7 @@ with the message plist to insert the custom message content."
 ;; ls
 (defun pimacs--insert-ls-args (args)
   (when-let ((path (plist-get args :path)))
-    (insert path))
+    (insert (abbreviate-file-name path)))
   (when-let ((limit (plist-get args :limit)))
     (insert (format " limit %d" limit))))
 
@@ -2119,10 +2119,11 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
              (pimacs--insert-file-link (plist-get data :sessionFile) (pimacs--project-root))
              (insert "\n")
 
-             (insert
-              (format " ID: %s\n\n"
-                      (plist-get data :sessionId)))
-
+             (insert " ID: ")
+             (insert (propertize (format "%s"
+                                         (pimacs--short-uuid (plist-get data :sessionId)))
+                                 'face 'font-lock-type-face))
+             (insert "\n\n")
              (pimacs--insert-stats-section
               "Messages"
               data
@@ -2363,7 +2364,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                           pimacs-resume-max-sessions)))
                 (sessions (mapcar #'pimacs--read-session-choice files)))
            (if (null sessions)
-               (message "No session files found in %s" session-dir)
+               (message "No session files found in %s" (abbreviate-file-name session-dir))
              (let* ((candidates
                      (mapcar
                       (lambda (s)
@@ -2375,7 +2376,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                                (short-parent (pimacs--short-uuid (pimacs-session-choice-parent-id s))))
                           (cons (format "%s  %s  %s%s%s" short-id formatted-time
                                         (if (pimacs-session-choice-name s)
-                                            (format "[%s] " (pimacs-session-choice-name s))
+                                            (propertize (format "[%s] " (pimacs-session-choice-name s))
+                                                        'face 'font-lock-type-face)
                                           "")
                                         (pimacs-session-choice-message s)
                                         (if short-parent (format " (parent: %s)" short-parent) ""))

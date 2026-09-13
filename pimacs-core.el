@@ -51,7 +51,8 @@
          (path default-directory))
      (if project
          (setq path (project-root project))
-       (message "Couldn't find project root folder. Using '%s' as project root." default-directory))
+       (message "Couldn't find project root folder. Using '%s' as project root."
+                (abbreviate-file-name default-directory)))
      (let ((full-path (expand-file-name path)))
        (setq pimacs--project-root full-path)
        full-path))))

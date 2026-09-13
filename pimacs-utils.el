@@ -212,7 +212,7 @@ BODY must not modify the input field; retained undo entries must belong to it."
                    :button-prefix ""
                    :button-suffix (or suffix "")
                    :action #'pimacs--file-link-action
-                   :tag display-path
+                   :tag (abbreviate-file-name display-path)
                    :value path)))
 
 (defun pimacs--keyword-name (keyword)

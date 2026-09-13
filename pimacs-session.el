@@ -88,10 +88,11 @@ in descending order."
            (session-id (pimacs--plist-get pimacs--header-line-state :sessionStats :sessionId))
            (short-id (pimacs--short-uuid session-id)))
       (if (and (stringp name) (not (string-empty-p name)))
-          (if (and include-id short-id)
-              (concat name " " short-id)
-            name)
-        (or short-id "unknown")))))
+          (let ((display-name (propertize name 'face 'font-lock-type-face)))
+            (if (and include-id short-id)
+                (concat display-name " " short-id)
+              display-name))
+        (propertize (or short-id "unknown") 'face 'font-lock-type-face)))))
 
 (defun pimacs--select-chat (candidates prompt)
   (cond
@@ -116,7 +117,7 @@ in descending order."
               (when-let* ((candidate (cdr (assoc label choices)))
                           (agent (gethash (car candidate) pimacs--agents))
                           (root (process-get agent 'project-root)))
-                (concat "  " (propertize (expand-file-name root) 'face 'dired-directory)))))
+                (concat "  " (propertize (abbreviate-file-name (expand-file-name root)) 'face 'dired-directory)))))
            (completion-extra-properties
             `(:annotation-function ,annotation-function))
            (selected (completing-read prompt choices nil t)))

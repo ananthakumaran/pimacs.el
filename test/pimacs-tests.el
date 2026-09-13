@@ -70,6 +70,10 @@
                      ("unnamed" . ,unnamed) ("unique" . ,unique))
                    "Session: ")))
           (should (equal labels '("33333333" "shared 11111111" "shared 22222222" "unique")))
+          (should (eq (get-text-property 0 'face (nth 1 labels))
+                      'font-lock-type-face))
+          (should (eq (get-text-property 0 'face (car labels))
+                      'font-lock-type-face))
           (should (eq (cdr selected) second)))
       (dolist (buffer (list first second unnamed unique))
         (kill-buffer buffer)))))
@@ -440,6 +444,18 @@
      '(:pattern "foo" :ignoreCase json-false :literal json-false))
     (should (equal (buffer-string) "/foo/"))))
 
+(ert-deftest pimacs--tool-args-abbreviate-home-paths ()
+  (let ((path (expand-file-name "pimacs-tool-path" "~")))
+    (with-temp-buffer
+      (pimacs--insert-grep-args (list :pattern "foo" :path path))
+      (should (equal (buffer-string) "/foo/ in ~/pimacs-tool-path")))
+    (with-temp-buffer
+      (pimacs--insert-find-args (list :pattern "foo" :path path))
+      (should (equal (buffer-string) "/foo/ in ~/pimacs-tool-path")))
+    (with-temp-buffer
+      (pimacs--insert-ls-args (list :path path))
+      (should (equal (buffer-string) "~/pimacs-tool-path")))))
+
 (ert-deftest pimacs--insert-grep-result-fontifies-primary-and-context-lines ()
   (let ((content "dir:name.el:12: foo BAR\ndir:name.el-13-foo BAR"))
     (with-temp-buffer
@@ -580,15 +596,20 @@
 (ert-deftest pimacs--file-link-displays-project-relative-path ()
   (let* ((root (make-temp-file "pimacs-project-" t))
          (inside (expand-file-name "lib/file.el" root))
-         (outside (make-temp-file "pimacs-file-link-")))
+         (outside (make-temp-file "pimacs-file-link-"))
+         (home-file (expand-file-name "pimacs-file-link-test" "~")))
     (unwind-protect
         (with-temp-buffer
           (let ((inside-widget (pimacs--insert-file-link "lib/file.el" root)))
             (insert " ")
             (let ((outside-widget (pimacs--insert-file-link outside root)))
-              (should (equal (buffer-string) (concat "lib/file.el " outside)))
-              (should (equal (widget-value inside-widget) inside))
-              (should (equal (widget-value outside-widget) outside)))))
+              (insert " ")
+              (let ((home-widget (pimacs--insert-file-link home-file root)))
+                (should (equal (buffer-string)
+                               (concat "lib/file.el " outside " ~/pimacs-file-link-test")))
+                (should (equal (widget-value inside-widget) inside))
+                (should (equal (widget-value outside-widget) outside))
+                (should (equal (widget-value home-widget) home-file))))))
       (delete-file outside)
       (delete-directory root t))))
 

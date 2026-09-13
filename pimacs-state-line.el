@@ -173,7 +173,10 @@ See `pimacs-header-line-format' for available components."
        (pimacs--short-uuid (pimacs--plist-get state :sessionStats :sessionId))))))
 
 (defun pimacs--format-state-line-project-root (state)
-  (pimacs--format-state-line-value (plist-get state :projectRoot)))
+  (let ((project-root (plist-get state :projectRoot)))
+    (if (stringp project-root)
+        (abbreviate-file-name project-root)
+      (pimacs--format-state-line-value project-root))))
 
 (defun pimacs--format-state-line-message-count (state)
   (pimacs--format-state-line-value (plist-get state :messageCount)))
