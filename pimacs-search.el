@@ -215,7 +215,11 @@ select(.type == \"match\")
            properties)))
 
 (defun pimacs-search--option-label (option)
-  (replace-regexp-in-string "-" " " (symbol-name option)))
+  (if (eq option 'current-project)
+      (abbreviate-file-name
+       (or (pimacs-search-request-project-root pimacs-search--request)
+           default-directory))
+    (replace-regexp-in-string "-" " " (symbol-name option))))
 
 (defun pimacs-search--insert-options (control selected action options)
   (let ((first t))
@@ -309,7 +313,7 @@ select(.type == \"match\")
     (insert "\nProjects: ")
     (pimacs-search--insert-options
      'scope scope #'pimacs-search--set-scope
-     '(current all))
+     '(current-project all))
     (insert "\nTypes: ")
     (pimacs-search--insert-filters
      (pimacs-search-request-filters request))
@@ -458,7 +462,7 @@ select(.type == \"match\")
 (defun pimacs-search--default-request ()
   (make-pimacs-search-request
    :directory (expand-file-name pimacs-search-default-directory)
-   :scope 'current
+   :scope 'current-project
    :query ""
    :search-type 'string
    :case 'smart
@@ -468,7 +472,7 @@ select(.type == \"match\")
 
 (defun pimacs-search--request-directory (request)
   (pcase (pimacs-search-request-scope request)
-    ('current
+    ('current-project
      (pimacs-search--project-session-directory
       (pimacs-search-request-directory request)
       (pimacs-search-request-project-root request)))
@@ -491,6 +495,8 @@ select(.type == \"match\")
      ('ignore '("--ignore-case"))
      (_ (error "Unknown search case: %S"
                (pimacs-search-request-case request))))
+   (when (eq (pimacs-search-request-scope request) 'current-project)
+     '("--sortr" "path"))
    (list "-e"
          (pimacs-search-request-query request)
          "-e" "\"type\":\"session\""
