@@ -91,28 +91,147 @@ select(.type == \"match\")
   "Major mode for browsing historical Pi session search results."
   (setq-local truncate-lines t))
 
-(defun pimacs-search--insert-control (label value action)
-  (insert label ": ")
-  (insert-text-button value 'action action 'follow-link t)
-  (insert "\n"))
+(defface pimacs-search-control-face
+  '((t :underline t))
+  "Face used for editable session search controls."
+  :group 'pimacs)
+
+(defface pimacs-search-active-control-face
+  '((t :inherit font-lock-keyword-face))
+  "Face used for selected session search control options."
+  :group 'pimacs)
+
+(defun pimacs-search--insert-button (text action &rest properties)
+  (apply #'insert-text-button
+         text
+         'action action
+         'follow-link t
+         'face 'pimacs-search-control-face
+         properties))
+
+(defun pimacs-search--insert-options (control selected action options)
+  (let ((first t))
+    (dolist (option options)
+      (unless first
+        (insert " "))
+      (let ((text (replace-regexp-in-string "-" " " (symbol-name option))))
+        (if (eq option selected)
+            (insert (propertize text
+                                'face 'pimacs-search-active-control-face
+                                'pimacs-search-focus control))
+          (pimacs-search--insert-button
+           text action 'pimacs-search-value option)))
+      (setq first nil))))
+
+(defun pimacs-search--insert-context-button (text direction context)
+  (pimacs-search--insert-button
+   text
+   #'pimacs-search--set-context
+   'pimacs-search-context-direction direction
+   'pimacs-search-focus
+   (and context
+        (if (eq direction 'before)
+            (> (car context) 0)
+          (> (cdr context) 0))
+        'context)))
 
 (defun pimacs-search--insert-controls ()
-  (let ((request pimacs-search--request))
-    (insert (propertize "Session Search" 'face 'bold) "\n")
-    (pimacs-search--insert-control
-     "Query"
-     (or (pimacs-search-request-query request) "<empty>")
-     #'pimacs-search--edit-query)
-    (pimacs-search--insert-control
-     "Directory"
+  (let* ((request pimacs-search--request)
+         (search-type (pimacs-search-request-search-type request))
+         (case (pimacs-search-request-case request))
+         (scope (pimacs-search-request-scope request))
+         (context (pimacs-search-request-context request)))
+    (insert "Search term: ")
+    (insert (propertize
+             (if (equal (pimacs-search-request-query request) "")
+                 "<empty>"
+               (pimacs-search-request-query request))
+             'face 'pimacs-search-active-control-face))
+    (insert " ")
+    (pimacs-search--insert-button
+     "change" #'pimacs-search--edit-query
+     'pimacs-search-focus 'query)
+    (insert "\nSearch type: ")
+    (pimacs-search--insert-options
+     'search-type search-type #'pimacs-search--set-search-type
+     '(string words regexp))
+    (insert "\nCase: ")
+    (pimacs-search--insert-options
+     'case case #'pimacs-search--set-case
+     '(smart sensitive ignore))
+    (insert "\nContext: ")
+    (if context
+        (pimacs-search--insert-button
+         "none" #'pimacs-search--clear-context)
+      (insert (propertize "none"
+                          'face 'pimacs-search-active-control-face
+                          'pimacs-search-focus 'context)))
+    (insert " ")
+    (pimacs-search--insert-context-button "before" 'before context)
+    (when context
+      (insert (format ":%d" (car context))))
+    (insert " ")
+    (pimacs-search--insert-context-button "after" 'after context)
+    (when context
+      (insert (format ":%d" (cdr context))))
+    (insert "\n\nDirectory: ")
+    (pimacs-search--insert-button
      (abbreviate-file-name
       (pimacs-search-request-directory request))
-     #'pimacs-search--edit-directory)))
+     #'pimacs-search--edit-directory
+     'pimacs-search-focus 'directory)
+    (insert "\nProjects: ")
+    (pimacs-search--insert-options
+     'scope scope #'pimacs-search--set-scope
+     '(current-project all-projects))
+    (insert "\n")))
 
-(defun pimacs-search--render-controls ()
+(defun pimacs-search--render-controls (&optional control)
   (let ((inhibit-read-only t))
     (pimacs-section--replace-section pimacs-search--controls-section
-      (pimacs-search--insert-controls))))
+      (pimacs-search--insert-controls))
+    (when-let ((position (and control
+                              (text-property-any
+                               (point-min) (point-max)
+                               'pimacs-search-focus control))))
+      (goto-char position))))
+
+(defun pimacs-search--set-search-type (button)
+  (setf (pimacs-search-request-search-type pimacs-search--request)
+        (button-get button 'pimacs-search-value))
+  (pimacs-search--render-controls 'search-type))
+
+(defun pimacs-search--set-case (button)
+  (setf (pimacs-search-request-case pimacs-search--request)
+        (button-get button 'pimacs-search-value))
+  (pimacs-search--render-controls 'case))
+
+(defun pimacs-search--set-scope (button)
+  (setf (pimacs-search-request-scope pimacs-search--request)
+        (button-get button 'pimacs-search-value))
+  (pimacs-search--render-controls 'scope))
+
+(defun pimacs-search--set-context (button)
+  (let* ((direction (button-get button 'pimacs-search-context-direction))
+         (context (or (pimacs-search-request-context pimacs-search--request)
+                      '(0 . 0)))
+         (value (read-number (format "Lines %s: " direction)
+                             (if (eq direction 'before)
+                                 (car context)
+                               (cdr context))))
+         (updated-context
+          (if (eq direction 'before)
+              (cons value (cdr context))
+            (cons (car context) value)))
+         (updated-context (unless (equal updated-context '(0 . 0))
+                            updated-context)))
+    (setf (pimacs-search-request-context pimacs-search--request)
+          updated-context)
+    (pimacs-search--render-controls 'context)))
+
+(defun pimacs-search--clear-context (&optional _button)
+  (setf (pimacs-search-request-context pimacs-search--request) nil)
+  (pimacs-search--render-controls 'context))
 
 (defun pimacs-search--edit-query (&optional _button)
   "Edit the session search query."
@@ -120,7 +239,7 @@ select(.type == \"match\")
   (setf (pimacs-search-request-query pimacs-search--request)
         (read-string "Search query: "
                      (pimacs-search-request-query pimacs-search--request)))
-  (pimacs-search--render-controls))
+  (pimacs-search--render-controls 'query))
 
 (defun pimacs-search--edit-directory (&optional _button)
   "Edit the session directory to search."
@@ -130,7 +249,7 @@ select(.type == \"match\")
          (read-directory-name
           "Session directory: "
           (pimacs-search-request-directory pimacs-search--request))))
-  (pimacs-search--render-controls))
+  (pimacs-search--render-controls 'directory))
 
 (defun pimacs-search--initialize-buffer ()
   (let ((inhibit-read-only t))
@@ -139,7 +258,7 @@ select(.type == \"match\")
     (let ((root (pimacs-section--create-root-section)))
       (setq pimacs-search--request (pimacs-search--default-request))
       (setq pimacs-search--controls-section
-            (pimacs-section--create-section 'input root
+            (pimacs-section--create-section 'search root
               (pimacs-search--insert-controls)))
       (setq pimacs-search--status-section
             (pimacs-section--create-section 'info root
@@ -162,7 +281,7 @@ select(.type == \"match\")
   (pop-to-buffer (pimacs-search--buffer)))
 
 (cl-defstruct pimacs-search-request
-  directory scope query filters project-root)
+  directory scope query search-type case context filters project-root)
 
 (defun pimacs-search--project-session-directory (directory project-root)
   (let* ((project-root (directory-file-name (expand-file-name project-root)))
@@ -175,6 +294,9 @@ select(.type == \"match\")
    :directory (expand-file-name pimacs-search-default-directory)
    :scope 'current-project
    :query ""
+   :search-type 'string
+   :case 'smart
+   :context nil
    :filters (copy-sequence pimacs-search--default-filters)
    :project-root (pimacs--project-root)))
 

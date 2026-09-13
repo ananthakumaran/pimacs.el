@@ -180,6 +180,11 @@ Set this to nil to disable fringe indicators."
   "Face applied to session sections."
   :group 'pimacs)
 
+(defface pimacs-section-search-face
+  '((t))
+  "Face applied to search sections."
+  :group 'pimacs)
+
 (defcustom pimacs-section-type-faces
   '((root . pimacs-section-root-face)
     (thinking . pimacs-section-thinking-face)
@@ -198,6 +203,7 @@ Set this to nil to disable fringe indicators."
     (select . pimacs-section-select-face)
     (confirm . pimacs-section-confirm-face)
     (input . pimacs-section-input-face)
+    (search . pimacs-section-search-face)
     (session . pimacs-section-session-face))
   "Faces prepended to content in sections of each type."
   :type '(repeat (cons (symbol :tag "Section type")
