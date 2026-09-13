@@ -26,6 +26,10 @@ $(CASK_DIR): Cask
 .PHONY: cask
 cask: $(CASK_DIR)
 
+
+.PHONY: generate-search-jq
+generate-search-jq:
+	@scripts/generate-search-jq
 .PHONY: setup
 setup: cask
 	npm install -g --ignore-scripts @earendil-works/pi-coding-agent

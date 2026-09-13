@@ -23,6 +23,7 @@
 
 (require 'cl-lib)
 (require 'pimacs-core)
+(require 'pimacs-section)
 
 (defcustom pimacs-search-rg-executable "rg"
   "Ripgrep executable used for historical session searches."
@@ -78,6 +79,44 @@ select(.type == \"match\")
 | select($entry | accepted)
 | {path: $match.path.text, offset: $match.absolute_offset, entry: $entry}
 ")
+
+(defconst pimacs-search--buffer-name "*Pimacs Session Search*")
+
+(defvar-local pimacs-search--controls-section nil)
+(defvar-local pimacs-search--status-section nil)
+(defvar-local pimacs-search--results-section nil)
+
+(define-derived-mode pimacs-search-mode special-mode "Pimacs Search"
+  "Major mode for browsing historical Pi session search results."
+  (setq-local truncate-lines t))
+
+(defun pimacs-search--initialize-buffer ()
+  (let ((inhibit-read-only t))
+    (erase-buffer)
+    (setq pimacs-section--root-section nil)
+    (let ((root (pimacs-section--create-root-section)))
+      (setq pimacs-search--controls-section
+            (pimacs-section--create-section 'custom root
+              (insert (propertize "Session Search" 'face 'bold))))
+      (setq pimacs-search--status-section
+            (pimacs-section--create-section 'info root
+              (insert "No search started.")))
+      (setq pimacs-search--results-section
+            (pimacs-section--create-section 'custom root)))))
+
+(defun pimacs-search--buffer ()
+  (let ((buffer (get-buffer-create pimacs-search--buffer-name)))
+    (with-current-buffer buffer
+      (unless (derived-mode-p 'pimacs-search-mode)
+        (pimacs-search-mode)
+        (pimacs-search--initialize-buffer)))
+    buffer))
+
+;;;###autoload
+(defun pimacs-search-sessions ()
+  "Display the persistent buffer for searching historical Pi sessions."
+  (interactive)
+  (pop-to-buffer (pimacs-search--buffer)))
 
 (cl-defstruct pimacs-search-request
   folder scope query filters project-root)
