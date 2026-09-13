@@ -2924,7 +2924,8 @@ With a prefix argument OTHER-WINDOW, visit in other window."
                                  (when name
                                    (pimacs-set-session-name name)))
                                buffer))))
-        (pop-to-buffer chat-buffer)))))
+        (pop-to-buffer chat-buffer)
+        chat-buffer))))
 
 ;;;###autoload
 (defun pimacs-chat (&optional name root)
@@ -2971,6 +2972,18 @@ If non-nil, call CB after the session refresh finishes."
                                  (pimacs--notify message)
                                  (when cb
                                    (funcall cb))))))))
+
+
+(defun pimacs-resume-session-file (session-file cwd)
+  "Resume SESSION-FILE in a chat rooted at CWD."
+  (unless (file-exists-p session-file)
+    (user-error "Session file no longer exists: %s" session-file))
+  (unless (file-directory-p cwd)
+    (user-error "Session directory no longer exists: %s" cwd))
+  (with-current-buffer (pimacs-chat nil cwd)
+    (pimacs--switch-session session-file "Resumed session")))
+
+(setq pimacs-search-resume-function #'pimacs-resume-session-file)
 
 (defun pimacs-reload ()
   "Reload agent configuration by restarting the agent process."

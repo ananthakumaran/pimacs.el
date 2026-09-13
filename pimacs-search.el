@@ -154,6 +154,7 @@ select(.type == \"match\")
 (defvar-local pimacs-search--parse-error nil)
 
 (defvar pimacs-search--query-history nil)
+(defvar pimacs-search-resume-function nil)
 
 (defvar-keymap pimacs-search-mode-map
   :parent special-mode-map
@@ -174,7 +175,8 @@ select(.type == \"match\")
   "M-p" #'pimacs-goto-previous-section
   "M-g l" #'pimacs-goto-last-section
   "l" #'pimacs-goto-last-section
-  "g" #'pimacs-search-refresh)
+  "g" #'pimacs-search-refresh
+  "RET" #'pimacs-search-resume-at-point)
 
 (defun pimacs-search-cycle-sections ()
   "Cycle visibility of all sections in the current search buffer."
@@ -453,6 +455,10 @@ select(.type == \"match\")
 (cl-defstruct pimacs-search-render-context
   regexp ignore-case before after)
 
+
+(cl-defstruct pimacs-search-result-info
+  path)
+
 (defun pimacs-search--project-session-directory (directory project-root)
   (let* ((project-root (directory-file-name (expand-file-name project-root)))
          (path (replace-regexp-in-string "\\`[/\\\\]+" "" project-root))
@@ -652,8 +658,30 @@ select(.type == \"match\")
               'search-session pimacs-section--root-section :padding "\n")))
         (pimacs-section--insert-section section
           (pimacs-search--insert-session-info path))
+        (pimacs-section--set-info
+         section (make-pimacs-search-result-info :path path))
         (puthash path section pimacs-search--session-sections)
         section)))
+
+
+(defun pimacs-search--resume-info-at-point ()
+  (let ((section (pimacs-section--current-section)))
+    (while (and section
+                (not (pimacs-search-result-info-p
+                      (pimacs-section-info section))))
+      (setq section (pimacs-section-parent section)))
+    (and section (pimacs-section-info section))))
+
+(defun pimacs-search-resume-at-point ()
+  "Resume the session associated with the result at point."
+  (interactive)
+  (if-let* ((info (pimacs-search--resume-info-at-point))
+            (path (pimacs-search-result-info-path info))
+            (cwd (plist-get (gethash path pimacs-search--session-metadata) :cwd)))
+      (if (functionp pimacs-search-resume-function)
+          (funcall pimacs-search-resume-function path cwd)
+        (user-error "Session resumption is unavailable"))
+    (user-error "No session result at point")))
 
 (defun pimacs-search--plain-text (content)
   (cond
@@ -744,7 +772,10 @@ select(.type == \"match\")
           (pimacs-section--insert-section entry-section
             (when role
               (pimacs-ui--insert-role-prefix role))
-            (pimacs-search--insert-text-preview lines ranges render-context)))
+            (pimacs-search--insert-text-preview lines ranges render-context))
+          (pimacs-section--set-info
+           entry-section
+           (make-pimacs-search-result-info :path (plist-get result :path))))
         t))))
 
 (defun pimacs-search--render-content-entry (result role content render-context)
