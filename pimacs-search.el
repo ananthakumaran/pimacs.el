@@ -153,6 +153,8 @@ select(.type == \"match\")
 (defvar-local pimacs-search--session-metadata nil)
 (defvar-local pimacs-search--parse-error nil)
 
+(defvar pimacs-search--query-history nil)
+
 (defvar-keymap pimacs-search-mode-map
   :parent special-mode-map
   "<left-fringe> <mouse-1>" #'pimacs-mouse-toggle-section
@@ -323,6 +325,10 @@ select(.type == \"match\")
                                'pimacs-search-focus control))))
       (goto-char position))))
 
+(defun pimacs-search--refresh-after-control-change (control)
+  (pimacs-search--render-controls control)
+  (pimacs-search-refresh))
+
 (defun pimacs-search--set-status (message)
   (let ((inhibit-read-only t))
     (save-excursion
@@ -332,17 +338,17 @@ select(.type == \"match\")
 (defun pimacs-search--set-search-type (button)
   (setf (pimacs-search-request-search-type pimacs-search--request)
         (button-get button 'pimacs-search-value))
-  (pimacs-search--render-controls 'search-type))
+  (pimacs-search--refresh-after-control-change 'search-type))
 
 (defun pimacs-search--set-case (button)
   (setf (pimacs-search-request-case pimacs-search--request)
         (button-get button 'pimacs-search-value))
-  (pimacs-search--render-controls 'case))
+  (pimacs-search--refresh-after-control-change 'case))
 
 (defun pimacs-search--set-scope (button)
   (setf (pimacs-search-request-scope pimacs-search--request)
         (button-get button 'pimacs-search-value))
-  (pimacs-search--render-controls 'scope))
+  (pimacs-search--refresh-after-control-change 'scope))
 
 (defun pimacs-search--toggle-filter (button)
   (let* ((filter (button-get button 'pimacs-search-filter))
@@ -351,7 +357,7 @@ select(.type == \"match\")
           (if (memq filter filters)
               (delq filter filters)
             (append filters (list filter))))
-    (pimacs-search--render-controls filter)))
+    (pimacs-search--refresh-after-control-change filter)))
 
 (defun pimacs-search--set-context (button)
   (let* ((direction (button-get button 'pimacs-search-context-direction))
@@ -369,19 +375,20 @@ select(.type == \"match\")
                             updated-context)))
     (setf (pimacs-search-request-context pimacs-search--request)
           updated-context)
-    (pimacs-search--render-controls 'context)))
+    (pimacs-search--refresh-after-control-change 'context)))
 
 (defun pimacs-search--clear-context (&optional _button)
   (setf (pimacs-search-request-context pimacs-search--request) nil)
-  (pimacs-search--render-controls 'context))
+  (pimacs-search--refresh-after-control-change 'context))
 
 (defun pimacs-search--edit-query (&optional _button)
   "Edit the session search query."
   (interactive)
   (setf (pimacs-search-request-query pimacs-search--request)
         (read-string "Search query: "
-                     (pimacs-search-request-query pimacs-search--request)))
-  (pimacs-search--render-controls 'query))
+                     (pimacs-search-request-query pimacs-search--request)
+                     'pimacs-search--query-history))
+  (pimacs-search--refresh-after-control-change 'query))
 
 (defun pimacs-search--edit-directory (&optional _button)
   "Edit the session directory to search."
@@ -391,7 +398,7 @@ select(.type == \"match\")
          (read-directory-name
           "Session directory: "
           (pimacs-search-request-directory pimacs-search--request))))
-  (pimacs-search--render-controls 'directory))
+  (pimacs-search--refresh-after-control-change 'directory))
 
 (defun pimacs-search--initialize-buffer ()
   (let ((inhibit-read-only t))
@@ -416,11 +423,25 @@ select(.type == \"match\")
         (pimacs-search--initialize-buffer)))
     buffer))
 
+(defun pimacs-search--dwim-query ()
+  (or (and (use-region-p)
+           (buffer-substring-no-properties (region-beginning) (region-end)))
+      (thing-at-point 'symbol t)
+      (thing-at-point 'word t)
+      ""))
+
 ;;;###autoload
-(defun pimacs-search-sessions ()
-  "Display the persistent buffer for searching historical Pi sessions."
-  (interactive)
-  (pop-to-buffer (pimacs-search--buffer)))
+(defun pimacs-search-sessions (query)
+  "Search historical Pi sessions for QUERY."
+  (interactive
+   (list (read-string "Search sessions: "
+                      (pimacs-search--dwim-query)
+                      'pimacs-search--query-history)))
+  (let ((buffer (pimacs-search--buffer)))
+    (pop-to-buffer buffer)
+    (with-current-buffer buffer
+      (setf (pimacs-search-request-query pimacs-search--request) query)
+      (pimacs-search--refresh-after-control-change 'query))))
 
 (cl-defstruct pimacs-search-request
   directory scope query search-type case context filters project-root)
