@@ -143,6 +143,7 @@
                   "pimacs-parent-[^/]+/")
           "PARENT_DIR/")
          (replace-regexp-in-string "\\b[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{12\\}" "UUID")
+         (replace-regexp-in-string "\\b[0-9a-f]\\{8\\}\\b" "UUID")
          (replace-regexp-in-string "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}T[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{3\\}Z" "TIMESTAMP"))))
 
 (defun pimacs--force-update-header-line ()
