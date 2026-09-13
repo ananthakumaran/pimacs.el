@@ -102,25 +102,49 @@ select(.type == \"match\")
   :group 'pimacs)
 
 (defun pimacs-search--insert-button (text action &rest properties)
-  (apply #'insert-text-button
-         text
-         'action action
-         'follow-link t
-         'face 'pimacs-search-control-face
-         properties))
+  (let ((face (if (plist-member properties 'face)
+                  (plist-get properties 'face)
+                'pimacs-search-control-face)))
+    (setq properties (plist-put properties 'face face))
+    (apply #'insert-text-button
+           text
+           'action action
+           'follow-link t
+           properties)))
+
+(defun pimacs-search--option-label (option)
+  (replace-regexp-in-string "-" " " (symbol-name option)))
 
 (defun pimacs-search--insert-options (control selected action options)
   (let ((first t))
     (dolist (option options)
       (unless first
         (insert " "))
-      (let ((text (replace-regexp-in-string "-" " " (symbol-name option))))
+      (let ((text (pimacs-search--option-label option)))
         (if (eq option selected)
             (insert (propertize text
                                 'face 'pimacs-search-active-control-face
                                 'pimacs-search-focus control))
           (pimacs-search--insert-button
            text action 'pimacs-search-value option)))
+      (setq first nil))))
+
+(defun pimacs-search--insert-filters (filters)
+  (let ((first t))
+    (dolist (filter pimacs-search--filter-types)
+      (unless first
+        (insert "   "))
+      (let ((active (memq filter filters))
+            (text (pimacs-search--option-label filter)))
+        (pimacs-search--insert-button
+         (if active "[x] " "[ ] ")
+         #'pimacs-search--toggle-filter
+         'face (and active 'pimacs-search-active-control-face)
+         'pimacs-search-filter filter
+         'pimacs-search-focus filter)
+        (pimacs-search--insert-button
+         text #'pimacs-search--toggle-filter
+         'pimacs-search-filter filter))
       (setq first nil))))
 
 (defun pimacs-search--insert-context-button (text direction context)
@@ -183,7 +207,10 @@ select(.type == \"match\")
     (insert "\nProjects: ")
     (pimacs-search--insert-options
      'scope scope #'pimacs-search--set-scope
-     '(current-project all-projects))
+     '(current all))
+    (insert "\nTypes: ")
+    (pimacs-search--insert-filters
+     (pimacs-search-request-filters request))
     (insert "\n")))
 
 (defun pimacs-search--render-controls (&optional control)
@@ -210,6 +237,15 @@ select(.type == \"match\")
   (setf (pimacs-search-request-scope pimacs-search--request)
         (button-get button 'pimacs-search-value))
   (pimacs-search--render-controls 'scope))
+
+(defun pimacs-search--toggle-filter (button)
+  (let* ((filter (button-get button 'pimacs-search-filter))
+         (filters (pimacs-search-request-filters pimacs-search--request)))
+    (setf (pimacs-search-request-filters pimacs-search--request)
+          (if (memq filter filters)
+              (delq filter filters)
+            (append filters (list filter))))
+    (pimacs-search--render-controls filter)))
 
 (defun pimacs-search--set-context (button)
   (let* ((direction (button-get button 'pimacs-search-context-direction))
@@ -292,7 +328,7 @@ select(.type == \"match\")
 (defun pimacs-search--default-request ()
   (make-pimacs-search-request
    :directory (expand-file-name pimacs-search-default-directory)
-   :scope 'current-project
+   :scope 'current
    :query ""
    :search-type 'string
    :case 'smart
@@ -302,11 +338,11 @@ select(.type == \"match\")
 
 (defun pimacs-search--request-directory (request)
   (pcase (pimacs-search-request-scope request)
-    ('current-project
+    ('current
      (pimacs-search--project-session-directory
       (pimacs-search-request-directory request)
       (pimacs-search-request-project-root request)))
-    ('all-projects (pimacs-search-request-directory request))
+    ('all (pimacs-search-request-directory request))
     (_ (error "Unknown search scope: %S"
               (pimacs-search-request-scope request)))))
 

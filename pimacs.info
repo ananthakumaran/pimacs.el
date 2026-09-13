@@ -697,6 +697,19 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      Whether to keep the input area at the bottom as new chat content is
      added.
 
+ -- User Option: pimacs-search-rg-executable "rg"
+
+     Ripgrep executable used for historical session searches.
+
+ -- User Option: pimacs-search-jq-executable "jq"
+
+     Jq executable used for historical session searches.
+
+ -- User Option: pimacs-search-default-directory (expand-file-name
+          "sessions/" "~/.pi/agent/")
+
+     Default directory containing Pi session directories.
+
  -- User Option: pimacs-list-sessions-table
 
           '(("Session" . (:session_name face font-lock-type-face))
@@ -914,6 +927,7 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
             (select . pimacs-section-select-face)
             (confirm . pimacs-section-confirm-face)
             (input . pimacs-section-input-face)
+            (search . pimacs-section-search-face)
             (session . pimacs-section-session-face))
 
      Faces prepended to content in sections of each type.
@@ -978,6 +992,15 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
  -- Face: pimacs-status-face '((t :inherit shadow))
 
      Face used for extension status.
+
+ -- Face: pimacs-search-control-face '((t :underline t))
+
+     Face used for editable session search controls.
+
+ -- Face: pimacs-search-active-control-face '((t :inherit
+          font-lock-keyword-face))
+
+     Face used for selected session search control options.
 
  -- Face: pimacs-markdown-heading-face '((t :inherit
           font-lock-function-name-face :weight bold))
@@ -1121,6 +1144,10 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
      Face applied to session sections.
 
+ -- Face: pimacs-section-search-face '((t))
+
+     Face applied to search sections.
+
 
 Tag Table:
 Node: Top746
@@ -1141,7 +1168,7 @@ Node: Sandbox15483
 Node: How It Works15876
 Node: Keybindings17028
 Node: Custom Variables21261
-Node: Custom Faces36184
+Node: Custom Faces36622
 
 End Tag Table
 
