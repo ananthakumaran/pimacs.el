@@ -801,6 +801,11 @@ Ripgrep executable used for historical session searches.
 Jq executable used for historical session searches.
 @end defopt
 
+@defopt pimacs-search-render-idle-delay @code{0.1}
+
+Idle time required before rendering another result batch.
+@end defopt
+
 @defopt pimacs-search-default-directory @code{(expand-file-name "sessions/" "~/.pi/agent/")}
 
 Default directory containing Pi session directories.
@@ -1043,7 +1048,6 @@ Set this to nil to disable fringe indicators.
   (select . pimacs-section-select-face)
   (confirm . pimacs-section-confirm-face)
   (input . pimacs-section-input-face)
-  (search . pimacs-section-search-face)
   (session . pimacs-section-session-face))
 @end lisp
 
@@ -1056,21 +1060,6 @@ Faces prepended to content in sections of each type.
 @chapter Custom Faces
 
 @c custom-faces-start
-
-@deffn Face pimacs-chat-role-face @code{'((t :inherit font-lock-builtin-face))}
-
-Face used for generic chat role labels.
-@end deffn
-
-@deffn Face pimacs-chat-user-role-face @code{'((t :inherit font-lock-keyword-face))}
-
-Face used for user chat message role labels.
-@end deffn
-
-@deffn Face pimacs-chat-assistant-role-face @code{'((t :inherit font-lock-constant-face))}
-
-Face used for assistant chat message role labels.
-@end deffn
 
 @deffn Face pimacs-chat-title-face @code{'((t :inherit font-lock-builtin-face))}
 
@@ -1085,16 +1074,6 @@ Face used for the Pimacs prompt input field.
 @deffn Face pimacs-error-face @code{'((t :inherit error))}
 
 Face used for Pimacs widget error messages.
-@end deffn
-
-@deffn Face pimacs-tool-name-face @code{'((t :inherit font-lock-function-name-face))}
-
-Face used for tool names in tool execution events.
-@end deffn
-
-@deffn Face pimacs-grep-match-face @code{'((t :inherit match))}
-
-Face used to highlight matching text in grep tool results.
 @end deffn
 
 @deffn Face pimacs-notify-info-face @code{'((t :inherit font-lock-comment-face))}
@@ -1130,6 +1109,31 @@ Face used for editable session search controls.
 @deffn Face pimacs-search-active-control-face @code{'((t :inherit font-lock-keyword-face))}
 
 Face used for selected session search control options.
+@end deffn
+
+@deffn Face pimacs-chat-role-face @code{'((t :inherit font-lock-builtin-face))}
+
+Face used for generic chat role labels.
+@end deffn
+
+@deffn Face pimacs-chat-user-role-face @code{'((t :inherit font-lock-keyword-face))}
+
+Face used for user chat message role labels.
+@end deffn
+
+@deffn Face pimacs-chat-assistant-role-face @code{'((t :inherit font-lock-constant-face))}
+
+Face used for assistant chat message role labels.
+@end deffn
+
+@deffn Face pimacs-tool-name-face @code{'((t :inherit font-lock-function-name-face))}
+
+Face used for tool names in tool execution events.
+@end deffn
+
+@deffn Face pimacs-grep-match-face @code{'((t :inherit match))}
+
+Face used to highlight matching text in grep tool results.
 @end deffn
 
 @deffn Face pimacs-markdown-heading-face @code{'((t :inherit font-lock-function-name-face :weight bold))}
@@ -1300,11 +1304,6 @@ Face applied to input sections.
 @deffn Face pimacs-section-session-face @code{'((t :inherit shadow))}
 
 Face applied to session sections.
-@end deffn
-
-@deffn Face pimacs-section-search-face @code{'((t))}
-
-Face applied to search sections.
 @end deffn
 
 @c custom-faces-end

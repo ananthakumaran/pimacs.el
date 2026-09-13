@@ -500,7 +500,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
     (pimacs-section--update-section-end (pimacs-section-parent section) end)))
 
 (defun pimacs-section--propertize-section (section &optional end)
-  "Add text-property needed for SECTION."
+  "Add text-property needed for SECTION, up to END."
   (put-text-property (pimacs-section-beginning section)
                      (or end (pimacs-section-end section))
                      'pimacs-section section))

@@ -37,7 +37,7 @@
     (forward-sexp 1)
     (forward-comment (point-max))
     (let ((default-start (point)))
-      (forward-sexp 1)
+      (read (current-buffer))
       (buffer-substring-no-properties default-start (point)))))
 
 (defun pimacs-doc--emit-defcustom (form form-start)
