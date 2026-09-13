@@ -85,12 +85,16 @@ select(.type == \"match\")
 
 (defvar-local pimacs-search--controls-section nil)
 (defvar-local pimacs-search--status-section nil)
-(defvar-local pimacs-search--results-section nil)
 (defvar-local pimacs-search--request nil)
 (defvar-local pimacs-search--pipeline-process nil)
 (defvar-local pimacs-search--generation 0)
 (defvar-local pimacs-search--partial-output "")
-(defvar-local pimacs-search--pending-entries nil)
+(defconst pimacs-search--render-batch-size 25)
+(defvar-local pimacs-search--entry-queue nil)
+(defvar-local pimacs-search--entry-queue-tail nil)
+(defvar-local pimacs-search--drain-timer nil)
+(defvar-local pimacs-search--rendered-count 0)
+(defvar-local pimacs-search--session-sections nil)
 (defvar-local pimacs-search--result-count 0)
 (defvar-local pimacs-search--parse-error nil)
 
@@ -333,14 +337,13 @@ select(.type == \"match\")
     (setq pimacs-section--root-section nil)
     (let ((root (pimacs-section--create-root-section)))
       (setq pimacs-search--request (pimacs-search--default-request))
+      (setq pimacs-search--session-sections (make-hash-table :test 'equal))
       (setq pimacs-search--controls-section
-            (pimacs-section--create-section 'search root
+            (pimacs-section--create-section 'search-control root
               (pimacs-search--insert-controls)))
       (setq pimacs-search--status-section
-            (pimacs-section--create-section 'info root
-              (insert "No search started.")))
-      (setq pimacs-search--results-section
-            (pimacs-section--create-section 'custom root)))))
+            (pimacs-section--create-section 'search-info root
+              (insert "No search started."))))))
 
 (defun pimacs-search--buffer ()
   (let ((buffer (get-buffer-create pimacs-search--buffer-name)))
@@ -469,9 +472,22 @@ select(.type == \"match\")
          (pimacs-search--set-status (error-message-string error-data))
          nil)))))
 
+(defun pimacs-search--reset-results ()
+  (let ((inhibit-read-only t))
+    (dolist (section (copy-sequence
+                      (pimacs-section-children pimacs-section--root-section)))
+      (when (eq (pimacs-section-type section) 'search-session)
+        (pimacs-section--delete-section section)))
+    (setq pimacs-search--session-sections (make-hash-table :test 'equal))))
+
 (defun pimacs-search--reset-stream-state ()
+  (when (timerp pimacs-search--drain-timer)
+    (cancel-timer pimacs-search--drain-timer))
   (setq pimacs-search--partial-output ""
-        pimacs-search--pending-entries nil
+        pimacs-search--entry-queue nil
+        pimacs-search--entry-queue-tail nil
+        pimacs-search--drain-timer nil
+        pimacs-search--rendered-count 0
         pimacs-search--result-count 0
         pimacs-search--parse-error nil))
 
@@ -483,12 +499,86 @@ select(.type == \"match\")
       (interrupt-process process t)))
   (setq pimacs-search--pipeline-process nil))
 
+
+(defun pimacs-search--session-section (path)
+  (or (gethash path pimacs-search--session-sections)
+      (let ((section
+             (pimacs-section--create-section
+                 'search-session pimacs-section--root-section
+               (insert (abbreviate-file-name path)))))
+        (puthash path section pimacs-search--session-sections)
+        section)))
+
+(defun pimacs-search--entry-section-type (entry)
+  (pcase (plist-get entry :type)
+    ("message"
+     (pcase (plist-get (plist-get entry :message) :role)
+       ("user" 'user)
+       ("assistant" 'assistant)
+       ("toolResult" 'tool-result)
+       ("bashExecution" 'bash)
+       (_ 'info)))
+    ("compaction" 'compact)
+    (_ 'info)))
+
+(defun pimacs-search--render-entry (result)
+  (let* ((session (pimacs-search--session-section (plist-get result :path)))
+         (entry (plist-get result :entry))
+         (type (pimacs-search--entry-section-type entry)))
+    (pimacs-section--create-section type session
+      (insert (format "%s @ %d" type (plist-get result :offset))))))
+
+(defun pimacs-search--update-status ()
+  (unless pimacs-search--parse-error
+    (pimacs-search--set-status
+     (format "%s: %d matches in %d sessions%s"
+             (if pimacs-search--pipeline-process "Searching" "Finished")
+             pimacs-search--result-count
+             (hash-table-count pimacs-search--session-sections)
+             (if pimacs-search--entry-queue "…" ".")))))
+
+(defun pimacs-search--schedule-drain ()
+  (unless pimacs-search--drain-timer
+    (setq pimacs-search--drain-timer
+          (run-with-idle-timer
+           0 nil
+           #'pimacs-search--drain-queue
+           (current-buffer) pimacs-search--generation))))
+
+(defun pimacs-search--enqueue-entry (entry)
+  (let ((cell (list entry)))
+    (if pimacs-search--entry-queue-tail
+        (setcdr pimacs-search--entry-queue-tail cell)
+      (setq pimacs-search--entry-queue cell))
+    (setq pimacs-search--entry-queue-tail cell))
+  (pimacs-search--schedule-drain))
+
+(defun pimacs-search--drain-queue (buffer generation)
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (= generation pimacs-search--generation)
+        (setq pimacs-search--drain-timer nil)
+        (let ((count 0)
+              (inhibit-read-only t))
+          (save-excursion
+            (while (and pimacs-search--entry-queue
+                        (< count pimacs-search--render-batch-size))
+              (let ((entry (pop pimacs-search--entry-queue)))
+                (unless pimacs-search--entry-queue
+                  (setq pimacs-search--entry-queue-tail nil))
+                (pimacs-search--render-entry entry)
+                (cl-incf pimacs-search--rendered-count)
+                (cl-incf count))))
+          (when pimacs-search--entry-queue
+            (pimacs-search--schedule-drain))
+          (pimacs-search--update-status))))))
+
 (defun pimacs-search--parse-entry (line)
   (unless (equal line "")
     (condition-case error-data
         (progn
-          (push (json-parse-string line :object-type 'plist :array-type 'list)
-                pimacs-search--pending-entries)
+          (pimacs-search--enqueue-entry
+           (json-parse-string line :object-type 'plist :array-type 'list))
           (cl-incf pimacs-search--result-count))
       (error
        (setq pimacs-search--parse-error
@@ -524,8 +614,7 @@ select(.type == \"match\")
          (pimacs-search--parse-error
           (pimacs-search--set-status pimacs-search--parse-error))
          ((string= event "finished\n")
-          (pimacs-search--set-status
-           (format "Finished: %d matches." pimacs-search--result-count)))
+          (pimacs-search--update-status))
          (t
           (pimacs-search--set-status
            (format "Search failed: %s"
@@ -537,6 +626,7 @@ select(.type == \"match\")
   (pimacs-search--cancel-pipeline)
   (cl-incf pimacs-search--generation)
   (pimacs-search--reset-stream-state)
+  (pimacs-search--reset-results)
   (let ((buffer (current-buffer))
         (generation pimacs-search--generation))
     (pimacs-search--start-pipeline
