@@ -606,7 +606,7 @@
               (insert " ")
               (let ((home-widget (pimacs--insert-file-link home-file root)))
                 (should (equal (buffer-string)
-                               (concat "lib/file.el " outside " ~/pimacs-file-link-test")))
+                               (concat "lib/file.el " (abbreviate-file-name outside) " ~/pimacs-file-link-test")))
                 (should (equal (widget-value inside-widget) inside))
                 (should (equal (widget-value outside-widget) outside))
                 (should (equal (widget-value home-widget) home-file))))))
