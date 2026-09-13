@@ -25,6 +25,7 @@
 (require 'subr-x)
 (require 'treesit)
 (require 'pimacs-agent)
+(require 'pimacs-search)
 
 (defconst pimacs-doctor--treesit-language-source-alist
   '((markdown
@@ -43,10 +44,10 @@
   "Major mode for the Pimacs dependency report."
   (setq-local revert-buffer-function (lambda (&rest _) (pimacs-doctor-refresh))))
 
-(defun pimacs-doctor--executable ()
-  (if (file-name-absolute-p pimacs-executable)
-      (and (file-executable-p pimacs-executable) pimacs-executable)
-    (executable-find pimacs-executable)))
+(defun pimacs-doctor--find-executable (executable)
+  (if (file-name-absolute-p executable)
+      (and (file-executable-p executable) executable)
+    (executable-find executable)))
 
 (defun pimacs-doctor--treesit-ready-p (language)
   (condition-case nil
@@ -60,7 +61,7 @@
 
 (defun pimacs-doctor--insert-pi-status ()
   (insert (propertize "Pi\n" 'face 'bold))
-  (if-let ((executable (pimacs-doctor--executable)))
+  (if-let ((executable (pimacs-doctor--find-executable pimacs-executable)))
       (let ((pimacs-executable executable)
             (display-executable (abbreviate-file-name executable)))
         (condition-case err
@@ -86,6 +87,17 @@
     (insert-text-button "Install or upgrade Pi"
                         'action #'pimacs-doctor--install-pi)
     (insert "\n"))
+  (insert "\n"))
+
+(defun pimacs-doctor--insert-search-status ()
+  (insert (propertize "Session Search\n" 'face 'bold))
+  (dolist (executable (list pimacs-search-rg-executable
+                            pimacs-search-jq-executable))
+    (if-let ((path (pimacs-doctor--find-executable executable)))
+        (pimacs-doctor--insert-status
+         t (format "%s is available" (abbreviate-file-name path)))
+      (pimacs-doctor--insert-status
+       nil (format "%s was not found" (abbreviate-file-name executable)))))
   (insert "\n"))
 
 (defun pimacs-doctor--insert-treesit-status ()
@@ -114,6 +126,7 @@
     (pimacs-doctor-mode)
     (insert (propertize "Pimacs Doctor\n\n" 'face 'bold))
     (pimacs-doctor--insert-pi-status)
+    (pimacs-doctor--insert-search-status)
     (pimacs-doctor--insert-treesit-status)
     (insert "Press g to refresh this report.\n")
     (goto-char (point-min))))

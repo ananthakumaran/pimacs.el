@@ -46,7 +46,7 @@ package-lint: cask
 
 .PHONY: test
 test: compile
-	@$(CASK_EMACS) -L . -L test -l pimacs-tests.el -l pimacs-agent-tests.el -l pimacs-section-tests.el -l pimacs-state-line-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
+	@$(CASK_EMACS) -L . -L test -l pimacs-tests.el -l pimacs-agent-tests.el -l pimacs-doctor-tests.el -l pimacs-section-tests.el -l pimacs-state-line-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
 
 .PHONY: markdown-test
 markdown-test: compile
@@ -74,7 +74,7 @@ coverage: test integration
 
 .PHONY: format
 format:
-	@$(CASK_EMACS) -L . -L test -l pimacs-utils.el -l pimacs-markdown-table.el -l pimacs-markdown.el -l pimacs-state-line.el -l pimacs-core.el -l pimacs.el -l pimacs-section.el -l pimacs-edit.el -l pimacs-agent.el -l pimacs-doctor.el -l pimacs-session.el -l pimacs-search.el -l test/pimacs-tests.el -l test/pimacs-agent-tests.el -l test/pimacs-markdown-tests.el -l test/pimacs-markdown-table-tests.el -l test/pimacs-section-tests.el -l test/pimacs-state-line-tests.el -l integration/pimacs-integration-tests.el \
+	@$(CASK_EMACS) -L . -L test -l pimacs-utils.el -l pimacs-markdown-table.el -l pimacs-markdown.el -l pimacs-state-line.el -l pimacs-core.el -l pimacs.el -l pimacs-section.el -l pimacs-edit.el -l pimacs-agent.el -l pimacs-doctor.el -l pimacs-session.el -l pimacs-search.el -l test/pimacs-tests.el -l test/pimacs-agent-tests.el -l test/pimacs-doctor-tests.el -l test/pimacs-markdown-tests.el -l test/pimacs-markdown-table-tests.el -l test/pimacs-section-tests.el -l test/pimacs-state-line-tests.el -l integration/pimacs-integration-tests.el \
 	  --eval " \
 	  (let ((inhibit-message t) \
                 (message-log-max nil)) \
@@ -83,7 +83,7 @@ format:
 	      (with-current-buffer (find-file-noselect f) \
 	        (indent-region (point-min) (point-max)) \
 	        (save-buffer))))" \
-	        pimacs-utils.el pimacs-markdown-table.el pimacs-markdown.el pimacs-state-line.el pimacs-core.el pimacs-section.el pimacs-edit.el pimacs-agent.el pimacs-doctor.el pimacs-session.el pimacs-search.el pimacs.el test/pimacs-tests.el test/pimacs-agent-tests.el test/pimacs-markdown-tests.el test/pimacs-markdown-table-tests.el test/pimacs-section-tests.el test/pimacs-state-line-tests.el integration/pimacs-integration-tests.el
+	        pimacs-utils.el pimacs-markdown-table.el pimacs-markdown.el pimacs-state-line.el pimacs-core.el pimacs-section.el pimacs-edit.el pimacs-agent.el pimacs-doctor.el pimacs-session.el pimacs-search.el pimacs.el test/pimacs-tests.el test/pimacs-agent-tests.el test/pimacs-doctor-tests.el test/pimacs-markdown-tests.el test/pimacs-markdown-table-tests.el test/pimacs-section-tests.el test/pimacs-state-line-tests.el integration/pimacs-integration-tests.el
 
 
 .PHONY: sandbox
