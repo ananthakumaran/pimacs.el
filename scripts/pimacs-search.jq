@@ -7,6 +7,45 @@ def has_content_type($kind):
     else false
     end;
 
+
+def text_content:
+  if type == "array" then
+    [.[] | select(.type == "text") | {type, text}]
+  elif type == "string" then .
+  else []
+  end;
+
+def assistant_content:
+  if (.message.content | type) == "array" then
+    [.message.content[]
+     | select((.type == "text" and selected("assistant"))
+              or (.type == "thinking" and selected("thinking"))
+              or (.type == "toolCall" and selected("tool-call")))
+     | if .type == "text" then {type, text}
+       elif .type == "thinking" then {type, thinking}
+       else {type, name, arguments}
+       end]
+  else .message.content
+  end;
+
+def projected:
+  if .type == "message" then
+    if .message.role == "user" then
+      {type, message: {role: "user", content: (.message.content | text_content)}}
+    elif .message.role == "assistant" then
+      {type, message: {role: "assistant", content: assistant_content}}
+    elif .message.role == "toolResult" then
+      {type, message: {role: "toolResult", toolName: .message.toolName,
+                       content: (.message.content | text_content)}}
+    elif .message.role == "bashExecution" then
+      {type, message: {role: "bashExecution", command: .message.command,
+                       output: (.message.output | text_content)}}
+    else {type}
+    end
+  elif .type == "compaction" then
+    {type, summary, tokensBefore}
+  else {type}
+  end;
 def accepted:
   if .type == "message" then
     if .message.role == "user" then selected("user")
@@ -31,7 +70,7 @@ select(.type == "match")
   elif $entry.type == "session_info" then
     {kind: "session-info", path: $match.path.text, name: $entry.name}
   elif ($entry | accepted) then
-    {kind: "entry", path: $match.path.text, offset: $match.absolute_offset, entry: $entry}
+    {kind: "entry", path: $match.path.text, offset: $match.absolute_offset, entry: ($entry | projected)}
   else
     empty
   end
