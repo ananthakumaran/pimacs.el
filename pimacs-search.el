@@ -22,6 +22,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'json)
 (require 'pimacs-core)
 (require 'pimacs-section)
 
@@ -86,6 +87,12 @@ select(.type == \"match\")
 (defvar-local pimacs-search--status-section nil)
 (defvar-local pimacs-search--results-section nil)
 (defvar-local pimacs-search--request nil)
+(defvar-local pimacs-search--pipeline-process nil)
+(defvar-local pimacs-search--generation 0)
+(defvar-local pimacs-search--partial-output "")
+(defvar-local pimacs-search--pending-entries nil)
+(defvar-local pimacs-search--result-count 0)
+(defvar-local pimacs-search--parse-error nil)
 
 (defvar-keymap pimacs-search-mode-map
   :parent special-mode-map
@@ -105,7 +112,8 @@ select(.type == \"match\")
   "p" #'pimacs-goto-previous-section
   "M-p" #'pimacs-goto-previous-section
   "M-g l" #'pimacs-goto-last-section
-  "l" #'pimacs-goto-last-section)
+  "l" #'pimacs-goto-last-section
+  "g" #'pimacs-search-refresh)
 
 (defun pimacs-search-cycle-sections ()
   "Cycle visibility of all sections in the current search buffer."
@@ -249,6 +257,12 @@ select(.type == \"match\")
                                'pimacs-search-focus control))))
       (goto-char position))))
 
+(defun pimacs-search--set-status (message)
+  (let ((inhibit-read-only t))
+    (save-excursion
+      (pimacs-section--replace-section pimacs-search--status-section
+        (insert message)))))
+
 (defun pimacs-search--set-search-type (button)
   (setf (pimacs-search-request-search-type pimacs-search--request)
         (button-get button 'pimacs-search-value))
@@ -371,6 +385,166 @@ select(.type == \"match\")
     ('all (pimacs-search-request-directory request))
     (_ (error "Unknown search scope: %S"
               (pimacs-search-request-scope request)))))
+
+(defun pimacs-search--rg-arguments (request)
+  (append
+   '("--json" "--no-ignore" "--glob" "*.jsonl")
+   (pcase (pimacs-search-request-search-type request)
+     ('string '("--fixed-strings"))
+     ('words '("--fixed-strings" "--word-regexp"))
+     ('regexp nil)
+     (_ (error "Unknown search type: %S"
+               (pimacs-search-request-search-type request))))
+   (pcase (pimacs-search-request-case request)
+     ('smart '("--smart-case"))
+     ('sensitive '("--case-sensitive"))
+     ('ignore '("--ignore-case"))
+     (_ (error "Unknown search case: %S"
+               (pimacs-search-request-case request))))
+   (list "--"
+         (pimacs-search-request-query request)
+         (pimacs-search--request-directory request))))
+
+(defun pimacs-search--jq-arguments (request)
+  (list "--unbuffered" "-c"
+        "--argjson" "filters"
+        (json-serialize
+         (vconcat
+          (mapcar #'symbol-name
+                  (pimacs-search-request-filters request))))
+        pimacs-search--jq-filter))
+
+(defun pimacs-search--startup-error (request)
+  (cond
+   ((equal (pimacs-search-request-query request) "")
+    "Enter a search term.")
+   ((not (executable-find pimacs-search-rg-executable))
+    (format "Cannot find ripgrep executable: %s"
+            pimacs-search-rg-executable))
+   ((not (executable-find pimacs-search-jq-executable))
+    (format "Cannot find jq executable: %s"
+            pimacs-search-jq-executable))
+   ((not (file-directory-p (pimacs-search--request-directory request)))
+    (format "Session directory does not exist: %s"
+            (abbreviate-file-name
+             (pimacs-search--request-directory request))))))
+
+(defun pimacs-search--shell-command (program arguments)
+  (mapconcat #'shell-quote-argument (cons program arguments) " "))
+
+(defun pimacs-search--pipeline-command (request)
+  (format "%s | %s"
+          (pimacs-search--shell-command
+           pimacs-search-rg-executable
+           (pimacs-search--rg-arguments request))
+          (pimacs-search--shell-command
+           pimacs-search-jq-executable
+           (pimacs-search--jq-arguments request))))
+
+(defun pimacs-search--start-pipeline (request output-filter sentinel)
+  (if-let ((message (pimacs-search--startup-error request)))
+      (progn
+        (pimacs-search--set-status message)
+        nil)
+    (let (process)
+      (condition-case-unless-debug error-data
+          (progn
+            (setq process
+                  (make-process
+                   :name "pimacs-search-pipeline"
+                   :buffer nil
+                   :command (list shell-file-name shell-command-switch
+                                  (pimacs-search--pipeline-command request))
+                   :connection-type 'pipe
+                   :coding 'utf-8-unix
+                   :filter output-filter
+                   :sentinel sentinel
+                   :noquery t))
+            (setq pimacs-search--pipeline-process process)
+            (pimacs-search--set-status "Searching…")
+            process)
+        (error
+         (when (and process (process-live-p process))
+           (delete-process process))
+         (pimacs-search--set-status (error-message-string error-data))
+         nil)))))
+
+(defun pimacs-search--reset-stream-state ()
+  (setq pimacs-search--partial-output ""
+        pimacs-search--pending-entries nil
+        pimacs-search--result-count 0
+        pimacs-search--parse-error nil))
+
+(defun pimacs-search--cancel-pipeline ()
+  (when-let ((process pimacs-search--pipeline-process))
+    (set-process-filter process #'ignore)
+    (set-process-sentinel process #'ignore)
+    (when (process-live-p process)
+      (interrupt-process process t)))
+  (setq pimacs-search--pipeline-process nil))
+
+(defun pimacs-search--parse-entry (line)
+  (unless (equal line "")
+    (condition-case error-data
+        (progn
+          (push (json-parse-string line :object-type 'plist :array-type 'list)
+                pimacs-search--pending-entries)
+          (cl-incf pimacs-search--result-count))
+      (error
+       (setq pimacs-search--parse-error
+             (error-message-string error-data))))))
+
+(defun pimacs-search--consume-output (output finished)
+  (let ((output (concat pimacs-search--partial-output output))
+        (start 0)
+        end)
+    (setq pimacs-search--partial-output "")
+    (while (setq end (string-match "\n" output start))
+      (pimacs-search--parse-entry (substring output start end))
+      (setq start (1+ end)))
+    (setq pimacs-search--partial-output (substring output start))
+    (when finished
+      (pimacs-search--parse-entry pimacs-search--partial-output)
+      (setq pimacs-search--partial-output ""))))
+
+(defun pimacs-search--process-output (buffer generation output &optional finished)
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (= generation pimacs-search--generation)
+        (pimacs-search--consume-output output finished)))))
+
+(defun pimacs-search--pipeline-sentinel (buffer generation process event)
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when (= generation pimacs-search--generation)
+        (pimacs-search--process-output buffer generation "" t)
+        (when (eq process pimacs-search--pipeline-process)
+          (setq pimacs-search--pipeline-process nil))
+        (cond
+         (pimacs-search--parse-error
+          (pimacs-search--set-status pimacs-search--parse-error))
+         ((string= event "finished\n")
+          (pimacs-search--set-status
+           (format "Finished: %d matches." pimacs-search--result-count)))
+         (t
+          (pimacs-search--set-status
+           (format "Search failed: %s"
+                   (replace-regexp-in-string "[\n\r]+\\'" "" event)))))))))
+
+(defun pimacs-search-refresh ()
+  "Restart the current session search."
+  (interactive)
+  (pimacs-search--cancel-pipeline)
+  (cl-incf pimacs-search--generation)
+  (pimacs-search--reset-stream-state)
+  (let ((buffer (current-buffer))
+        (generation pimacs-search--generation))
+    (pimacs-search--start-pipeline
+     pimacs-search--request
+     (lambda (_process output)
+       (pimacs-search--process-output buffer generation output))
+     (lambda (process event)
+       (pimacs-search--pipeline-sentinel buffer generation process event)))))
 
 (provide 'pimacs-search)
 
