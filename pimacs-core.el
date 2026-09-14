@@ -26,6 +26,16 @@
   :prefix "pimacs-"
   :group 'tools)
 
+(defface pimacs-session-name-face
+  '((t :inherit font-lock-type-face))
+  "Face used for session names and IDs."
+  :group 'pimacs)
+
+(defface pimacs-session-directory-face
+  '((t :inherit dired-directory))
+  "Face used for session directories and project roots."
+  :group 'pimacs)
+
 (require 'pimacs-utils)
 (require 'project)
 (require 'ansi-color)

@@ -736,14 +736,14 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
 
  -- User Option: pimacs-list-sessions-table
 
-          '(("Session" . (:session_name face font-lock-type-face))
+          '(("Session" . (:session_name face pimacs-session-name-face))
             ("Provider" . :provider)
             ("Model" . :model)
             ("State" . (:agent_state face font-lock-constant-face))
             ("Context" . (:context_usage face shadow))
             ("Messages" . :total_messages)
             ("Cost" . (:cost face shadow))
-            ("Project" . (:project_root face shadow)))
+            ("Project" . (:project_root face pimacs-session-directory-face)))
 
      Columns displayed by ‘pimacs-list-sessions’.
 
@@ -1026,6 +1026,14 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
      Face used to highlight matching text in grep tool results.
 
+ -- Face: pimacs-session-name-face '((t :inherit font-lock-type-face))
+
+     Face used for session names and IDs.
+
+ -- Face: pimacs-session-directory-face '((t :inherit dired-directory))
+
+     Face used for session directories and project roots.
+
  -- Face: pimacs-markdown-heading-face '((t :inherit
           font-lock-function-name-face :weight bold))
 
@@ -1193,7 +1201,7 @@ Node: Sandbox15483
 Node: How It Works15876
 Node: Keybindings17028
 Node: Custom Variables21261
-Node: Custom Faces37327
+Node: Custom Faces37355
 
 End Tag Table
 

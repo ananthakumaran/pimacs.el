@@ -282,7 +282,7 @@ select(.type == \"match\")
         (if (eq option selected)
             (insert (propertize text
                                 'face (if (eq option 'current-project)
-                                          'dired-directory
+                                          'pimacs-session-directory-face
                                         'pimacs-search-active-control-face)
                                 'pimacs-search-focus control))
           (pimacs-search--insert-button
@@ -694,14 +694,14 @@ select(.type == \"match\")
     (insert (propertize (if (and (stringp name) (> (length name) 0))
                             name
                           (pimacs--short-uuid id))
-                        'face 'font-lock-type-face))
+                        'face 'pimacs-session-name-face))
     (when timestamp
       (insert " • " timestamp))
     (when (and (eq (pimacs-search-request-scope pimacs-search--request) 'all)
                (stringp cwd))
       (insert " • "
               (propertize (abbreviate-file-name cwd)
-                          'face 'dired-directory)))
+                          'face 'pimacs-session-directory-face)))
     (when relative-time
       (let ((padding (- (window-width)
                         (current-column)

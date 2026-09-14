@@ -2065,7 +2065,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
              (insert " ID: ")
              (insert (propertize (format "%s"
                                          (pimacs--short-uuid (plist-get data :sessionId)))
-                                 'face 'font-lock-type-face))
+                                 'face 'pimacs-session-name-face))
              (insert "\n\n")
              (pimacs--insert-stats-section
               "Messages"
@@ -2320,7 +2320,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                           (cons (format "%s  %s  %s%s%s" short-id formatted-time
                                         (if (pimacs-session-choice-name s)
                                             (propertize (format "[%s] " (pimacs-session-choice-name s))
-                                                        'face 'font-lock-type-face)
+                                                        'face 'pimacs-session-name-face)
                                           "")
                                         (pimacs-session-choice-message s)
                                         (if short-parent (format " (parent: %s)" short-parent) ""))
