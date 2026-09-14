@@ -39,7 +39,6 @@
 (require 'parse-time)
 (require 'timeout)
 (require 'spinner)
-(require 'pcre2el)
 (require 'thingatpt)
 (require 'ffap)
 (require 'ansi-color)
@@ -54,25 +53,12 @@
 (require 'pimacs-utils)
 (autoload 'pimacs--render-markdown "pimacs-markdown")
 (require 'pimacs-section)
+(require 'pimacs-ui)
 (require 'pimacs-edit)
 (require 'pimacs-agent)
 (require 'pimacs-state-line)
 (require 'pimacs-session)
-
-(defface pimacs-chat-role-face
-  '((t :inherit font-lock-builtin-face))
-  "Face used for generic chat role labels."
-  :group 'pimacs)
-
-(defface pimacs-chat-user-role-face
-  '((t :inherit font-lock-keyword-face))
-  "Face used for user chat message role labels."
-  :group 'pimacs)
-
-(defface pimacs-chat-assistant-role-face
-  '((t :inherit font-lock-constant-face))
-  "Face used for assistant chat message role labels."
-  :group 'pimacs)
+(require 'pimacs-search)
 
 (defface pimacs-chat-title-face
   '((t :inherit font-lock-builtin-face))
@@ -89,15 +75,7 @@
   "Face used for Pimacs widget error messages."
   :group 'pimacs)
 
-(defface pimacs-tool-name-face
-  '((t :inherit font-lock-function-name-face))
-  "Face used for tool names in tool execution events."
-  :group 'pimacs)
 
-(defface pimacs-grep-match-face
-  '((t :inherit match))
-  "Face used to highlight matching text in grep tool results."
-  :group 'pimacs)
 
 (defface pimacs-notify-info-face
   '((t :inherit font-lock-comment-face))
@@ -732,7 +710,7 @@ with the message plist to insert the custom message content."
 (defun pimacs--insert-user-message (content)
   (pimacs--widget-save-excursion
     (let ((section (pimacs-section--create-section 'user pimacs-section--root-section
-                     (pimacs--insert-role-prefix "user")
+                     (pimacs-ui--insert-role-prefix "user")
                      (pimacs--insert-content content))))
       (pimacs-section--set-info section (make-pimacs-section-user-info
                                          :header (pimacs--content-header content)
@@ -757,19 +735,6 @@ with the message plist to insert the custom message content."
                     :max-width max-width
                     :max-height max-height))))
 
-(defun pimacs--role-face (role)
-  (pcase role
-    ("user" 'pimacs-chat-user-role-face)
-    ("assistant" 'pimacs-chat-assistant-role-face)
-    (_ 'pimacs-chat-role-face)))
-
-(defun pimacs--insert-role-prefix (role)
-  (pimacs-section--insert-chrome (format "%s> " role)
-                                 (pimacs--role-face role)))
-
-(defun pimacs--insert-tool-name (tool-name)
-  (pimacs-section--insert-chrome (format "%s " tool-name)
-                                 'pimacs-tool-name-face))
 
 (defun pimacs--extract-truncation-notice (result-text)
   (if (string-match "\n\\(\\[[^]]* Use \\(?:offset=[^]]* to [Cc]ontinue\\|bash: [^]]*\\)\\.?\\]\\)$" result-text)
@@ -789,7 +754,7 @@ with the message plist to insert the custom message content."
   (let ((header (format "**Compacted from %s tokens**\n"
                         (pimacs--format-number-short tokens-before))))
     (pimacs-section--create-section 'compact pimacs-section--root-section
-      (pimacs--insert-role-prefix "assistant")
+      (pimacs-ui--insert-role-prefix "assistant")
       (pimacs--render-insert pimacs-markdown-renderer (concat header summary) nil))))
 
 (defun pimacs--insert-session-info (name)
@@ -805,7 +770,7 @@ with the message plist to insert the custom message content."
         ;; Default rendering: use customType as role, render content
         (pimacs--widget-save-excursion
           (pimacs-section--create-section 'custom pimacs-section--root-section
-            (pimacs--insert-role-prefix (or custom-type "custom"))
+            (pimacs-ui--insert-role-prefix (or custom-type "custom"))
             (pimacs--insert-content (plist-get message :content) t)))))))
 
 (defun pimacs--insert-message (message)
@@ -820,7 +785,7 @@ with the message plist to insert the custom message content."
           (let ((content (list item)))
             (pimacs--widget-save-excursion
               (let ((section (pimacs-section--create-section 'thinking pimacs-section--root-section
-                               (pimacs--insert-role-prefix "assistant")
+                               (pimacs-ui--insert-role-prefix "assistant")
                                (pimacs--insert-content content))))
                 (pimacs-section--set-info section (make-pimacs-section-assistant-info
                                                    :header (pimacs--content-header content)
@@ -830,7 +795,7 @@ with the message plist to insert the custom message content."
           (let ((content (list item)))
             (pimacs--widget-save-excursion
               (let ((section (pimacs-section--create-section 'assistant pimacs-section--root-section
-                               (pimacs--insert-role-prefix "assistant")
+                               (pimacs-ui--insert-role-prefix "assistant")
                                (pimacs--insert-content content t))))
                 (pimacs-section--set-info section (make-pimacs-section-assistant-info
                                                    :header (pimacs--content-header content)
@@ -900,7 +865,7 @@ with the message plist to insert the custom message content."
              (let ((section (pimacs-section--new-section 'thinking pimacs-section--root-section))
                    content)
                (pimacs-section--insert-section section
-                 (pimacs--insert-role-prefix "assistant")
+                 (pimacs-ui--insert-role-prefix "assistant")
                  (setq content (pimacs--thinking-insert delta t)))
                (puthash content-index
                         (make-pimacs-content-section
@@ -919,7 +884,7 @@ with the message plist to insert the custom message content."
              (let ((section (pimacs-section--new-section 'assistant pimacs-section--root-section))
                    content)
                (pimacs-section--insert-section section
-                 (pimacs--insert-role-prefix "assistant")
+                 (pimacs-ui--insert-role-prefix "assistant")
                  (setq content (pimacs--render-insert pimacs-markdown-renderer delta t)))
                (puthash content-index
                         (make-pimacs-content-section
@@ -1013,7 +978,7 @@ with the message plist to insert the custom message content."
                                   (pimacs-content-section-section content-section))
                              'thinking
                              pimacs-section--root-section
-                           (pimacs--insert-role-prefix role)
+                           (pimacs-ui--insert-role-prefix role)
                            (if rendered-content
                                (pimacs--insert-rendered-content operations)
                              (pimacs--insert-content content)))))
@@ -1038,7 +1003,7 @@ with the message plist to insert the custom message content."
                                   (pimacs-content-section-section content-section))
                              'assistant
                              pimacs-section--root-section
-                           (pimacs--insert-role-prefix role)
+                           (pimacs-ui--insert-role-prefix role)
                            (if rendered-content
                                (pimacs--insert-rendered-content operations)
                              (pimacs--insert-content content t)))))
@@ -1197,28 +1162,6 @@ with the message plist to insert the custom message content."
     (when limit
       (insert (format " limit %d" limit)))))
 
-(defun pimacs--grep-pattern-regexp (pattern literal)
-  (if literal
-      (regexp-quote pattern)
-    (condition-case nil
-        (rxt-pcre-to-elisp pattern)
-      (error nil))))
-
-(defun pimacs--fontify-grep-matches (begin end regexp ignore-case)
-  (when regexp
-    (let ((case-fold-search (if ignore-case t nil))
-          (searching t))
-      (save-restriction
-        (narrow-to-region begin end)
-        (goto-char (point-min))
-        (while (and searching (re-search-forward regexp nil t))
-          (if (= (match-beginning 0) (match-end 0))
-              (if (< (point) (point-max))
-                  (forward-char 1)
-                (setq searching nil))
-            (add-text-properties (match-beginning 0) (match-end 0)
-                                 '(face pimacs-grep-match-face))))))))
-
 (defconst pimacs--grep-line-regexp "^\\(.*\\):\\([0-9]+\\): \\(.*\\)$")
 (defconst pimacs--grep-line-alt-regexp "^\\(.*\\)\\([-:]\\)\\([0-9]+\\)\\([-:] ?\\)\\(.*\\)$")
 
@@ -1333,7 +1276,7 @@ is non-nil, insert an ellipsis instead of ARGS."
     (pimacs--widget-save-excursion
       (let ((insert-content
              (lambda ()
-               (pimacs--insert-tool-name tool-name)
+               (pimacs-ui--insert-tool-name tool-name)
                (setq args-begin (point))
                (cond
                 (args
@@ -2122,7 +2065,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
              (insert " ID: ")
              (insert (propertize (format "%s"
                                          (pimacs--short-uuid (plist-get data :sessionId)))
-                                 'face 'font-lock-type-face))
+                                 'face 'pimacs-session-name-face))
              (insert "\n\n")
              (pimacs--insert-stats-section
               "Messages"
@@ -2377,7 +2320,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                           (cons (format "%s  %s  %s%s%s" short-id formatted-time
                                         (if (pimacs-session-choice-name s)
                                             (propertize (format "[%s] " (pimacs-session-choice-name s))
-                                                        'face 'font-lock-type-face)
+                                                        'face 'pimacs-session-name-face)
                                           "")
                                         (pimacs-session-choice-message s)
                                         (if short-parent (format " (parent: %s)" short-parent) ""))
@@ -2981,7 +2924,8 @@ With a prefix argument OTHER-WINDOW, visit in other window."
                                  (when name
                                    (pimacs-set-session-name name)))
                                buffer))))
-        (pop-to-buffer chat-buffer)))))
+        (pop-to-buffer chat-buffer)
+        chat-buffer))))
 
 ;;;###autoload
 (defun pimacs-chat (&optional name root)
@@ -3028,6 +2972,18 @@ If non-nil, call CB after the session refresh finishes."
                                  (pimacs--notify message)
                                  (when cb
                                    (funcall cb))))))))
+
+
+(defun pimacs-resume-session-file (session-file cwd)
+  "Resume SESSION-FILE in a chat rooted at CWD."
+  (unless (file-exists-p session-file)
+    (user-error "Session file no longer exists: %s" session-file))
+  (unless (file-directory-p cwd)
+    (user-error "Session directory no longer exists: %s" cwd))
+  (with-current-buffer (pimacs-chat nil cwd)
+    (pimacs--switch-session session-file "Resumed session")))
+
+(setq pimacs-search-resume-function #'pimacs-resume-session-file)
 
 (defun pimacs-reload ()
   "Reload agent configuration by restarting the agent process."

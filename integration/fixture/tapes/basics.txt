@@ -4,6 +4,7 @@ assistant> The user wants me to list files in the current directory. I'll use th
 
 ls 
 .dir-locals.el
+.gitignore
 .project
 agent/
 config.json

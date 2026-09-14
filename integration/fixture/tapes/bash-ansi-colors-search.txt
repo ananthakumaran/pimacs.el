@@ -1,0 +1,18 @@
+Search term: red change
+Search type: string words regexp
+Case: smart sensitive ignore
+Context: none before:1 after:0
+
+Directory: PROJECT_DIR/agent/sessions
+Projects: PROJECT_DIR/ all
+Types: [x] user   [ ] assistant   [ ] thinking   [ ] tool call   [ ] tool result   [x] bash   [ ] compact
+
+
+Finished: 3 matches in 1 sessions.
+
+UUID • DISPLAY_TIMESTAMP                                           RELATIVE_TIME
+bash printf '\033[31mred\033[0m\n'
+red
+bash printf '\033[31mred\033[0m\n'
+red
+user> Run exactly this bash command: printf '\033[31mred\033[0m\n'

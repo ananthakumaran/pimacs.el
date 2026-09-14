@@ -6,6 +6,7 @@ I'll start by looking for the file green-triangle.png.
 
 ls .
 .dir-locals.el
+.gitignore
 .project
 agent/
 config.json

@@ -31,14 +31,14 @@
 (require 'pimacs-utils)
 
 (defcustom pimacs-list-sessions-table
-  '(("Session" . (:session_name face font-lock-type-face))
+  '(("Session" . (:session_name face pimacs-session-name-face))
     ("Provider" . :provider)
     ("Model" . :model)
     ("State" . (:agent_state face font-lock-constant-face))
     ("Context" . (:context_usage face shadow))
     ("Messages" . :total_messages)
     ("Cost" . (:cost face shadow))
-    ("Project" . (:project_root face shadow)))
+    ("Project" . (:project_root face pimacs-session-directory-face)))
   "Columns displayed by `pimacs-list-sessions'.
 
 Each entry is (HEADER . COMPONENT).  COMPONENT uses the same format as an
@@ -88,11 +88,11 @@ in descending order."
            (session-id (pimacs--plist-get pimacs--header-line-state :sessionStats :sessionId))
            (short-id (pimacs--short-uuid session-id)))
       (if (and (stringp name) (not (string-empty-p name)))
-          (let ((display-name (propertize name 'face 'font-lock-type-face)))
+          (let ((display-name (propertize name 'face 'pimacs-session-name-face)))
             (if (and include-id short-id)
                 (concat display-name " " short-id)
               display-name))
-        (propertize (or short-id "unknown") 'face 'font-lock-type-face)))))
+        (propertize (or short-id "unknown") 'face 'pimacs-session-name-face)))))
 
 (defun pimacs--select-chat (candidates prompt)
   (cond
@@ -117,7 +117,7 @@ in descending order."
               (when-let* ((candidate (cdr (assoc label choices)))
                           (agent (gethash (car candidate) pimacs--agents))
                           (root (process-get agent 'project-root)))
-                (concat "  " (propertize (abbreviate-file-name (expand-file-name root)) 'face 'dired-directory)))))
+                (concat "  " (propertize (abbreviate-file-name (expand-file-name root)) 'face 'pimacs-session-directory-face)))))
            (completion-extra-properties
             `(:annotation-function ,annotation-function))
            (selected (completing-read prompt choices nil t)))

@@ -77,6 +77,8 @@ jobs:
 
     - name: Run integration tests
       run: |
+        sudo apt-get update
+        sudo apt-get install --yes jq ripgrep
         npm install -g --ignore-scripts @earendil-works/pi-coding-agent
         UNDERCOVER_FORCE=true UNDERCOVER_CONFIG='("*.el" (:report-format codecov) (:send-report nil) (:exclude "*-tests.el"))' make integration
 

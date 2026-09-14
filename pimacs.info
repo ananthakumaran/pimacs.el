@@ -697,16 +697,53 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      Whether to keep the input area at the bottom as new chat content is
      added.
 
+ -- User Option: pimacs-search-rg-executable "rg"
+
+     Ripgrep executable used for historical session searches.
+
+ -- User Option: pimacs-search-jq-executable "jq"
+
+     Jq executable used for historical session searches.
+
+ -- User Option: pimacs-search-render-idle-delay 0.1
+
+     Idle time required before rendering another result batch.
+
+ -- User Option: pimacs-search-default-directory (expand-file-name
+          "sessions/" "~/.pi/agent/")
+
+     Default directory containing Pi session directories.
+
+ -- User Option: pimacs-search-default-scope 'current-project
+
+     Project scope used for new session searches.
+
+ -- User Option: pimacs-search-default-search-type 'string
+
+     Search type used for new session searches.
+
+ -- User Option: pimacs-search-default-case 'smart
+
+     Case sensitivity used for new session searches.
+
+ -- User Option: pimacs-search-default-context '(1 . 1)
+
+     Context lines shown around matches in new session searches.
+
+ -- User Option: pimacs-search-default-filters '(user assistant)
+
+     Result types enabled for new session searches.
+
  -- User Option: pimacs-list-sessions-table
 
-          '(("Session" . (:session_name face font-lock-type-face))
+          '(("Session" . (:session_name face pimacs-session-name-face))
             ("Provider" . :provider)
             ("Model" . :model)
             ("State" . (:agent_state face font-lock-constant-face))
             ("Context" . (:context_usage face shadow))
             ("Messages" . :total_messages)
             ("Cost" . (:cost face shadow))
-            ("Project" . (:project_root face shadow)))
+            ("Project" . (:project_root face pimacs-session-directory-face)))
 
      Columns displayed by ‘pimacs-list-sessions’.
 
@@ -914,6 +951,7 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
             (select . pimacs-section-select-face)
             (confirm . pimacs-section-confirm-face)
             (input . pimacs-section-input-face)
+            (search-session . pimacs-section-search-session-face)
             (session . pimacs-section-session-face))
 
      Faces prepended to content in sections of each type.
@@ -923,20 +961,6 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
 10 Custom Faces
 ***************
-
- -- Face: pimacs-chat-role-face '((t :inherit font-lock-builtin-face))
-
-     Face used for generic chat role labels.
-
- -- Face: pimacs-chat-user-role-face '((t :inherit
-          font-lock-keyword-face))
-
-     Face used for user chat message role labels.
-
- -- Face: pimacs-chat-assistant-role-face '((t :inherit
-          font-lock-constant-face))
-
-     Face used for assistant chat message role labels.
 
  -- Face: pimacs-chat-title-face '((t :inherit font-lock-builtin-face))
 
@@ -949,15 +973,6 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
  -- Face: pimacs-error-face '((t :inherit error))
 
      Face used for Pimacs widget error messages.
-
- -- Face: pimacs-tool-name-face '((t :inherit
-          font-lock-function-name-face))
-
-     Face used for tool names in tool execution events.
-
- -- Face: pimacs-grep-match-face '((t :inherit match))
-
-     Face used to highlight matching text in grep tool results.
 
  -- Face: pimacs-notify-info-face '((t :inherit font-lock-comment-face))
 
@@ -978,6 +993,46 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
  -- Face: pimacs-status-face '((t :inherit shadow))
 
      Face used for extension status.
+
+ -- Face: pimacs-search-control-face '((t :underline t))
+
+     Face used for editable session search controls.
+
+ -- Face: pimacs-search-active-control-face '((t :inherit
+          font-lock-keyword-face))
+
+     Face used for selected session search control options.
+
+ -- Face: pimacs-chat-role-face '((t :inherit font-lock-builtin-face))
+
+     Face used for generic chat role labels.
+
+ -- Face: pimacs-chat-user-role-face '((t :inherit
+          font-lock-keyword-face))
+
+     Face used for user chat message role labels.
+
+ -- Face: pimacs-chat-assistant-role-face '((t :inherit
+          font-lock-constant-face))
+
+     Face used for assistant chat message role labels.
+
+ -- Face: pimacs-tool-name-face '((t :inherit
+          font-lock-function-name-face))
+
+     Face used for tool names in tool execution events.
+
+ -- Face: pimacs-grep-match-face '((t :inherit match))
+
+     Face used to highlight matching text in grep tool results.
+
+ -- Face: pimacs-session-name-face '((t :inherit font-lock-type-face))
+
+     Face used for session names and IDs.
+
+ -- Face: pimacs-session-directory-face '((t :inherit dired-directory))
+
+     Face used for session directories and project roots.
 
  -- Face: pimacs-markdown-heading-face '((t :inherit
           font-lock-function-name-face :weight bold))
@@ -1121,6 +1176,11 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
      Face applied to session sections.
 
+ -- Face: pimacs-section-search-session-face '((t :inherit highlight
+          :extend t))
+
+     Face applied to search-session sections.
+
 
 Tag Table:
 Node: Top746
@@ -1141,7 +1201,7 @@ Node: Sandbox15483
 Node: How It Works15876
 Node: Keybindings17028
 Node: Custom Variables21261
-Node: Custom Faces36184
+Node: Custom Faces37355
 
 End Tag Table
 

@@ -1,0 +1,15 @@
+Search term: cowsay change
+Search type: string words regexp
+Case: smart sensitive ignore
+Context: none before after
+
+Directory: PROJECT_DIR/agent/sessions
+Projects: PROJECT_DIR/ all
+Types: [x] user   [x] assistant   [ ] thinking   [x] tool call   [x] tool result   [ ] bash   [ ] compact
+
+
+Finished: 2 matches in 1 sessions.
+
+UUID • DISPLAY_TIMESTAMP                                           RELATIVE_TIME
+user> use the cowsay tool to say hello
+cowsay {"message":"hello"}
