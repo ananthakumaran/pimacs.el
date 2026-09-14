@@ -50,11 +50,48 @@
   :type 'directory
   :group 'pimacs)
 
+(defcustom pimacs-search-default-scope 'current-project
+  "Project scope used for new session searches."
+  :type '(choice (const :tag "Current project" current-project)
+                 (const :tag "All projects" all))
+  :group 'pimacs)
+
+(defcustom pimacs-search-default-search-type 'string
+  "Search type used for new session searches."
+  :type '(choice (const :tag "String" string)
+                 (const :tag "Words" words)
+                 (const :tag "Regexp" regexp))
+  :group 'pimacs)
+
+(defcustom pimacs-search-default-case 'smart
+  "Case sensitivity used for new session searches."
+  :type '(choice (const :tag "Smart" smart)
+                 (const :tag "Sensitive" sensitive)
+                 (const :tag "Ignore case" ignore))
+  :group 'pimacs)
+
+(defcustom pimacs-search-default-context '(1 . 1)
+  "Context lines shown around matches in new session searches."
+  :type '(choice (const :tag "None" nil)
+                 (cons :tag "Context lines"
+                       (integer :tag "Before")
+                       (integer :tag "After")))
+  :group 'pimacs)
+
+(defcustom pimacs-search-default-filters '(user assistant)
+  "Result types enabled for new session searches."
+  :type '(set (const :tag "User" user)
+              (const :tag "Assistant" assistant)
+              (const :tag "Thinking" thinking)
+              (const :tag "Tool call" tool-call)
+              (const :tag "Tool result" tool-result)
+              (const :tag "Bash" bash)
+              (const :tag "Compaction" compact))
+  :group 'pimacs)
+
 (defconst pimacs-search--filter-types
   '(user assistant thinking tool-call tool-result bash compact))
 
-(defconst pimacs-search--default-filters
-  '(user assistant))
 
 (defconst pimacs-search--jq-filter
   "def selected($kind): ($filters | index($kind)) != null;
@@ -156,6 +193,16 @@ select(.type == \"match\")
 (defvar pimacs-search--query-history nil)
 (defvar pimacs-search-resume-function nil)
 
+(defun pimacs-search-next-session ()
+  "Go to the next search-session section."
+  (interactive)
+  (pimacs-section--goto-next-section-of-type 'search-session))
+
+(defun pimacs-search-previous-session ()
+  "Go to the previous search-session section."
+  (interactive)
+  (pimacs-section--goto-previous-section-of-type 'search-session))
+
 (defvar-keymap pimacs-search-mode-map
   :parent special-mode-map
   "<left-fringe> <mouse-1>" #'pimacs-mouse-toggle-section
@@ -170,8 +217,10 @@ select(.type == \"match\")
   "M-2" #'pimacs-section-show-level-2-all
   "M-3" #'pimacs-section-show-level-3-all
   "n" #'pimacs-goto-next-section
+  "N" #'pimacs-search-next-session
   "M-n" #'pimacs-goto-next-section
   "p" #'pimacs-goto-previous-section
+  "P" #'pimacs-search-previous-session
   "M-p" #'pimacs-goto-previous-section
   "M-g l" #'pimacs-goto-last-section
   "l" #'pimacs-goto-last-section
@@ -185,12 +234,13 @@ select(.type == \"match\")
 
 (define-derived-mode pimacs-search-mode special-mode "Pimacs Search"
   "Major mode for browsing historical Pi session search results."
-  (setq-local truncate-lines t)
   (setq-local bidi-paragraph-direction 'left-to-right)
   (setq-local bidi-inhibit-bpa t)
   (setq-local buffer-undo-list t)
   (font-lock-mode -1)
   (visual-line-mode -1)
+  (setq-local truncate-lines t
+              word-wrap nil)
   (when (bound-and-true-p display-line-numbers-mode)
     (display-line-numbers-mode -1))
   (setq-local pimacs-section-autohide-count nil))
@@ -231,7 +281,9 @@ select(.type == \"match\")
       (let ((text (pimacs-search--option-label option)))
         (if (eq option selected)
             (insert (propertize text
-                                'face 'pimacs-search-active-control-face
+                                'face (if (eq option 'current-project)
+                                          'dired-directory
+                                        'pimacs-search-active-control-face)
                                 'pimacs-search-focus control))
           (pimacs-search--insert-button
            text action 'pimacs-search-value option)))
@@ -273,7 +325,7 @@ select(.type == \"match\")
          (case (pimacs-search-request-case request))
          (scope (pimacs-search-request-scope request))
          (context (pimacs-search-request-context request)))
-    (insert "Search term: ")
+    (insert (propertize "Search term: " 'face 'shadow))
     (insert (propertize
              (if (equal (pimacs-search-request-query request) "")
                  "<empty>"
@@ -283,15 +335,15 @@ select(.type == \"match\")
     (pimacs-search--insert-button
      "change" #'pimacs-search--edit-query
      'pimacs-search-focus 'query)
-    (insert "\nSearch type: ")
+    (insert "\n" (propertize "Search type: " 'face 'shadow))
     (pimacs-search--insert-options
      'search-type search-type #'pimacs-search--set-search-type
      '(string words regexp))
-    (insert "\nCase: ")
+    (insert "\n" (propertize "Case: " 'face 'shadow))
     (pimacs-search--insert-options
      'case case #'pimacs-search--set-case
      '(smart sensitive ignore))
-    (insert "\nContext: ")
+    (insert "\n" (propertize "Context: " 'face 'shadow))
     (if context
         (pimacs-search--insert-button
          "none" #'pimacs-search--clear-context)
@@ -306,17 +358,17 @@ select(.type == \"match\")
     (pimacs-search--insert-context-button "after" 'after context)
     (when context
       (insert (format ":%d" (cdr context))))
-    (insert "\n\nDirectory: ")
+    (insert "\n\n" (propertize "Directory: " 'face 'shadow))
     (pimacs-search--insert-button
      (abbreviate-file-name
       (pimacs-search-request-directory request))
      #'pimacs-search--edit-directory
      'pimacs-search-focus 'directory)
-    (insert "\nProjects: ")
+    (insert "\n" (propertize "Projects: " 'face 'shadow))
     (pimacs-search--insert-options
      'scope scope #'pimacs-search--set-scope
      '(current-project all))
-    (insert "\nTypes: ")
+    (insert "\n" (propertize "Types: " 'face 'shadow))
     (pimacs-search--insert-filters
      (pimacs-search-request-filters request))
     (insert "\n")))
@@ -418,7 +470,7 @@ select(.type == \"match\")
             (pimacs-section--create-section 'search-control root
               (pimacs-search--insert-controls)))
       (setq pimacs-search--status-section
-            (pimacs-section--create-section 'search-info root
+            (pimacs-section--create-section 'info root
               (insert "No search started."))))))
 
 (defun pimacs-search--buffer ()
@@ -468,12 +520,12 @@ select(.type == \"match\")
 (defun pimacs-search--default-request ()
   (make-pimacs-search-request
    :directory (expand-file-name pimacs-search-default-directory)
-   :scope 'current-project
+   :scope pimacs-search-default-scope
    :query ""
-   :search-type 'string
-   :case 'smart
-   :context '(1 . 1)
-   :filters (copy-sequence pimacs-search--default-filters)
+   :search-type pimacs-search-default-search-type
+   :case pimacs-search-default-case
+   :context (copy-tree pimacs-search-default-context)
+   :filters (copy-sequence pimacs-search-default-filters)
    :project-root (pimacs--project-root)))
 
 (defun pimacs-search--request-directory (request)
@@ -612,26 +664,50 @@ select(.type == \"match\")
 (defun pimacs-search--format-session-timestamp (timestamp)
   (when (stringp timestamp)
     (condition-case nil
-        (format-time-string "%F %R" (parse-iso8601-time-string timestamp))
+        (format-time-string "%d %b %Y, %R" (parse-iso8601-time-string timestamp))
+      (error nil))))
+
+(defun pimacs-search--format-session-relative-time (timestamp)
+  (when (stringp timestamp)
+    (condition-case nil
+        (let ((seconds (max 0
+                            (floor (pimacs--seconds-elapsed-since
+                                    (parse-iso8601-time-string timestamp))))))
+          (if (< seconds 60)
+              "just now"
+            (concat
+             (cond
+              ((< seconds 3600) (format-seconds "%M" seconds))
+              ((< seconds 86400) (format-seconds "%H" seconds))
+              (t (format-seconds "%D" seconds)))
+             " ago")))
       (error nil))))
 
 (defun pimacs-search--insert-session-info (path)
   (let* ((metadata (gethash path pimacs-search--session-metadata))
          (name (plist-get metadata :name))
          (id (pimacs-search--session-short-id path))
-         (timestamp (pimacs-search--format-session-timestamp
-                     (plist-get metadata :timestamp)))
+         (raw-timestamp (plist-get metadata :timestamp))
+         (timestamp (pimacs-search--format-session-timestamp raw-timestamp))
+         (relative-time (pimacs-search--format-session-relative-time raw-timestamp))
          (cwd (plist-get metadata :cwd)))
     (insert (propertize (if (and (stringp name) (> (length name) 0))
                             name
                           (pimacs--short-uuid id))
                         'face 'font-lock-type-face))
     (when timestamp
-      (insert "  " timestamp))
-    (when (stringp cwd)
-      (insert "  "
+      (insert " • " timestamp))
+    (when (and (eq (pimacs-search-request-scope pimacs-search--request) 'all)
+               (stringp cwd))
+      (insert " • "
               (propertize (abbreviate-file-name cwd)
-                          'face 'dired-directory)))))
+                          'face 'dired-directory)))
+    (when relative-time
+      (let ((padding (- (window-width)
+                        (current-column)
+                        (string-width relative-time))))
+        (insert (make-string (max 1 padding) ?\s)
+                (propertize relative-time 'face 'shadow))))))
 
 (defun pimacs-search--render-session-heading (path section)
   (pimacs-section--replace-section-body section
@@ -655,7 +731,8 @@ select(.type == \"match\")
   (or (gethash path pimacs-search--session-sections)
       (let ((section
              (pimacs-section--new-section
-              'search-session pimacs-section--root-section :padding "\n")))
+              'search-session pimacs-section--root-section
+              :padding "\n")))
         (pimacs-section--insert-section section
           (pimacs-search--insert-session-info path))
         (pimacs-section--set-info
