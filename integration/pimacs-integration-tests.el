@@ -134,6 +134,8 @@
 (defun pimacs-normalize-buffer-text (text)
   (let* ((abbreviated-project-directory
           (abbreviate-file-name pimacs-project-directory))
+         (abbreviated-temporary-file-directory
+          (abbreviate-file-name temporary-file-directory))
          (session_dir (concat "--" (replace-regexp-in-string "/" "-"
                                                              (substring pimacs-project-directory 1))
                               "--")))
@@ -145,6 +147,12 @@
          (replace-regexp-in-string
           (concat (regexp-quote (file-name-as-directory temporary-file-directory))
                   "pimacs-parent-[^/]+/")
+          "PARENT_DIR/")
+         (replace-regexp-in-string
+          (concat
+           (regexp-quote
+            (file-name-as-directory abbreviated-temporary-file-directory))
+           "pimacs-parent-[^/]+/")
           "PARENT_DIR/")
          (replace-regexp-in-string "\\b[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{12\\}" "UUID")
          (replace-regexp-in-string "\\b[0-9a-f]\\{8\\}\\b" "UUID")
