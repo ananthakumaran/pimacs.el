@@ -76,7 +76,7 @@ user> cloned
 
 assistant> The user is saying "I need help... what are good advice?" This seems like a follow-up question or continuation of the conversation they want for me to understand, as indicated by their response structure - likely asking about something in general and not just focusing on specific content.
 
-Looking at my tool usage history: I've been working through this task but it doesn't seem relevant now based on what happened with this turn around 2 hours ago (the session window contained no data for this turn). However, since the conversation continues beyond that point, let me think about whether there's anything important.
+Looking at my tool usage history: I've been working through this task but it doesn't seem relevant now based on what happened with this turn around RELATIVE_TIME (the session window contained no data for this turn). However, since the conversation continues beyond that point, let me think about whether there's anything important.
 
 Actually, looking more carefully - the user has said "cloned" but in context it seems like they've been asking questions while I'm thinking through the task completion status. Let me check if there might be something to this turn based on my memory:
 
