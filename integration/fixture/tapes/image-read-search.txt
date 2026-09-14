@@ -1,0 +1,19 @@
+Search term: green-triangle.png change
+Search type: string words regexp
+Case: smart sensitive ignore
+Context: none before:2 after:1
+
+Directory: PROJECT_DIR/agent/sessions
+Projects: PROJECT_DIR/ all
+Types: [x] user   [ ] assistant   [ ] thinking   [x] tool call   [x] tool result   [ ] bash   [ ] compact
+
+
+Finished: 3 matches in 1 sessions.
+
+UUID • DISPLAY_TIMESTAMP • PROJECT_DIR RELATIVE_TIME
+user> Use the read tool to inspect green-triangle.png, then describe the image.
+agent/
+config.json
+green-triangle.png
+notes.txt
+read {"path":"green-triangle.png"}

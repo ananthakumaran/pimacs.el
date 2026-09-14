@@ -1,0 +1,14 @@
+Search term: hello change
+Search type: string words regexp
+Case: smart sensitive ignore
+Context: none before after
+
+Directory: PROJECT_DIR/agent/sessions
+Projects: PROJECT_DIR/ all
+Types: [ ] user   [ ] assistant   [ ] thinking   [ ] tool call   [x] tool result   [ ] bash   [ ] compact
+
+
+Finished: 1 matches in 1 sessions.
+
+UUID • DISPLAY_TIMESTAMP                                           RELATIVE_TIME
+< hello >

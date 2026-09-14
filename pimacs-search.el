@@ -193,6 +193,15 @@ select(.type == \"match\")
 (defvar pimacs-search--query-history nil)
 (defvar pimacs-search-resume-function nil)
 
+(cl-defstruct pimacs-search-request
+  directory scope query search-type case context filters project-root)
+
+(cl-defstruct pimacs-search-render-context
+  regexp ignore-case before after)
+
+(cl-defstruct pimacs-search-result-info
+  path)
+
 (defun pimacs-search-next-session ()
   "Go to the next search-session section."
   (interactive)
@@ -501,15 +510,6 @@ select(.type == \"match\")
       (setf (pimacs-search-request-query pimacs-search--request) query)
       (pimacs-search--refresh-after-control-change 'query))))
 
-(cl-defstruct pimacs-search-request
-  directory scope query search-type case context filters project-root)
-
-(cl-defstruct pimacs-search-render-context
-  regexp ignore-case before after)
-
-
-(cl-defstruct pimacs-search-result-info
-  path)
 
 (defun pimacs-search--project-session-directory (directory project-root)
   (let* ((project-root (directory-file-name (expand-file-name project-root)))

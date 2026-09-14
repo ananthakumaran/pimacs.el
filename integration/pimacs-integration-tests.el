@@ -132,11 +132,15 @@
      (pimacs-drain-process-output)))
 
 (defun pimacs-normalize-buffer-text (text)
-  (let ((session_dir (concat "--" (replace-regexp-in-string "/" "-"
-                                                            (substring pimacs-project-directory 1))
-                             "--")))
+  (let* ((abbreviated-project-directory
+          (abbreviate-file-name pimacs-project-directory))
+         (session_dir (concat "--" (replace-regexp-in-string "/" "-"
+                                                             (substring pimacs-project-directory 1))
+                              "--")))
     (->> text
          (replace-regexp-in-string (regexp-quote pimacs-project-directory) "PROJECT_DIR")
+         (replace-regexp-in-string
+          (regexp-quote abbreviated-project-directory) "PROJECT_DIR")
          (replace-regexp-in-string (regexp-quote session_dir) "SESSION_DIR")
          (replace-regexp-in-string
           (concat (regexp-quote (file-name-as-directory temporary-file-directory))
@@ -144,7 +148,9 @@
           "PARENT_DIR/")
          (replace-regexp-in-string "\\b[0-9a-f]\\{8\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{4\\}-[0-9a-f]\\{12\\}" "UUID")
          (replace-regexp-in-string "\\b[0-9a-f]\\{8\\}\\b" "UUID")
-         (replace-regexp-in-string "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}T[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{3\\}Z" "TIMESTAMP"))))
+         (replace-regexp-in-string "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}T[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{3\\}Z" "TIMESTAMP")
+         (replace-regexp-in-string "\\(?:just now\\|[0-9]+ [[:alpha:]]+ ago\\)" "RELATIVE_TIME")
+         (replace-regexp-in-string "[0-9]\\{2\\} [[:alpha:]]\\{3\\} [0-9]\\{4\\}, [0-9]\\{2\\}:[0-9]\\{2\\}" "DISPLAY_TIMESTAMP"))))
 
 (defun pimacs--force-update-header-line ()
   (let ((state-response (pimacs--send-command-sync "get_state" '()))
@@ -188,6 +194,105 @@
       (accept-process-output nil pimacs-poll-interval))
     (should (funcall predicate))))
 
+(defun pimacs-wait-for-search (buffer &optional timeout)
+  (pimacs-wait-until
+   (lambda ()
+     (with-current-buffer buffer
+       ;; Batch Emacs does not run this idle timer while waiting.
+       (when (and pimacs-search--entry-queue
+                  (timerp pimacs-search--drain-timer))
+         (pimacs-search--drain-queue
+          (current-buffer) pimacs-search--generation))
+       (and (null pimacs-search--pipeline-process)
+            (null pimacs-search--entry-queue))))
+   (or timeout 10)))
+
+(defun pimacs-search-test-activate-button (buffer &rest properties)
+  (with-current-buffer buffer
+    (let ((position
+           (cl-loop for position from (point-min) below (point-max)
+                    when (and (button-at position)
+                              (cl-loop for (property value) on properties by #'cddr
+                                       always (equal
+                                               (button-get (button-at position)
+                                                           property)
+                                               value)))
+                    return position)))
+      (should position)
+      (button-activate (button-at position)))))
+
+(defun pimacs-search-test-exercise-controls (buffer)
+  (pimacs-search-test-activate-button
+   buffer 'pimacs-search-value 'regexp)
+  (pimacs-search-test-activate-button
+   buffer 'pimacs-search-value 'sensitive)
+  (pimacs-search-test-activate-button
+   buffer 'pimacs-search-value 'all)
+  (pimacs-search-test-activate-button
+   buffer 'pimacs-search-filter 'assistant)
+  (cl-letf (((symbol-function 'read-number)
+             (lambda (&rest _) 2)))
+    (pimacs-search-test-activate-button
+     buffer 'pimacs-search-focus 'context
+     'pimacs-search-context-direction 'before))
+  (pimacs-search-test-activate-button
+   buffer 'action #'pimacs-search--clear-context)
+  (cl-letf (((symbol-function 'read-directory-name)
+             (lambda (&rest _) pimacs-search-default-directory)))
+    (pimacs-search-test-activate-button
+     buffer 'pimacs-search-focus 'directory)))
+
+(defun pimacs-search-session-and-wait
+    (query &optional customizations tape-scenario action)
+  (let* ((pimacs-search-default-directory
+          (if (plist-member customizations :directory)
+              (plist-get customizations :directory)
+            (expand-file-name "sessions" pimacs-project-agent-directory)))
+         (pimacs-search-default-scope
+          (if (plist-member customizations :scope)
+              (plist-get customizations :scope)
+            pimacs-search-default-scope))
+         (pimacs-search-default-search-type
+          (if (plist-member customizations :search-type)
+              (plist-get customizations :search-type)
+            pimacs-search-default-search-type))
+         (pimacs-search-default-case
+          (if (plist-member customizations :case)
+              (plist-get customizations :case)
+            pimacs-search-default-case))
+         (pimacs-search-default-context
+          (if (plist-member customizations :context)
+              (plist-get customizations :context)
+            pimacs-search-default-context))
+         (pimacs-search-default-filters
+          (if (plist-member customizations :filters)
+              (plist-get customizations :filters)
+            pimacs-search-default-filters))
+         (expect-results
+          (if (plist-member customizations :expect-results)
+              (plist-get customizations :expect-results)
+            t)))
+    (save-window-excursion
+      (unwind-protect
+          (progn
+            (pimacs-search-sessions query)
+            (let ((buffer (get-buffer pimacs-search--buffer-name)))
+              (pimacs-wait-for-search buffer)
+              (when action
+                (funcall action buffer)
+                (pimacs-wait-for-search buffer))
+              (with-current-buffer buffer
+                (when expect-results
+                  (should (> pimacs-search--rendered-count 0)))
+                (pimacs-check-tape
+                 (or tape-scenario "session-search") ".txt"
+                 (buffer-substring (point-min) (point-max))))))
+        (when-let ((buffer (get-buffer pimacs-search--buffer-name)))
+          (with-current-buffer buffer
+            (pimacs-search--cancel-pipeline))
+          (kill-buffer buffer))))))
+
+
 (defmacro pimacs-wait-for-agent-event (predicate &rest body)
   (declare (indent 1))
   `(let (matched-event)
@@ -221,7 +326,21 @@
 
 (ert-deftest pimacs-custom-tool ()
   (pimacs-with-integration-project "custom-tool"
-    (pimacs-send-prompt-and-wait "use the cowsay tool to say hello")))
+    (pimacs-send-prompt-and-wait "use the cowsay tool to say hello")
+    (pimacs-search-session-and-wait
+     "cowsay"
+     '(:search-type words
+                    :case ignore
+                    :context nil
+                    :filters (user assistant tool-call tool-result))
+     "custom-tool-search")
+    (pimacs-search-session-and-wait
+     "hello"
+     '(:search-type string
+                    :case smart
+                    :context nil
+                    :filters (tool-result))
+     "custom-tool-tool-result")))
 
 (ert-deftest pimacs-image-prompt ()
   (pimacs-with-integration-project "image-prompt"
@@ -267,6 +386,14 @@
         (let ((image (car rendered-images)))
           (should (eq (plist-get image :type) 'png))
           (should (plist-get image :data-p))
+          (pimacs-search-session-and-wait
+           "green-triangle.png"
+           '(:scope all
+                    :search-type string
+                    :case sensitive
+                    :context (2 . 1)
+                    :filters (user tool-call tool-result))
+           "image-read-search")
           (should (equal (plist-get image :data) image-data)))))))
 
 (ert-deftest pimacs-basics ()
@@ -280,7 +407,24 @@
     (pimacs-send-prompt-and-wait "create test.txt with some text")
     (pimacs-send-prompt-and-wait "remove the 3rd line using edit tool")
     (pimacs-send-prompt-and-wait "delete text.txt")
-    (pimacs-send-prompt-and-wait "/export /tmp/pimacs-session.html")))
+    (pimacs-send-prompt-and-wait "/export /tmp/pimacs-session.html")
+    (pimacs-search-session-and-wait
+     "utils.py"
+     '(:scope current-project
+              :search-type words
+              :case ignore
+              :context (0 . 2)
+              :filters (user tool-call tool-result))
+     "basics-search")
+    (pimacs-search-session-and-wait
+     "utils.py"
+     '(:scope current-project
+              :search-type string
+              :case smart
+              :context (1 . 1)
+              :filters (user assistant))
+     "basics-search-controls"
+     #'pimacs-search-test-exercise-controls)))
 
 (ert-deftest pimacs-slash ()
   (pimacs-with-integration-project "slash"
@@ -324,7 +468,30 @@
     (pimacs-send-prompt-and-wait "/name test-session")
     (pimacs-send-prompt-and-wait "/session")
     (pimacs-send-prompt-and-wait "say hello")
-    (pimacs-send-prompt-and-wait "/session")))
+    (pimacs-send-prompt-and-wait "/session")
+    (pimacs-search-session-and-wait "say hello")
+    (pimacs-search-session-and-wait
+     "term-that-does-not-exist"
+     '(:search-type regexp
+                    :case sensitive
+                    :context nil
+                    :filters (user assistant)
+                    :expect-results nil)
+     "session-no-results")
+    (let (resumed)
+      (let ((pimacs-search-resume-function
+             (lambda (path cwd)
+               (setq resumed (list path cwd)))))
+        (pimacs-search-session-and-wait
+         "say hello" nil "session-search"
+         (lambda (buffer)
+           (with-current-buffer buffer
+             (goto-char (point-min))
+             (search-forward "user> say hello")
+             (pimacs-search-resume-at-point)))))
+      (should (and resumed (file-exists-p (car resumed))
+                   (equal (expand-file-name (cadr resumed))
+                          (expand-file-name pimacs-project-directory)))))))
 
 (ert-deftest pimacs-clone ()
   (pimacs-with-integration-project "clone"
@@ -341,7 +508,15 @@
     (pimacs-with-minibuffer-input "high (Deep reasoning ~16k tokens)"
       (pimacs-send-prompt-and-wait "/set-thinking-level"))
     (pimacs-send-prompt-and-wait "/clone")
-    (pimacs-send-prompt-and-wait "cloned")))
+    (pimacs-send-prompt-and-wait "cloned")
+    (pimacs-search-session-and-wait
+     "story"
+     '(:scope current-project
+              :search-type words
+              :case ignore
+              :context (1 . 1)
+              :filters (thinking))
+     "clone-thinking-search")))
 
 (ert-deftest pimacs-fork ()
   (pimacs-with-integration-project "fork"
@@ -370,7 +545,15 @@
     (pimacs-send-prompt-and-wait "/name sessionv2")
     (pimacs-with-minibuffer-input (kbd "sessionv1 TAB RET")
       (pimacs-send-prompt-and-wait "/resume"))
-    (pimacs-send-prompt-and-wait "h3")))
+    (pimacs-send-prompt-and-wait "h3")
+    (pimacs-search-session-and-wait
+     "h1"
+     '(:scope current-project
+              :search-type regexp
+              :case sensitive
+              :context nil
+              :filters (user))
+     "resume-search")))
 
 (ert-deftest pimacs-compact ()
   (pimacs-with-integration-project "compact"
@@ -379,7 +562,14 @@
     (pimacs-send-prompt-and-wait "hello")
     (pimacs-send-prompt-and-wait "tell me a story, 100 words")
     (pimacs-send-prompt-and-wait "/compact")
-    (pimacs-send-prompt-and-wait "hello again")))
+    (pimacs-send-prompt-and-wait "hello again")
+    (pimacs-search-session-and-wait
+     "story"
+     '(:search-type string
+                    :case sensitive
+                    :context (0 . 2)
+                    :filters (compact))
+     "compact-compaction-search")))
 
 (ert-deftest pimacs-followup ()
   (pimacs-with-integration-project "followup"
@@ -751,5 +941,12 @@
     (pimacs-send-prompt-and-wait
      "!!printf '\\033[31mred\\033[0m\\n'")
     (pimacs-send-prompt-and-wait
-     "Run exactly this bash command: printf '\\033[31mred\\033[0m\\n'")))
+     "Run exactly this bash command: printf '\\033[31mred\\033[0m\\n'")
+    (pimacs-search-session-and-wait
+     "red"
+     '(:search-type string
+                    :case sensitive
+                    :context (1 . 0)
+                    :filters (user bash))
+     "bash-ansi-colors-search")))
 ;;; pimacs-tests.el ends here
