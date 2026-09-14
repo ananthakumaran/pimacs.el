@@ -2966,6 +2966,9 @@ With a prefix argument OTHER-WINDOW, visit in other window."
         (pimacs--with-directory-local-variables
          root
          (lambda ()
+           ;; Buffer-local variables do not survive `with-temp-buffer'.
+           (setq-local pimacs--project-root root)
+           (setq-local pimacs--project-key key)
            (pimacs--start-agent key))))
       (let ((chat-buffer (or (pimacs--current-chat)
                              (let ((buffer (generate-new-buffer (pimacs--chat-buffer-name name))))
