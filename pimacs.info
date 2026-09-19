@@ -688,6 +688,38 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
      (DETAILS ARGS) to visit the relevant location of the tool result.
 
+ -- User Option: pimacs-copy-section-functions
+
+          '((assistant . pimacs--copy-assistant-section)
+            (thinking . pimacs--copy-assistant-section)
+            (user . pimacs--copy-user-section)
+            (tool-call . pimacs--copy-tool-call-section)
+            (tool-result . pimacs--copy-tool-result-section))
+
+     Alist mapping section types to section copy functions.
+
+     Each entry is (SECTION-TYPE .  FUNCTION) where FUNCTION is called
+     with the section at point and returns text to copy, or nil to use
+     the section body.
+
+ -- User Option: pimacs-copy-tool-result-functions '(("edit" .
+          pimacs--copy-edit-result))
+
+     Alist mapping tool names to tool-result copy functions.
+
+     Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
+     (DETAILS ARGS) and returns text to copy, or nil to use the section
+     body.
+
+ -- User Option: pimacs-copy-tool-call-functions '(("bash" .
+          pimacs--copy-bash-call))
+
+     Alist mapping tool names to tool-call copy functions.
+
+     Each entry is (TOOL-NAME .  FUNCTION) where FUNCTION is called with
+     ARGS and returns text to copy, or nil to use the generic tool-call
+     representation.
+
  -- User Option: pimacs-visit-tool-call-functions
 
           '(("read" . pimacs--visit-read-call)
@@ -1221,7 +1253,7 @@ Node: Sandbox16288
 Node: How It Works16681
 Node: Keybindings17833
 Node: Custom Variables22066
-Node: Custom Faces38160
+Node: Custom Faces39359
 
 End Tag Table
 

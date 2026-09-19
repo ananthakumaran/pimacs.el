@@ -1,0 +1,28 @@
+== 1 model ==
+Switched to model: (fixture) gemma4:12b
+
+== 2 thinking-level ==
+Thinking level set to: low
+
+== 3 user ==
+hello
+
+== 4 thinking ==
+The user is simply saying "hello" which is a greeting. I should respond with a friendly greeting and offer to help them with whatever they need.
+
+== 5 assistant ==
+Hello! How can I help you today?
+
+== 6 notify ==
+Forked to new session
+
+== 7 user ==
+hello fork
+
+== 8 thinking ==
+The user is saying "hello fork" - this seems like they're greeting me and possibly referring to forks (in the context of collaborative software development, or perhaps something else). I should respond to their greeting and offer to help them.
+
+== 9 assistant ==
+Hello! It's great to see you again. 😊
+
+How can I assist you today?

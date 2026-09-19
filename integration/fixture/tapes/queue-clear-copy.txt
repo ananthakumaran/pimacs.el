@@ -1,0 +1,17 @@
+== 1 user ==
+hello
+
+== 2 queue ==
+queue
+ Steering: steering message
+
+== 3 queue ==
+queue
+ Steering: steering message
+ Follow-up: follow-up message
+
+== 4 notify ==
+Cleared 1 steering message and 1 follow-up message.
+
+== 5 assistant ==
+Hello! How can I help you today?

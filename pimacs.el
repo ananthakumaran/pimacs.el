@@ -244,6 +244,37 @@ with (DETAILS ARGS) to visit the relevant location of the tool result."
   :type '(alist :key-type string :value-type function)
   :group 'pimacs)
 
+(defcustom pimacs-copy-section-functions
+  '((assistant . pimacs--copy-assistant-section)
+    (thinking . pimacs--copy-assistant-section)
+    (user . pimacs--copy-user-section)
+    (tool-call . pimacs--copy-tool-call-section)
+    (tool-result . pimacs--copy-tool-result-section))
+  "Alist mapping section types to section copy functions.
+
+Each entry is (SECTION-TYPE . FUNCTION) where FUNCTION is called with the
+section at point and returns text to copy, or nil to use the section body."
+  :type '(alist :key-type symbol :value-type function)
+  :group 'pimacs)
+
+(defcustom pimacs-copy-tool-result-functions
+  '(("edit" . pimacs--copy-edit-result))
+  "Alist mapping tool names to tool-result copy functions.
+
+Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called with (DETAILS
+ARGS) and returns text to copy, or nil to use the section body."
+  :type '(alist :key-type string :value-type function)
+  :group 'pimacs)
+
+(defcustom pimacs-copy-tool-call-functions
+  '(("bash" . pimacs--copy-bash-call))
+  "Alist mapping tool names to tool-call copy functions.
+
+Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called with ARGS and
+returns text to copy, or nil to use the generic tool-call representation."
+  :type '(alist :key-type string :value-type function)
+  :group 'pimacs)
+
 (defcustom pimacs-visit-tool-call-functions
   '(("read" . pimacs--visit-read-call)
     ("write" . pimacs--visit-write-call)
@@ -2701,6 +2732,71 @@ summarization."
            (mapcar (lambda (c) (cons (plist-get c :name) c))
                    (plist-get (plist-get resp :data) :commands))))))
 
+(defun pimacs--copy-content-text (content)
+  (mapconcat
+   (lambda (item)
+     (pcase (plist-get item :type)
+       ("text" (or (plist-get item :text) ""))
+       ("thinking" (or (plist-get item :thinking) ""))
+       (_ "")))
+   (pimacs--content-normalize content)
+   ""))
+
+(defun pimacs--copy-section-body (section)
+  (let* ((beginning (pimacs-section-beginning section))
+         (end (pimacs-section--section-body-end section))
+         (content-end (max beginning (- end (length (pimacs-section-padding section))))))
+    (buffer-substring-no-properties beginning content-end)))
+
+(defun pimacs--copy-assistant-section (section)
+  (when-let ((info (pimacs-section-info section)))
+    (pimacs--copy-content-text
+     (pimacs-section-assistant-info-content info))))
+
+(defun pimacs--copy-user-section (section)
+  (when-let ((info (pimacs-section-info section)))
+    (pimacs--copy-content-text
+     (pimacs-section-user-info-content info))))
+
+(defun pimacs--copy-edit-result (details _args)
+  (or (plist-get details :patch)
+      (plist-get details :diff)))
+
+(defun pimacs--copy-bash-call (args)
+  (plist-get args :command))
+
+(defun pimacs--copy-tool-result-section (section)
+  (when-let* ((info (pimacs-section-info section))
+              (tool-name (pimacs-section-tool-result-info-tool-name info))
+              (copier (pimacs--alist-get-equal tool-name
+                                               pimacs-copy-tool-result-functions)))
+    (funcall copier (pimacs-section-tool-result-info-details info)
+             (pimacs-section-tool-result-info-args info))))
+
+(defun pimacs--copy-tool-call-section (section)
+  (when-let ((info (pimacs-section-info section)))
+    (let ((args (pimacs-section-tool-call-info-args info)))
+      (if-let ((copier (pimacs--alist-get-equal
+                        (pimacs-section-tool-call-info-tool-name info)
+                        pimacs-copy-tool-call-functions)))
+          (funcall copier args)
+        (and args (prin1-to-string args))))))
+
+(defun pimacs--copy-section-text (section)
+  (or (when-let ((copier (alist-get (pimacs-section-type section)
+                                    pimacs-copy-section-functions)))
+        (funcall copier section))
+      (pimacs--copy-section-body section)))
+
+(defun pimacs-copy-section ()
+  "Copy the current section's content to the kill ring."
+  (interactive)
+  (if-let ((section (pimacs-section--current-section)))
+      (let ((text (pimacs--copy-section-text section)))
+        (kill-new text)
+        (message "Copied section content."))
+    (user-error "No section at point")))
+
 (defun pimacs-visit-item (&optional other-window)
   "Visit current item.
 With a prefix argument OTHER-WINDOW, visit in other window."
@@ -2770,6 +2866,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   "l" #'pimacs-goto-last-section
   "i" #'pimacs-focus-prompt
   ">" #'pimacs-quote-region
+  "w" #'pimacs-copy-section
   "e" #'pimacs-edit-queue
   "k" #'pimacs-clear-queue
   "q" #'pimacs-quit-chat)

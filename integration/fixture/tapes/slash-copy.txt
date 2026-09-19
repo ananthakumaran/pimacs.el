@@ -1,0 +1,63 @@
+== 1 notify ==
+New session started.
+
+== 2 info ==
+Session renamed to: session1
+
+== 3 session ==
+Session Info
+ File: agent/sessions/SESSION_DIR/TIMESTAMP_UUID.jsonl
+ ID: UUID
+
+Messages
+ User: 0
+ Assistant: 0
+ Tool Calls: 0
+ Tool Results: 0
+ Total: 0
+
+Tokens
+ Input: 0
+ Output: 0
+ Cache Read: 0
+ Total: 0
+
+Cost
+ Total: 0.0000
+
+
+== 4 user ==
+hello
+
+== 5 thinking ==
+The user is just saying "hello" which is a simple greeting. I should respond with a friendly greeting and let them know I'm here to help.
+
+== 6 assistant ==
+Hello! How can I help you today?
+
+== 7 info ==
+Compaction set to: manual
+
+== 8 info ==
+Compaction set to: auto
+
+== 9 model ==
+Switched to model: (fixture) gemma4:12b
+
+== 10 thinking-level ==
+Thinking level set to: minimal
+
+== 11 thinking ==
+Cycled thinking level to: low
+
+== 12 info ==
+Auto retry set to: disabled
+
+== 13 info ==
+Auto retry set to: enabled
+
+== 14 info ==
+Steering mode set to: One at a time
+
+== 15 info ==
+Follow-up mode set to: All

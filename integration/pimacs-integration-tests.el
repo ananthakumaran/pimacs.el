@@ -92,6 +92,8 @@
                (pimacs--force-update-header-line)
                (pimacs-check-tape ,scenario ".txt"
                                   (buffer-substring (point-min) (point-max)))
+               (pimacs-check-tape ,scenario "-copy.txt"
+                                  (pimacs-copy-section-transcript))
                (pimacs-check-tape
                 ,scenario "-header.txt"
                 (replace-regexp-in-string
@@ -189,6 +191,44 @@
                     (message "Tape mismatch for %s:\n%s" scenario (buffer-string))
                     (ert-fail (format "Tape mismatch for %s" scenario))))
               (delete-file temp-file))))))))
+
+(defun pimacs-copy-section-transcript-label (section)
+  (let* ((type (pimacs-section-type section))
+         (info (pimacs-section-info section))
+         (tool-name
+          (pcase type
+            ('tool-call
+             (and info (pimacs-section-tool-call-info-tool-name info)))
+            ('tool-result
+             (and info (pimacs-section-tool-result-info-tool-name info))))))
+    (if tool-name
+        (format "%s (%s)" type tool-name)
+      (symbol-name type))))
+
+(defun pimacs-copy-section-transcript ()
+  (save-excursion
+    (let ((sections (cdr (pimacs-section--all-sections
+                          pimacs-section--root-section)))
+          (index 0)
+          entries)
+      (dolist (section sections)
+        (cl-incf index)
+        (goto-char (pimacs-section-beginning section))
+        (let (copied)
+          (cl-letf (((symbol-function 'kill-new)
+                     (lambda (text &rest _)
+                       (setq copied text)))
+                    ((symbol-function 'message)
+                     (lambda (&rest _))))
+            (pimacs-copy-section))
+          (push (format "== %d %s ==\n%s"
+                        index
+                        (pimacs-copy-section-transcript-label section)
+                        (substring-no-properties copied))
+                entries)))
+      (if entries
+          (concat (mapconcat #'identity (nreverse entries) "\n\n") "\n")
+        ""))))
 
 (defun pimacs-send-prompt-and-wait (prompt)
   (pimacs-send-prompt prompt)

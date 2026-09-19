@@ -1,0 +1,31 @@
+== 1 user ==
+use the cowsay tool to say hello
+
+== 2 thinking ==
+The user wants to use the `cowsay` tool to say "hello". I should call the `cowsay` tool with the argument `message="hello"`.
+
+== 3 tool-call (cowsay) ==
+(:message "hello")
+
+== 4 tool-result (cowsay) ==
+ ______
+< hello >
+ ------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+
+== 5 thinking ==
+The `cowsay` tool was called, and it successfully output the cow saying "hello". I've fulfilled the user's request.
+
+== 6 assistant ==
+______
+< hello >
+ ------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||

@@ -1,0 +1,17 @@
+== 1 user ==
+say hello
+
+== 2 thinking ==
+The user is asking me to "say hello" - this is a simple greeting request. There's no need to use any tools for this. I should just respond with a friendly greeting back.
+
+== 3 assistant ==
+Hello! How can I help you today?
+
+== 4 user ==
+hello again
+
+== 5 thinking ==
+The user is just saying hello again. This is a simple greeting - no tools needed to respond. I should respond naturally without using any tools.
+
+== 6 assistant ==
+Hello again! Is there something you'd like to do today?

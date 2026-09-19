@@ -1,0 +1,9 @@
+== 1 tool-call (bash) ==
+printf 'started\n'; sleep 120
+
+== 2 tool-result ==
+started
+Cancelled
+
+== 3 error ==
+Aborted
