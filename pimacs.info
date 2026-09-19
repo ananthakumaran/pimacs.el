@@ -116,6 +116,7 @@ anywhere in the chat buffer to move point to the prompt input area.
 * Images::
 * State Lines::
 * Managing Sessions::
+* Searching Sessions::
 * Section Visibility::
 
 
@@ -270,7 +271,7 @@ status only in a state line, add its key to
      (setq pimacs-status-widget-hidden-keys '("xyz-status"))
 
 
-File: pimacs.info,  Node: Managing Sessions,  Next: Section Visibility,  Prev: State Lines,  Up: Usage
+File: pimacs.info,  Node: Managing Sessions,  Next: Searching Sessions,  Prev: State Lines,  Up: Usage
 
 4.7 Managing Sessions
 =====================
@@ -285,9 +286,27 @@ column header to sort by that column.
 ‘pimacs-list-sessions-table’ and ‘pimacs-list-sessions-sort-key’.
 
 
-File: pimacs.info,  Node: Section Visibility,  Prev: Managing Sessions,  Up: Usage
+File: pimacs.info,  Node: Searching Sessions,  Next: Section Visibility,  Prev: Managing Sessions,  Up: Usage
 
-4.8 Section Visibility
+4.8 Searching Sessions
+======================
+
+Use ‘pimacs-search-sessions’ to search historical Pi sessions.  The
+command opens a search buffer and accepts the initial query
+interactively.  Searches use ‘rg’ and ‘jq’; run ‘M-x pimacs-doctor’ to
+check that both executables are available.
+
+   The search buffer provides controls for the search type, case
+sensitivity, context lines, project scope, and content types.  Results
+are rendered as they arrive and grouped by session.  Press ‘RET’ on a
+result to resume that session, or ‘g’ to refresh the search.  Standard
+section navigation and visibility commands are also available in the
+search buffer.
+
+
+File: pimacs.info,  Node: Section Visibility,  Prev: Searching Sessions,  Up: Usage
+
+4.9 Section Visibility
 ======================
 
 Pimacs represents the chat as a hierarchy of sections.  Every non-root
@@ -1188,20 +1207,21 @@ Node: Introduction1151
 Node: Setup1408
 Node: Doctor2205
 Node: Usage2577
-Node: Slash Commands3460
-Node: File Name Completion5958
-Node: Bash6286
-Node: Sending Context6553
-Node: Images7361
-Node: State Lines8226
-Node: Managing Sessions9554
-Node: Section Visibility10174
-Node: UI Customization12204
-Node: Sandbox15475
-Node: How It Works15868
-Node: Keybindings17020
-Node: Custom Variables21253
-Node: Custom Faces37347
+Node: Slash Commands3483
+Node: File Name Completion5981
+Node: Bash6309
+Node: Sending Context6576
+Node: Images7384
+Node: State Lines8249
+Node: Managing Sessions9577
+Node: Searching Sessions10197
+Node: Section Visibility10986
+Node: UI Customization13017
+Node: Sandbox16288
+Node: How It Works16681
+Node: Keybindings17833
+Node: Custom Variables22066
+Node: Custom Faces38160
 
 End Tag Table
 

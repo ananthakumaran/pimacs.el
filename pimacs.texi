@@ -141,6 +141,7 @@ input area.
 * Images::
 * State Lines::
 * Managing Sessions::
+* Searching Sessions::
 * Section Visibility::
 @end menu
 
@@ -333,6 +334,20 @@ column header to sort by that column.
 
 Customize the list's columns and initial sort order with
 @code{pimacs-list-sessions-table} and @code{pimacs-list-sessions-sort-key}.
+
+@node Searching Sessions
+@section Searching Sessions
+
+Use @code{pimacs-search-sessions} to search historical Pi sessions.  The
+command opens a search buffer and accepts the initial query interactively.
+Searches use @code{rg} and @code{jq}; run @kbd{M-x pimacs-doctor} to check
+that both executables are available.
+
+The search buffer provides controls for the search type, case sensitivity,
+context lines, project scope, and content types.  Results are rendered as
+they arrive and grouped by session.  Press @kbd{RET} on a result to resume
+that session, or @kbd{g} to refresh the search.  Standard section navigation
+and visibility commands are also available in the search buffer.
 
 @node Section Visibility
 @section Section Visibility
