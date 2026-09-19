@@ -1,6 +1,17 @@
 # Changelog
 
-## Unreleased
+## v0.7.0 - 2026-09-14
+
+### Added
+
+- `pimacs-search-sessions` searches historical Pi sessions with configurable search type, case sensitivity, project scope, context, and content filters, and can resume sessions from results.
+- `pimacs-doctor` checks the `rg` and `jq` dependencies required for session search.
+
+### Changed
+
+- Tool calls now appear as soon as execution starts, before their arguments are available.
+- Directory-local variables are respected when starting chats and reloading Pimacs; revert-buffer shortcuts now reload Pimacs.
+- Project, session, executable, and file paths are abbreviated where possible.
 
 ## v0.6.0 - 2026-08-30
 
