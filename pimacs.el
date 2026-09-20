@@ -129,6 +129,12 @@ status in the default widget to see its key."
   :type 'integer
   :group 'pimacs)
 
+(defcustom pimacs-resume-default-scope 'current-project
+  "Project scope used by standalone `pimacs-resume'."
+  :type '(choice (const :tag "Current project" current-project)
+                 (const :tag "All projects" all))
+  :group 'pimacs)
+
 (defcustom pimacs-prompt-streaming-behavior 'followUp
   "Default streaming behavior for prompts.
 
@@ -2271,47 +2277,119 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                (pimacs-section--create-section 'thinking pimacs-section--root-section
                  (insert (format "Cycled thinking level to: %s" level)))))))))))
 
+
 (defun pimacs--resume-session-candidates (records)
   (mapcar
    (lambda (record)
-     (let* ((timestamp (pimacs-session-record-timestamp record))
-            (formatted-time (if timestamp
-                                (format-time-string "%F %R" timestamp)
-                              ""))
-            (short-id (pimacs--short-uuid (pimacs-session-record-id record)))
-            (short-parent (pimacs--short-uuid
-                           (pimacs-session-record-parent-id record))))
-       (cons (format "%s  %s  %s%s%s" short-id formatted-time
-                     (if (pimacs-session-record-name record)
-                         (propertize (format "[%s] " (pimacs-session-record-name record))
-                                     'face 'pimacs-session-name-face)
-                       "")
-                     (pimacs-session-record-preview record)
-                     (if short-parent (format " (parent: %s)" short-parent) ""))
-             record)))
+     (let* ((modified (pimacs-session-record-modified record))
+            (id (propertize (or (pimacs--short-uuid
+                                 (pimacs-session-record-id record))
+                                "unknown")
+                            'face 'pimacs-session-name-face))
+            (date (when-let ((date (pimacs-session-format-timestamp modified)))
+                    (propertize date 'face 'shadow)))
+            (session-name (when-let ((name (pimacs-session-record-name record)))
+                            (propertize (format "[%s]" name)
+                                        'face 'pimacs-session-name-face)))
+            (text (string-join
+                   (delq nil
+                         (list session-name
+                               (pimacs-session-record-preview record)
+                               (when-let ((parent-id
+                                           (pimacs--short-uuid
+                                            (pimacs-session-record-parent-id record))))
+                                 (concat "(parent: "
+                                         (propertize parent-id
+                                                     'face 'pimacs-session-name-face)
+                                         ")"))))
+                   "  ")))
+       (cons (string-join (delq nil (list id date text)) "  ") record)))
    records))
 
-(defun pimacs-resume ()
-  "Resume a previous session."
-  (interactive)
-  (pimacs--with-chat-buffer
-    (pimacs--send-command
-     "get_state" '()
-     (lambda (resp)
-       (when (pimacs--response-success-p resp)
-         (let* ((data (plist-get resp :data))
-                (session-file (plist-get data :sessionFile))
-                (session-dir (file-name-directory session-file))
-                (records (when session-dir
-                           (pimacs-session-recent-records
-                            session-dir nil pimacs-resume-max-sessions))))
-           (if (null records)
-               (message "No session files found in %s" (abbreviate-file-name session-dir))
-             (let* ((candidates (pimacs--resume-session-candidates records))
-                    (selected (pimacs--completing-read "Resume session: " candidates))
-                    (record (pimacs--alist-get-equal selected candidates)))
-               (pimacs--switch-session (pimacs-session-record-path record)
-                                       "Resumed session")))))))))
+(defun pimacs--resume-session-annotation-function (candidates include-cwd)
+  (lambda (candidate)
+    (when-let ((record (pimacs--alist-get-equal candidate candidates)))
+      (let* ((cwd (pimacs-session-record-cwd record))
+             (relative-time (pimacs-session-format-relative-time
+                             (pimacs-session-record-modified record)))
+             (suffix (string-join
+                      (delq nil
+                            (list (when (and include-cwd cwd)
+                                    (propertize (abbreviate-file-name cwd)
+                                                'face 'pimacs-session-directory-face))
+                                  (when relative-time
+                                    (propertize relative-time 'face 'shadow))))
+                      "  ")))
+        (unless (string-empty-p suffix)
+          (concat (propertize " "
+                              'display `(space :align-to (- right ,(string-width suffix))))
+                  suffix))))))
+
+(defun pimacs--read-resume-record (records &optional include-cwd)
+  (when records
+    (let* ((candidates (pimacs--resume-session-candidates records))
+           (annotation-function
+            (pimacs--resume-session-annotation-function candidates include-cwd))
+           (selected (pimacs--completing-read "Resume session: " candidates
+                                              annotation-function)))
+      (pimacs--alist-get-equal selected candidates))))
+
+(defun pimacs--resume-chat ()
+  (pimacs--send-command
+   "get_state" '()
+   (lambda (resp)
+     (when (pimacs--response-success-p resp)
+       (let* ((data (plist-get resp :data))
+              (session-file (plist-get data :sessionFile))
+              (session-dir (file-name-directory session-file))
+              (records (when session-dir
+                         (pimacs-session-recent-records
+                          session-dir nil pimacs-resume-max-sessions))))
+         (if-let ((record (pimacs--read-resume-record records)))
+             (pimacs--switch-session (pimacs-session-record-path record)
+                                     "Resumed session")
+           (message "No session files found in %s"
+                    (abbreviate-file-name session-dir))))))))
+
+(defun pimacs--resume-standalone-directory (scope)
+  (pcase scope
+    ('current-project
+     (pimacs-session-project-directory pimacs-session-directory
+                                       (pimacs--project-root)))
+    ('all (expand-file-name pimacs-session-directory))
+    (_ (error "Unknown resume scope: %S" scope))))
+
+(defun pimacs--resumable-session-record-p (record)
+  (when-let ((cwd (pimacs-session-record-cwd record)))
+    (file-directory-p cwd)))
+
+(defun pimacs--resume-standalone (scope)
+  (let ((directory (pimacs--resume-standalone-directory scope)))
+    (unless (file-directory-p directory)
+      (user-error "Session directory does not exist: %s"
+                  (abbreviate-file-name directory)))
+    (let ((records
+           (seq-filter #'pimacs--resumable-session-record-p
+                       (pimacs-session-recent-records
+                        directory (eq scope 'all) pimacs-resume-max-sessions))))
+      (if-let ((record (pimacs--read-resume-record records t)))
+          (pimacs-resume-session-file (pimacs-session-record-path record)
+                                      (pimacs-session-record-cwd record))
+        (message "No resumable session files found in %s"
+                 (abbreviate-file-name directory))))))
+
+(defun pimacs-resume (&optional scope)
+  "Resume a previous session.
+
+SCOPE, when non-nil, searches resumable sessions across all projects."
+  (interactive (list (when current-prefix-arg 'all)))
+  (if scope
+      (pimacs--resume-standalone scope)
+    (if-let ((chat (or (pimacs--current-chat)
+                       (pimacs--select-relevant-chat))))
+        (with-current-buffer chat
+          (pimacs--resume-chat))
+      (pimacs--resume-standalone pimacs-resume-default-scope))))
 
 (defun pimacs--clear-sections ()
   (pimacs--history-render-reset)

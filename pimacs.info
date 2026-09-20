@@ -115,7 +115,7 @@ anywhere in the chat buffer to move point to the prompt input area.
 * Images::
 * State Lines::
 * Managing Chats::
-* Searching Sessions::
+* Searching and Resuming Sessions::
 * Section Visibility::
 
 
@@ -270,7 +270,7 @@ status only in a state line, add its key to
      (setq pimacs-status-widget-hidden-keys '("xyz-status"))
 
 
-File: pimacs.info,  Node: Managing Chats,  Next: Searching Sessions,  Prev: State Lines,  Up: Usage
+File: pimacs.info,  Node: Managing Chats,  Next: Searching and Resuming Sessions,  Prev: State Lines,  Up: Usage
 
 4.7 Managing Chats
 ==================
@@ -285,12 +285,29 @@ that column.
 ‘pimacs-list-chats-table’ and ‘pimacs-list-chats-sort-key’.
 
 
-File: pimacs.info,  Node: Searching Sessions,  Next: Section Visibility,  Prev: Managing Chats,  Up: Usage
+File: pimacs.info,  Node: Searching and Resuming Sessions,  Next: Section Visibility,  Prev: Managing Chats,  Up: Usage
 
-4.8 Searching Sessions
-======================
+4.8 Searching and Resuming Sessions
+===================================
 
-Use ‘pimacs-search-sessions’ to search historical Pi sessions.  The
+Use ‘M-x pimacs-resume’ to return to a persisted Pi session.  From an
+active chat, the command lists recent sessions from that chat's project
+session directory and switches the current chat to the selected session.
+
+   When no active chat exists, ‘M-x pimacs-resume’ lists sessions from
+the current project's session directory and creates a new chat rooted at
+the selected session's recorded working directory.  Invoke ‘C-u M-x
+pimacs-resume’ to search all projects under ‘pimacs-session-directory’
+instead.
+
+   Candidates show the session name or identifier, modification date,
+preview, and project directory where available.  The session directory
+root is controlled by ‘pimacs-session-directory’; its default is Pi's
+shared ‘~/.pi/agent/sessions/’ directory.  Standalone resume reads
+session metadata directly and does not require the ‘rg’ or ‘jq’
+executables used by historical session search.
+
+   Use ‘pimacs-search-sessions’ to search historical Pi sessions.  The
 command opens a search buffer and accepts the initial query
 interactively.  Searches use ‘rg’ and ‘jq’; run ‘M-x pimacs-doctor’ to
 check that both executables are available.
@@ -303,7 +320,7 @@ section navigation and visibility commands are also available in the
 search buffer.
 
 
-File: pimacs.info,  Node: Section Visibility,  Prev: Searching Sessions,  Up: Usage
+File: pimacs.info,  Node: Section Visibility,  Prev: Searching and Resuming Sessions,  Up: Usage
 
 4.9 Section Visibility
 ======================
@@ -573,6 +590,10 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
  -- User Option: pimacs-resume-max-sessions 100
 
      Maximum number of recent sessions to list when resuming a session.
+
+ -- User Option: pimacs-resume-default-scope 'current-project
+
+     Project scope used by standalone ‘pimacs-resume’.
 
  -- User Option: pimacs-prompt-streaming-behavior 'followUp
 
@@ -1242,21 +1263,21 @@ Node: Introduction1159
 Node: Setup1416
 Node: Doctor2213
 Node: Usage2585
-Node: Slash Commands3453
-Node: File Name Completion5951
-Node: Bash6279
-Node: Sending Context6546
-Node: Images7354
-Node: State Lines8219
-Node: Managing Chats9544
-Node: Searching Sessions10124
-Node: Section Visibility10910
-Node: UI Customization12941
-Node: Sandbox16212
-Node: How It Works16605
-Node: Keybindings17757
-Node: Custom Variables21990
-Node: Custom Faces39389
+Node: Slash Commands3466
+Node: File Name Completion5964
+Node: Bash6292
+Node: Sending Context6559
+Node: Images7367
+Node: State Lines8232
+Node: Managing Chats9557
+Node: Searching and Resuming Sessions10150
+Node: Section Visibility11909
+Node: UI Customization13953
+Node: Sandbox17224
+Node: How It Works17617
+Node: Keybindings18769
+Node: Custom Variables23002
+Node: Custom Faces40524
 
 End Tag Table
 

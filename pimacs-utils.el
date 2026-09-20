@@ -253,11 +253,13 @@ PRED is called with KEY VALUE."
 (defun pimacs--sort-entries-by-key (entries)
   (sort entries (lambda (a b) (string< (car a) (car b)))))
 
-(defun pimacs--completing-read (prompt collection)
+(defun pimacs--completing-read (prompt collection &optional annotation-function)
   (completing-read prompt
                    (lambda (string pred action)
                      (if (eq action 'metadata)
-                         '(metadata (display-sort-function . identity))
+                         (append '(metadata (display-sort-function . identity))
+                                 (when annotation-function
+                                   `((annotation-function . ,annotation-function))))
                        (complete-with-action action collection string pred)))
                    nil t))
 

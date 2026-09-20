@@ -40,7 +40,35 @@
   :group 'pimacs)
 
 (cl-defstruct pimacs-session-record
-  id timestamp cwd path parent-id name preview)
+  id timestamp modified cwd path parent-id name preview)
+
+(defun pimacs-session--timestamp-time (timestamp)
+  (if (stringp timestamp)
+      (condition-case nil
+          (parse-iso8601-time-string timestamp)
+        (error nil))
+    timestamp))
+
+(defun pimacs-session-format-timestamp (timestamp)
+  (when-let ((time (pimacs-session--timestamp-time timestamp)))
+    (condition-case nil
+        (format-time-string "%d %b %Y, %R" time)
+      (error nil))))
+
+(defun pimacs-session-format-relative-time (timestamp)
+  (when-let ((time (pimacs-session--timestamp-time timestamp)))
+    (condition-case nil
+        (let ((seconds (max 0
+                            (floor (pimacs--seconds-elapsed-since time)))))
+          (if (< seconds 60)
+              "just now"
+            (concat
+             (cond
+              ((< seconds 3600) (format-seconds "%M" seconds))
+              ((< seconds 86400) (format-seconds "%H" seconds))
+              (t (format-seconds "%D" seconds)))
+             " ago")))
+      (error nil))))
 
 (defun pimacs-session-project-directory (session-directory project-root)
   (let* ((project-root (directory-file-name (expand-file-name project-root)))
@@ -54,7 +82,7 @@
            (string-match-p "\\.jsonl\\'" file))
     (file-error nil)))
 
-(defun pimacs-session--modification-time (file)
+(defun pimacs-session-modification-time (file)
   (condition-case nil
       (file-attribute-modification-time (file-attributes file))
     (file-error nil)))
@@ -72,9 +100,9 @@
     (setq files
           (sort files
                 (lambda (left right)
-                  (time-less-p (or (pimacs-session--modification-time right)
+                  (time-less-p (or (pimacs-session-modification-time right)
                                    (seconds-to-time 0))
-                               (or (pimacs-session--modification-time left)
+                               (or (pimacs-session-modification-time left)
                                    (seconds-to-time 0))))))
     (seq-take files (max 0 limit))))
 
@@ -137,6 +165,7 @@
                           (condition-case nil
                               (parse-iso8601-time-string timestamp)
                             (error nil)))
+             :modified (pimacs-session-modification-time file)
              :cwd cwd
              :path file
              :parent-id parent-id

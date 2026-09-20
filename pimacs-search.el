@@ -650,42 +650,20 @@ select(.type == \"match\")
         (match-string 1 (file-name-base path)))
       "unknown"))
 
-(defun pimacs-search--format-session-timestamp (timestamp)
-  (when (stringp timestamp)
-    (condition-case nil
-        (format-time-string "%d %b %Y, %R" (parse-iso8601-time-string timestamp))
-      (error nil))))
-
-(defun pimacs-search--format-session-relative-time (timestamp)
-  (when (stringp timestamp)
-    (condition-case nil
-        (let ((seconds (max 0
-                            (floor (pimacs--seconds-elapsed-since
-                                    (parse-iso8601-time-string timestamp))))))
-          (if (< seconds 60)
-              "just now"
-            (concat
-             (cond
-              ((< seconds 3600) (format-seconds "%M" seconds))
-              ((< seconds 86400) (format-seconds "%H" seconds))
-              (t (format-seconds "%D" seconds)))
-             " ago")))
-      (error nil))))
-
 (defun pimacs-search--insert-session-info (path)
   (let* ((metadata (gethash path pimacs-search--session-metadata))
          (name (plist-get metadata :name))
          (id (pimacs-search--session-short-id path))
-         (raw-timestamp (plist-get metadata :timestamp))
-         (timestamp (pimacs-search--format-session-timestamp raw-timestamp))
-         (relative-time (pimacs-search--format-session-relative-time raw-timestamp))
+         (modified (plist-get metadata :modified))
+         (timestamp (pimacs-session-format-timestamp modified))
+         (relative-time (pimacs-session-format-relative-time modified))
          (cwd (plist-get metadata :cwd)))
     (insert (propertize (if (and (stringp name) (> (length name) 0))
                             name
                           (pimacs--short-uuid id))
                         'face 'pimacs-session-name-face))
     (when timestamp
-      (insert " • " timestamp))
+      (insert " • " (propertize timestamp 'face 'shadow)))
     (when (and (eq (pimacs-search-request-scope pimacs-search--request) 'all)
                (stringp cwd))
       (insert " • "
@@ -709,7 +687,9 @@ select(.type == \"match\")
       ("session"
        (setq metadata (plist-put metadata :id (plist-get record :id))
              metadata (plist-put metadata :cwd (plist-get record :cwd))
-             metadata (plist-put metadata :timestamp (plist-get record :timestamp))))
+             metadata (plist-put metadata :timestamp (plist-get record :timestamp))
+             metadata (plist-put metadata :modified
+                                 (pimacs-session-modification-time path))))
       ("session-info"
        (setq metadata (plist-put metadata :name (plist-get record :name)))))
     (puthash path metadata pimacs-search--session-metadata)

@@ -603,6 +603,44 @@
               :filters (user))
      "resume-search")))
 
+(ert-deftest pimacs-resume-standalone ()
+  (pimacs-with-integration-project "resume-standalone"
+    (let ((pimacs-session-directory
+           (expand-file-name "sessions" pimacs-project-agent-directory)))
+      (pimacs-send-prompt-and-wait "/name standalone-resume")
+      (pimacs-wait-for-agent-event
+          (lambda (event) (equal (plist-get event :type) "agent_start"))
+        (pimacs-send-prompt "h1"))
+      (pimacs-wait-for-agent-event
+          (lambda (event) (equal (plist-get event :type) "agent_settled"))
+        (pimacs-drain-process-output))
+      (let* ((closed-chat (pimacs--current-chat))
+             (project-key (buffer-local-value 'pimacs--project-key closed-chat)))
+        (should (buffer-live-p closed-chat))
+        (pimacs-quit-chat)
+        (pimacs-wait-until (lambda () (not (buffer-live-p closed-chat))))
+        (setenv "FIXTURE_SCENARIO" "resume-standalone-resumed")
+        (pimacs-wait-until (lambda () (not (gethash project-key pimacs--agents))))
+        (with-temp-buffer
+          (let ((default-directory pimacs-project-directory))
+            (should-not (pimacs--select-relevant-chat))
+            (pimacs-with-minibuffer-input (kbd "standalone-resume TAB RET")
+              (pimacs-resume))))
+        (pimacs-wait-until #'pimacs--active-chat-candidates)
+        (let ((resumed-chat (cdar (pimacs--active-chat-candidates))))
+          (should (buffer-live-p resumed-chat))
+          (pimacs-wait-until
+           (lambda ()
+             (with-current-buffer resumed-chat
+               (while pimacs--history-render-pending
+                 (pimacs--history-render-idle
+                  (current-buffer) pimacs--history-render-generation))
+               (string-match-p "h1" (buffer-string)))))
+          (with-current-buffer resumed-chat
+            (pimacs-send-prompt-and-wait "h2")
+            (should (string-empty-p (widget-value pimacs--prompt-widget))))
+          (set-buffer resumed-chat))))))
+
 (ert-deftest pimacs-compact ()
   (pimacs-with-integration-project "compact"
     (setq-local pimacs-header-line-format

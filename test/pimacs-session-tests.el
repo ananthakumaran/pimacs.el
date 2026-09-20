@@ -31,8 +31,21 @@
             (should (equal (pimacs-session-record-name record) "named session"))
             (should (equal (pimacs-session-record-preview record) "first line"))
             (should (equal (pimacs-session-record-path record) file))
-            (should (pimacs-session-record-timestamp record))))
+            (should (pimacs-session-record-timestamp record))
+            (should (pimacs-session-record-modified record))))
       (delete-file file))))
+
+(ert-deftest pimacs-session-formats-timestamps-and-relative-times ()
+  (let ((time (encode-time 0 4 3 2 1 2026)))
+    (should (equal (pimacs-session-format-timestamp time)
+                   "02 Jan 2026, 03:04"))
+    (should (equal (pimacs-session-format-timestamp "2026-01-02T03:04:00Z")
+                   (format-time-string "%d %b %Y, %R"
+                                       (parse-iso8601-time-string "2026-01-02T03:04:00Z"))))
+    (cl-letf (((symbol-function 'pimacs--seconds-elapsed-since)
+               (lambda (_time) 65)))
+      (should (equal (pimacs-session-format-relative-time time)
+                     "1 minute ago")))))
 
 (ert-deftest pimacs-session-read-record-respects-max-bytes ()
   (let ((file (make-temp-file "pimacs-session-" nil ".jsonl")))

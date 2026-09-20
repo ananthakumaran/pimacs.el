@@ -132,6 +132,7 @@ The chat buffer is read-only except for the prompt input area.  Use
 @kbd{i} from anywhere in the chat buffer to move point to the prompt
 input area.
 
+
 @menu
 * Slash Commands::
 * File Name Completion::
@@ -140,7 +141,7 @@ input area.
 * Images::
 * State Lines::
 * Managing Chats::
-* Searching Sessions::
+* Searching and Resuming Sessions::
 * Section Visibility::
 @end menu
 
@@ -333,8 +334,30 @@ column.
 
 Customize the list's columns and initial sort order with
 @code{pimacs-list-chats-table} and @code{pimacs-list-chats-sort-key}.
-@node Searching Sessions
-@section Searching Sessions
+
+@node Searching and Resuming Sessions
+@section Searching and Resuming Sessions
+
+Use @kbd{M-x pimacs-resume} to return to a persisted Pi session.  From an
+active chat, the command lists recent sessions from that chat's project session
+directory and switches the current chat to the selected session.
+
+
+When no active chat exists, @kbd{M-x pimacs-resume} lists sessions from the
+current project's session directory and creates a new chat rooted at the
+selected session's recorded working directory.  Invoke
+@kbd{C-u M-x pimacs-resume} to search all projects under
+@code{pimacs-session-directory} instead.
+
+
+Candidates show the session name or identifier, modification date, preview,
+and project directory where available.  The session directory root is
+controlled by @code{pimacs-session-directory}; its default is Pi's shared
+@file{~/.pi/agent/sessions/} directory.  Standalone resume reads session
+metadata directly and does not require the @code{rg} or @code{jq} executables
+used by historical session search.
+
+
 
 Use @code{pimacs-search-sessions} to search historical Pi sessions.  The
 command opens a search buffer and accepts the initial query interactively.
@@ -644,6 +667,11 @@ Maximum number of prompt history entries to keep.
 @defopt pimacs-resume-max-sessions @code{100}
 
 Maximum number of recent sessions to list when resuming a session.
+@end defopt
+
+@defopt pimacs-resume-default-scope @code{'current-project}
+
+Project scope used by standalone @code{pimacs-resume}.
 @end defopt
 
 @defopt pimacs-prompt-streaming-behavior @code{'followUp}

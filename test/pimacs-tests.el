@@ -79,16 +79,93 @@
         (kill-buffer buffer)))))
 
 (ert-deftest pimacs--resume-session-candidates-format-session-records ()
-  (let* ((record (make-pimacs-session-record
-                  :id "12345678-0000-0000-0000-000000000000"
-                  :timestamp (encode-time 0 4 3 2 1 2026)
-                  :parent-id "87654321-0000-0000-0000-000000000000"
-                  :name "named"
-                  :preview "preview"))
-         (candidate (car (pimacs--resume-session-candidates (list record)))))
-    (should (eq (cdr candidate) record))
-    (should (equal (substring-no-properties (car candidate))
-                   "00000000  2026-01-02 03:04  [named] preview (parent: 00000000)"))))
+  (let ((record (make-pimacs-session-record
+                 :id "12345678-0000-0000-0000-000000000000"
+                 :timestamp (encode-time 0 4 3 2 1 2026)
+                 :parent-id "87654321-0000-0000-0000-000000000000"
+                 :name "named"
+                 :cwd "/tmp/project"
+                 :preview "preview")))
+    (cl-letf (((symbol-function 'pimacs-session-format-timestamp)
+               (lambda (_timestamp) "date"))
+              ((symbol-function 'pimacs-session-format-relative-time)
+               (lambda (_timestamp) "relative")))
+      (let* ((candidates (pimacs--resume-session-candidates (list record)))
+             (candidate (car candidates))
+             (text (car candidate))
+             (annotation (funcall
+                          (pimacs--resume-session-annotation-function candidates t)
+                          text)))
+        (should (eq (cdr candidate) record))
+        (should (string-match-p "00000000  date  \\[named\\]  preview  (parent: 00000000)" text))
+        (should-not (string-match-p "/tmp/project" text))
+        (should (eq (get-text-property (string-match "00000000" text) 'face text)
+                    'pimacs-session-name-face))
+        (should (eq (get-text-property (string-match "date" text) 'face text)
+                    'shadow))
+        (should (eq (get-text-property (string-match "named" text) 'face text)
+                    'pimacs-session-name-face))
+        (should (string-match "parent: \\(00000000\\)" text))
+        (should (eq (get-text-property (match-beginning 1) 'face text)
+                    'pimacs-session-name-face))
+        (should (equal (substring-no-properties annotation)
+                       " /tmp/project  relative"))
+        (should (equal (get-text-property 0 'display annotation)
+                       `(space :align-to (- right ,(string-width (substring annotation 1))))))
+        (should (eq (get-text-property (string-match "/tmp/project" annotation)
+                                       'face annotation)
+                    'pimacs-session-directory-face))
+        (should (eq (get-text-property (string-match "relative" annotation)
+                                       'face annotation)
+                    'shadow))))))
+
+(ert-deftest pimacs-resume-without-chat-resumes-selected-session ()
+  (let* ((cwd (make-temp-file "pimacs-project-" t))
+         (session-file (make-temp-file "pimacs-session-" nil ".jsonl"))
+         (record (make-pimacs-session-record :path session-file :cwd cwd))
+         recent-arguments resumed)
+    (unwind-protect
+        (cl-letf (((symbol-function 'pimacs--current-chat) (lambda () nil))
+                  ((symbol-function 'pimacs--select-relevant-chat) (lambda () nil))
+                  ((symbol-function 'pimacs-session-recent-records)
+                   (lambda (&rest arguments)
+                     (setq recent-arguments arguments)
+                     (list record)))
+                  ((symbol-function 'pimacs--completing-read)
+                   (lambda (_prompt candidates &optional _annotation-function)
+                     (caar candidates)))
+                  ((symbol-function 'pimacs-resume-session-file)
+                   (lambda (path root) (setq resumed (list path root))))
+                  (pimacs-session-directory cwd))
+          (pimacs-resume 'all)
+          (should (equal recent-arguments
+                         (list cwd t pimacs-resume-max-sessions)))
+          (should (equal resumed (list session-file cwd))))
+      (delete-file session-file)
+      (delete-directory cwd))))
+
+
+(ert-deftest pimacs-resume-with-prefix-bypasses-active-chat ()
+  (let ((chat (get-buffer-create " *pimacs-test-chat*"))
+        standalone-scope)
+    (unwind-protect
+        (cl-letf (((symbol-function 'pimacs--current-chat) (lambda () chat))
+                  ((symbol-function 'pimacs--resume-standalone)
+                   (lambda (scope) (setq standalone-scope scope)))
+                  ((symbol-function 'pimacs--resume-chat)
+                   (lambda () (ert-fail "Should not resume active chat"))))
+          (pimacs-resume 'all)
+          (should (eq standalone-scope 'all)))
+      (kill-buffer chat))))
+
+(ert-deftest pimacs--resume-standalone-directory-respects-scope ()
+  (let ((pimacs-session-directory "/tmp/sessions/"))
+    (cl-letf (((symbol-function 'pimacs--project-root)
+               (lambda () "/tmp/project/")))
+      (should (equal (pimacs--resume-standalone-directory 'current-project)
+                     "/tmp/sessions/--tmp-project--"))
+      (should (equal (pimacs--resume-standalone-directory 'all)
+                     "/tmp/sessions/")))))
 
 (ert-deftest pimacs--parse-slash-command ()
   (should (equal (pimacs--parse-slash-command "/model") '(pimacs-select-model . nil)))

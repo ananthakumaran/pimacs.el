@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `M-x pimacs-resume` can resume persisted sessions without an active chat, either from the current project or across all projects.
+
+### Changed
+
+- Active conversation buffers are now called chats; persisted Pi conversations are called sessions.
+- `pimacs-session-directory` is the shared root for persisted session files and replaces `pimacs-search-default-directory`.
+
+### Breaking Changes
+
+- Active-chat commands use the `pimacs-*chat` names, including `pimacs-switch-chat` and `pimacs-quit-chat`.
+
 ## v0.7.0 - 2026-09-14
 
 ### Added
