@@ -286,13 +286,13 @@
   (pimacs-search-test-activate-button
    buffer 'action #'pimacs-search--clear-context)
   (cl-letf (((symbol-function 'read-directory-name)
-             (lambda (&rest _) pimacs-search-default-directory)))
+             (lambda (&rest _) pimacs-session-directory)))
     (pimacs-search-test-activate-button
      buffer 'pimacs-search-focus 'directory)))
 
 (defun pimacs-search-session-and-wait
     (query &optional customizations tape-scenario action)
-  (let* ((pimacs-search-default-directory
+  (let* ((pimacs-session-directory
           (if (plist-member customizations :directory)
               (plist-get customizations :directory)
             (expand-file-name "sessions" pimacs-project-agent-directory)))
@@ -834,7 +834,7 @@
             (list "--tools" "read,bash,edit,write,grep,find,ls"
                   "--extension" (expand-file-name "fixture" pimacs-integration-directory)))
            (pimacs-send-pop-to-chat nil)
-           parent-chat child-chat child-source parent-source outside-source sessions-list)
+           parent-chat child-chat child-source parent-source outside-source chats-list)
       (unwind-protect
           (progn
             (make-directory child-root)
@@ -853,18 +853,19 @@
             (with-current-buffer child-chat
               (pimacs--force-update-header-line))
 
-            (pimacs-list-sessions)
-            (setq sessions-list (get-buffer "*Pimacs Sessions*"))
-            (with-current-buffer sessions-list
-              (should (eq major-mode 'pimacs-list-sessions-mode))
-              (pimacs-check-tape "send-selects-enclosing-chat-sessions" ".txt"
+            (pimacs-list-chats)
+            (setq chats-list (get-buffer "*Pimacs Chats*"))
+            (with-current-buffer chats-list
+              (should (eq major-mode 'pimacs-list-chats-mode))
+              (pimacs-check-tape "send-selects-enclosing-chat-list" ".txt"
                                  (buffer-substring (point-min) (point-max)))
               (pimacs-check-tape
-               "send-selects-enclosing-chat-sessions" "-header.txt"
-               (substring-no-properties
-                (if (stringp header-line-format)
-                    header-line-format
-                  (nth 2 header-line-format)))))
+               "send-selects-enclosing-chat-list" "-header.txt"
+               (string-trim
+                (substring-no-properties
+                 (if (stringp header-line-format)
+                     header-line-format
+                   (nth 2 header-line-format))))))
 
             (setq child-source (find-file-noselect child-file))
             (with-current-buffer child-source
@@ -896,8 +897,8 @@
         (dolist (source (list child-source parent-source outside-source))
           (when (buffer-live-p source)
             (kill-buffer source)))
-        (when (buffer-live-p sessions-list)
-          (kill-buffer sessions-list))
+        (when (buffer-live-p chats-list)
+          (kill-buffer chats-list))
         (dolist (chat (list child-chat parent-chat))
           (when (buffer-live-p chat)
             (with-current-buffer chat

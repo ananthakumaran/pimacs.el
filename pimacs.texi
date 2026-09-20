@@ -1,7 +1,7 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename pimacs.info
-@set VERSION 0.7.0
+@set VERSION 0.8.0-pre
 @settitle Pimacs User Manual v@value{VERSION}
 @c %**end of header
 
@@ -121,12 +121,11 @@ missing, the report provides a button to install it.
 @node Usage
 @chapter Usage
 
-Run @kbd{M-x pimacs-chat} from any file in your project to start a Pimacs chat
-session.  Use a prefix argument (@kbd{C-u M-x pimacs-chat}) to open a
-transient where you can set a session name and root directory.  Setting a root
-directory starts the chat there instead of using @code{project.el} to find the
-project root.  Run @kbd{M-x pimacs-switch-session} to switch between any
-active chat sessions.
+Run @kbd{M-x pimacs-chat} from any file in your project to start a Pimacs chat.
+With a prefix argument (@kbd{C-u M-x pimacs-chat}), open a transient to set a
+session name and root directory.  Setting a root directory starts the chat
+there instead of using @code{project.el} to find the project root.  Run
+@kbd{M-x pimacs-switch-chat} to switch between active chats.
 
 The chat buffer is read-only except for the prompt input area.  Use
 @kbd{RET} to submit a prompt and @kbd{C-j} to insert a newline.  Press
@@ -140,7 +139,7 @@ input area.
 * Sending Context::
 * Images::
 * State Lines::
-* Managing Sessions::
+* Managing Chats::
 * Searching Sessions::
 * Section Visibility::
 @end menu
@@ -323,18 +322,17 @@ only in a state line, add its key to @code{pimacs-status-widget-hidden-keys}.
 (setq pimacs-status-widget-hidden-keys '("xyz-status"))
 @end example
 
-@node Managing Sessions
-@section Managing Sessions
+@node Managing Chats
+@section Managing Chats
 
-Use @code{pimacs-switch-session} to switch between active Pimacs chat
-sessions using completion.  Use @code{pimacs-list-sessions} to display all
-active chat sessions in a sortable tabulated list.  Press @kbd{RET} to visit
-the session on the current line and @kbd{g} to refresh the list.  Select a
-column header to sort by that column.
+Use @code{pimacs-switch-chat} to switch between active Pimacs chats using
+completion.  Use @code{pimacs-list-chats} to display all active chats in a
+sortable tabulated list.  Press @kbd{RET} to visit the chat on the current line
+and @kbd{g} to refresh the list.  Select a column header to sort by that
+column.
 
 Customize the list's columns and initial sort order with
-@code{pimacs-list-sessions-table} and @code{pimacs-list-sessions-sort-key}.
-
+@code{pimacs-list-chats-table} and @code{pimacs-list-chats-sort-key}.
 @node Searching Sessions
 @section Searching Sessions
 
@@ -853,11 +851,6 @@ Jq executable used for historical session searches.
 Idle time required before rendering another result batch.
 @end defopt
 
-@defopt pimacs-search-default-directory @code{(expand-file-name "sessions/" "~/.pi/agent/")}
-
-Default directory containing Pi session directories.
-@end defopt
-
 @defopt pimacs-search-default-scope @code{'current-project}
 
 Project scope used for new session searches.
@@ -883,10 +876,10 @@ Context lines shown around matches in new session searches.
 Result types enabled for new session searches.
 @end defopt
 
-@defopt pimacs-list-sessions-table
+@defopt pimacs-list-chats-table
 
 @lisp
-'(("Session" . (:session_name face pimacs-session-name-face))
+'(("Chat" . (:session_name face pimacs-session-name-face))
   ("Provider" . :provider)
   ("Model" . :model)
   ("State" . (:agent_state face font-lock-constant-face))
@@ -896,18 +889,28 @@ Result types enabled for new session searches.
   ("Project" . (:project_root face pimacs-session-directory-face)))
 @end lisp
 
-Columns displayed by @code{pimacs-list-sessions}.
+Columns displayed by @code{pimacs-list-chats}.
 
 Each entry is (HEADER . COMPONENT).  COMPONENT uses the same format as an
 entry in @code{pimacs-header-line-format}.
 @end defopt
 
-@defopt pimacs-list-sessions-sort-key @code{'("Session" . nil)}
+@defopt pimacs-list-chats-sort-key @code{'("Chat" . nil)}
 
-Initial sort order for @code{pimacs-list-sessions}.
+Initial sort order for @code{pimacs-list-chats}.
 
-The car is a header from @code{pimacs-list-sessions-table}.  A non-nil cdr sorts
+The car is a header from @code{pimacs-list-chats-table}.  A non-nil cdr sorts
 in descending order.
+@end defopt
+
+@defopt pimacs-session-directory @code{(expand-file-name "sessions/" "~/.pi/agent/")}
+
+Root directory containing persisted Pi session files.
+@end defopt
+
+@defopt pimacs-session-record-max-bytes @code{(* 10 1024)}
+
+Maximum number of bytes read from a session file for its record.
 @end defopt
 
 @defopt pimacs-sync-request-timeout @code{2}

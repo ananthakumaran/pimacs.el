@@ -28,6 +28,7 @@
 (require 'pimacs-utils)
 (require 'pimacs-section)
 (require 'pimacs-ui)
+(require 'pimacs-session)
 
 (defcustom pimacs-search-rg-executable "rg"
   "Ripgrep executable used for historical session searches."
@@ -42,12 +43,6 @@
 (defcustom pimacs-search-render-idle-delay 0.1
   "Idle time required before rendering another result batch."
   :type 'number
-  :group 'pimacs)
-
-(defcustom pimacs-search-default-directory
-  (expand-file-name "sessions/" "~/.pi/agent/")
-  "Default directory containing Pi session directories."
-  :type 'directory
   :group 'pimacs)
 
 (defcustom pimacs-search-default-scope 'current-project
@@ -511,15 +506,9 @@ select(.type == \"match\")
       (pimacs-search--refresh-after-control-change 'query))))
 
 
-(defun pimacs-search--project-session-directory (directory project-root)
-  (let* ((project-root (directory-file-name (expand-file-name project-root)))
-         (path (replace-regexp-in-string "\\`[/\\\\]+" "" project-root))
-         (path (replace-regexp-in-string "[:/\\\\]" "-" path)))
-    (expand-file-name (format "--%s--" path) directory)))
-
 (defun pimacs-search--default-request ()
   (make-pimacs-search-request
-   :directory (expand-file-name pimacs-search-default-directory)
+   :directory (expand-file-name pimacs-session-directory)
    :scope pimacs-search-default-scope
    :query ""
    :search-type pimacs-search-default-search-type
@@ -531,7 +520,7 @@ select(.type == \"match\")
 (defun pimacs-search--request-directory (request)
   (pcase (pimacs-search-request-scope request)
     ('current-project
-     (pimacs-search--project-session-directory
+     (pimacs-session-project-directory
       (pimacs-search-request-directory request)
       (pimacs-search-request-project-root request)))
     ('all (pimacs-search-request-directory request))

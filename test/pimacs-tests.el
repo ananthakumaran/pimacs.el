@@ -78,6 +78,18 @@
       (dolist (buffer (list first second unnamed unique))
         (kill-buffer buffer)))))
 
+(ert-deftest pimacs--resume-session-candidates-format-session-records ()
+  (let* ((record (make-pimacs-session-record
+                  :id "12345678-0000-0000-0000-000000000000"
+                  :timestamp (encode-time 0 4 3 2 1 2026)
+                  :parent-id "87654321-0000-0000-0000-000000000000"
+                  :name "named"
+                  :preview "preview"))
+         (candidate (car (pimacs--resume-session-candidates (list record)))))
+    (should (eq (cdr candidate) record))
+    (should (equal (substring-no-properties (car candidate))
+                   "00000000  2026-01-02 03:04  [named] preview (parent: 00000000)"))))
+
 (ert-deftest pimacs--parse-slash-command ()
   (should (equal (pimacs--parse-slash-command "/model") '(pimacs-select-model . nil)))
   (should (equal (pimacs--parse-slash-command "/new") '(pimacs-new-session . nil)))

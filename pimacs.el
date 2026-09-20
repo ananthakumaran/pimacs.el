@@ -4,7 +4,7 @@
 
 ;; Author: Anantha kumaran <ananthakumaran@gmail.com>
 ;; URL: https://github.com/ananthakumaran/pimacs.el
-;; Version: 0.7.0
+;; Version: 0.8.0-pre
 ;; Keywords: convenience processes
 ;; Package-Requires: ((emacs "29.1") (compat "31.0") (timeout "2.1.7") (pcre2el "1.12") (spinner "1.7") (transient "0.3.7"))
 
@@ -36,7 +36,6 @@
 (require 'wid-edit)
 (require 'ring)
 (require 'subr-x)
-(require 'parse-time)
 (require 'timeout)
 (require 'spinner)
 (require 'thingatpt)
@@ -58,6 +57,7 @@
 (require 'pimacs-agent)
 (require 'pimacs-state-line)
 (require 'pimacs-session)
+(require 'pimacs-chat)
 (require 'pimacs-search)
 
 (defface pimacs-chat-title-face
@@ -2271,54 +2271,25 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                (pimacs-section--create-section 'thinking pimacs-section--root-section
                  (insert (format "Cycled thinking level to: %s" level)))))))))))
 
-(cl-defstruct pimacs-session-choice
-  id message timestamp cwd path parent-id name)
-
-(defun pimacs--read-session-choice (filename)
-  (pimacs--with-temp-buffer
-    (insert-file-contents filename nil 0 10000)
-    (goto-char (point-min))
-    (let ((id nil)
-          (timestamp nil)
-          (cwd nil)
-          (parent-id nil)
-          (first-text nil)
-          (name nil)
-          (lines-read 0))
-      (while (and (< lines-read 20) (not (eobp)))
-        (let ((line (buffer-substring-no-properties
-                     (line-beginning-position) (line-end-position))))
-          (unless (string-empty-p line)
-            (condition-case nil
-                (let ((json (json-parse-string line :object-type 'plist)))
-                  (pcase (intern (plist-get json :type))
-                    ('session
-                     (setq id (plist-get json :id)
-                           timestamp (plist-get json :timestamp)
-                           cwd (plist-get json :cwd)
-                           parent-id (when-let ((ps (plist-get json :parentSession)))
-                                       (file-name-sans-extension
-                                        (file-name-nondirectory ps))))
-                     (when parent-id
-                       (setq parent-id (car (last (split-string parent-id "_"))))))
-                    ('session_info
-                     (setq name (plist-get json :name)))
-                    ('message
-                     (unless first-text
-                       (setq first-text (pimacs--content-header (plist-get (plist-get json :message) :content)))))))
-              (error nil))))
-        (forward-line 1)
-        (cl-incf lines-read))
-      (make-pimacs-session-choice :id id
-                                  :path filename
-                                  :timestamp (when timestamp
-                                               (condition-case nil
-                                                   (parse-iso8601-time-string timestamp)
-                                                 (error nil)))
-                                  :cwd cwd
-                                  :parent-id parent-id
-                                  :message first-text
-                                  :name name))))
+(defun pimacs--resume-session-candidates (records)
+  (mapcar
+   (lambda (record)
+     (let* ((timestamp (pimacs-session-record-timestamp record))
+            (formatted-time (if timestamp
+                                (format-time-string "%F %R" timestamp)
+                              ""))
+            (short-id (pimacs--short-uuid (pimacs-session-record-id record)))
+            (short-parent (pimacs--short-uuid
+                           (pimacs-session-record-parent-id record))))
+       (cons (format "%s  %s  %s%s%s" short-id formatted-time
+                     (if (pimacs-session-record-name record)
+                         (propertize (format "[%s] " (pimacs-session-record-name record))
+                                     'face 'pimacs-session-name-face)
+                       "")
+                     (pimacs-session-record-preview record)
+                     (if short-parent (format " (parent: %s)" short-parent) ""))
+             record)))
+   records))
 
 (defun pimacs-resume ()
   "Resume a previous session."
@@ -2331,36 +2302,16 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
          (let* ((data (plist-get resp :data))
                 (session-file (plist-get data :sessionFile))
                 (session-dir (file-name-directory session-file))
-                (files (when session-dir
-                         (seq-take
-                          (sort (directory-files session-dir t "\\.jsonl$")
-                                #'string>)
-                          pimacs-resume-max-sessions)))
-                (sessions (mapcar #'pimacs--read-session-choice files)))
-           (if (null sessions)
+                (records (when session-dir
+                           (pimacs-session-recent-records
+                            session-dir nil pimacs-resume-max-sessions))))
+           (if (null records)
                (message "No session files found in %s" (abbreviate-file-name session-dir))
-             (let* ((candidates
-                     (mapcar
-                      (lambda (s)
-                        (let* ((ts (pimacs-session-choice-timestamp s))
-                               (formatted-time (if ts
-                                                   (format-time-string "%F %R" ts)
-                                                 ""))
-                               (short-id (pimacs--short-uuid (pimacs-session-choice-id s)))
-                               (short-parent (pimacs--short-uuid (pimacs-session-choice-parent-id s))))
-                          (cons (format "%s  %s  %s%s%s" short-id formatted-time
-                                        (if (pimacs-session-choice-name s)
-                                            (propertize (format "[%s] " (pimacs-session-choice-name s))
-                                                        'face 'pimacs-session-name-face)
-                                          "")
-                                        (pimacs-session-choice-message s)
-                                        (if short-parent (format " (parent: %s)" short-parent) ""))
-                                s)))
-                      sessions))
+             (let* ((candidates (pimacs--resume-session-candidates records))
                     (selected (pimacs--completing-read "Resume session: " candidates))
-                    (choice (pimacs--alist-get-equal selected candidates))
-                    (session-path (pimacs-session-choice-path choice)))
-               (pimacs--switch-session session-path "Resumed session")))))))))
+                    (record (pimacs--alist-get-equal selected candidates)))
+               (pimacs--switch-session (pimacs-session-record-path record)
+                                       "Resumed session")))))))))
 
 (defun pimacs--clear-sections ()
   (pimacs--history-render-reset)

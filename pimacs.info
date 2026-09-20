@@ -20,8 +20,8 @@ END-INFO-DIR-ENTRY
 
 File: pimacs.info,  Node: Top,  Next: Introduction,  Up: (dir)
 
-Pimacs User Manual v0.7.0
-*************************
+Pimacs User Manual v0.8.0-pre
+*****************************
 
 Pimacs is an Emacs client for Pi Coding Agent (https://pi.dev/).  For
 release history, see the changelog (changelog.html).
@@ -97,11 +97,10 @@ File: pimacs.info,  Node: Usage,  Next: UI Customization,  Prev: Doctor,  Up: To
 *******
 
 Run ‘M-x pimacs-chat’ from any file in your project to start a Pimacs
-chat session.  Use a prefix argument (‘C-u M-x pimacs-chat’) to open a
-transient where you can set a session name and root directory.  Setting
-a root directory starts the chat there instead of using ‘project.el’ to
-find the project root.  Run ‘M-x pimacs-switch-session’ to switch
-between any active chat sessions.
+chat.  With a prefix argument (‘C-u M-x pimacs-chat’), open a transient
+to set a session name and root directory.  Setting a root directory
+starts the chat there instead of using ‘project.el’ to find the project
+root.  Run ‘M-x pimacs-switch-chat’ to switch between active chats.
 
    The chat buffer is read-only except for the prompt input area.  Use
 ‘RET’ to submit a prompt and ‘C-j’ to insert a newline.  Press ‘i’ from
@@ -115,7 +114,7 @@ anywhere in the chat buffer to move point to the prompt input area.
 * Sending Context::
 * Images::
 * State Lines::
-* Managing Sessions::
+* Managing Chats::
 * Searching Sessions::
 * Section Visibility::
 
@@ -237,7 +236,7 @@ chat buffer, or paste a supported image from the clipboard via
 the mouse, or place point on it and press ‘backspace’ or ‘delete’.
 
 
-File: pimacs.info,  Node: State Lines,  Next: Managing Sessions,  Prev: Images,  Up: Usage
+File: pimacs.info,  Node: State Lines,  Next: Managing Chats,  Prev: Images,  Up: Usage
 
 4.6 State Lines
 ===============
@@ -271,22 +270,22 @@ status only in a state line, add its key to
      (setq pimacs-status-widget-hidden-keys '("xyz-status"))
 
 
-File: pimacs.info,  Node: Managing Sessions,  Next: Searching Sessions,  Prev: State Lines,  Up: Usage
+File: pimacs.info,  Node: Managing Chats,  Next: Searching Sessions,  Prev: State Lines,  Up: Usage
 
-4.7 Managing Sessions
-=====================
+4.7 Managing Chats
+==================
 
-Use ‘pimacs-switch-session’ to switch between active Pimacs chat
-sessions using completion.  Use ‘pimacs-list-sessions’ to display all
-active chat sessions in a sortable tabulated list.  Press ‘RET’ to visit
-the session on the current line and ‘g’ to refresh the list.  Select a
-column header to sort by that column.
+Use ‘pimacs-switch-chat’ to switch between active Pimacs chats using
+completion.  Use ‘pimacs-list-chats’ to display all active chats in a
+sortable tabulated list.  Press ‘RET’ to visit the chat on the current
+line and ‘g’ to refresh the list.  Select a column header to sort by
+that column.
 
    Customize the list's columns and initial sort order with
-‘pimacs-list-sessions-table’ and ‘pimacs-list-sessions-sort-key’.
+‘pimacs-list-chats-table’ and ‘pimacs-list-chats-sort-key’.
 
 
-File: pimacs.info,  Node: Searching Sessions,  Next: Section Visibility,  Prev: Managing Sessions,  Up: Usage
+File: pimacs.info,  Node: Searching Sessions,  Next: Section Visibility,  Prev: Managing Chats,  Up: Usage
 
 4.8 Searching Sessions
 ======================
@@ -760,11 +759,6 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
 
      Idle time required before rendering another result batch.
 
- -- User Option: pimacs-search-default-directory (expand-file-name
-          "sessions/" "~/.pi/agent/")
-
-     Default directory containing Pi session directories.
-
  -- User Option: pimacs-search-default-scope 'current-project
 
      Project scope used for new session searches.
@@ -785,9 +779,9 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
 
      Result types enabled for new session searches.
 
- -- User Option: pimacs-list-sessions-table
+ -- User Option: pimacs-list-chats-table
 
-          '(("Session" . (:session_name face pimacs-session-name-face))
+          '(("Chat" . (:session_name face pimacs-session-name-face))
             ("Provider" . :provider)
             ("Model" . :model)
             ("State" . (:agent_state face font-lock-constant-face))
@@ -796,17 +790,26 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
             ("Cost" . (:cost face shadow))
             ("Project" . (:project_root face pimacs-session-directory-face)))
 
-     Columns displayed by ‘pimacs-list-sessions’.
+     Columns displayed by ‘pimacs-list-chats’.
 
      Each entry is (HEADER .  COMPONENT). COMPONENT uses the same format
      as an entry in ‘pimacs-header-line-format’.
 
- -- User Option: pimacs-list-sessions-sort-key '("Session" . nil)
+ -- User Option: pimacs-list-chats-sort-key '("Chat" . nil)
 
-     Initial sort order for ‘pimacs-list-sessions’.
+     Initial sort order for ‘pimacs-list-chats’.
 
-     The car is a header from ‘pimacs-list-sessions-table’.  A non-nil
-     cdr sorts in descending order.
+     The car is a header from ‘pimacs-list-chats-table’.  A non-nil cdr
+     sorts in descending order.
+
+ -- User Option: pimacs-session-directory (expand-file-name "sessions/"
+          "~/.pi/agent/")
+
+     Root directory containing persisted Pi session files.
+
+ -- User Option: pimacs-session-record-max-bytes (* 10 1024)
+
+     Maximum number of bytes read from a session file for its record.
 
  -- User Option: pimacs-sync-request-timeout 2
 
@@ -1235,25 +1238,25 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
 Tag Table:
 Node: Top746
-Node: Introduction1151
-Node: Setup1408
-Node: Doctor2205
-Node: Usage2577
-Node: Slash Commands3483
-Node: File Name Completion5981
-Node: Bash6309
-Node: Sending Context6576
-Node: Images7384
-Node: State Lines8249
-Node: Managing Sessions9577
-Node: Searching Sessions10197
-Node: Section Visibility10986
-Node: UI Customization13017
-Node: Sandbox16288
-Node: How It Works16681
-Node: Keybindings17833
-Node: Custom Variables22066
-Node: Custom Faces39359
+Node: Introduction1159
+Node: Setup1416
+Node: Doctor2213
+Node: Usage2585
+Node: Slash Commands3453
+Node: File Name Completion5951
+Node: Bash6279
+Node: Sending Context6546
+Node: Images7354
+Node: State Lines8219
+Node: Managing Chats9544
+Node: Searching Sessions10124
+Node: Section Visibility10910
+Node: UI Customization12941
+Node: Sandbox16212
+Node: How It Works16605
+Node: Keybindings17757
+Node: Custom Variables21990
+Node: Custom Faces39389
 
 End Tag Table
 

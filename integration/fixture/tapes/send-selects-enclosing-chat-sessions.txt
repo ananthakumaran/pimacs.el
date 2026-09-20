@@ -1,2 +1,0 @@
-child     fixture    gemma4:12b idle    0/200.0k  0          0      PARENT_DIR/child/
-parent    fixture    gemma4:12b idle    0/200.0k  0          0      PARENT_DIR/
