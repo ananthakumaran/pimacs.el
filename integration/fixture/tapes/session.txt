@@ -38,7 +38,7 @@ Messages
  Assistant: 1
  Tool Calls: 0
  Tool Results: 0
- Total: 2
+ Total: 3
 
 Tokens
  Input: 1520

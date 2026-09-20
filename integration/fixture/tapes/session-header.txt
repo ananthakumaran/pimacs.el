@@ -1,1 +1,1 @@
-session=test-session messages=2/0                                        total=2
+session=test-session messages=3/0                                        total=3
