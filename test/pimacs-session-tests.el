@@ -23,7 +23,8 @@
            (concat
             "{\"type\":\"session\",\"id\":\"session-id\",\"timestamp\":\"2026-01-02T03:04:05Z\",\"cwd\":\"/tmp/project\",\"parentSession\":\"/tmp/parent_1234.jsonl\"}\n"
             "{\"type\":\"session_info\",\"name\":\"named session\"}\n"
-            "{\"type\":\"message\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"first line\\nsecond line\"}]}}\n"))
+            "{\"type\":\"message\",\"message\":{\"role\":\"system\",\"content\":[{\"type\":\"text\",\"text\":\"system message\"}]}}\n"
+            "{\"type\":\"message\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"first line\\nsecond line\"}]}}\n"))
           (let ((record (pimacs-session-read-record file)))
             (should (equal (pimacs-session-record-id record) "session-id"))
             (should (equal (pimacs-session-record-cwd record) "/tmp/project"))

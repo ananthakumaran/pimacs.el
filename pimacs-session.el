@@ -152,7 +152,8 @@
                           ('session_info
                            (setq name (plist-get record :name)))
                           ('message
-                           (unless preview
+                           (when (and (not preview)
+                                      (equal (plist-get (plist-get record :message) :role) "user"))
                              (setq preview
                                    (pimacs-session--content-preview
                                     (plist-get (plist-get record :message) :content)))))))
