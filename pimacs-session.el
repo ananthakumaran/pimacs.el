@@ -34,7 +34,7 @@
   :type 'directory
   :group 'pimacs)
 
-(defcustom pimacs-session-record-max-bytes (* 10 1024)
+(defcustom pimacs-session-record-max-bytes (* 100 1024)
   "Maximum number of bytes read from a session file for its record."
   :type 'integer
   :group 'pimacs)

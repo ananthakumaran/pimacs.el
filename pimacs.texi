@@ -936,7 +936,7 @@ in descending order.
 Root directory containing persisted Pi session files.
 @end defopt
 
-@defopt pimacs-session-record-max-bytes @code{(* 10 1024)}
+@defopt pimacs-session-record-max-bytes @code{(* 100 1024)}
 
 Maximum number of bytes read from a session file for its record.
 @end defopt
