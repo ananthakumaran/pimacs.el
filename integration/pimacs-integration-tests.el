@@ -610,12 +610,14 @@
     (let ((pimacs-session-directory
            (expand-file-name "sessions" pimacs-project-agent-directory)))
       (pimacs-send-prompt-and-wait "/name standalone-resume")
-      (pimacs-wait-for-agent-event
-          (lambda (event) (equal (plist-get event :type) "agent_start"))
-        (pimacs-send-prompt "h1"))
-      (pimacs-wait-for-agent-event
-          (lambda (event) (equal (plist-get event :type) "agent_settled"))
-        (pimacs-drain-process-output))
+      (let (agent-started)
+        (pimacs-wait-for-agent-event
+            (lambda (event)
+              (pcase (plist-get event :type)
+                ("agent_start" (setq agent-started t) nil)
+                ("agent_settled" agent-started)))
+          (pimacs-send-prompt "h1"))
+        (should agent-started))
       (let* ((closed-chat (pimacs--current-chat))
              (project-key (buffer-local-value 'pimacs--project-key closed-chat)))
         (should (buffer-live-p closed-chat))
