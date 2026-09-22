@@ -145,6 +145,8 @@
          (replace-regexp-in-string (regexp-quote pimacs-project-directory) "PROJECT_DIR")
          (replace-regexp-in-string
           (regexp-quote abbreviated-project-directory) "PROJECT_DIR")
+         (replace-regexp-in-string
+          "/[^[:space:]`\"']*/integration/project" "PROJECT_DIR")
          (replace-regexp-in-string (regexp-quote session_dir) "SESSION_DIR")
          (replace-regexp-in-string
           (concat (regexp-quote (file-name-as-directory temporary-file-directory))
