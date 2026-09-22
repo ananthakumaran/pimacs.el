@@ -11,6 +11,6 @@ Types: [ ] user   [ ] assistant   [ ] thinking   [ ] tool call   [ ] tool result
 Finished: 1 matches in 1 sessions.
 
 UUID • DISPLAY_TIMESTAMP                                           RELATIVE_TIME
-assistant> The user asked for a 100-word story.
+assistant> The user asked the assistant to tell a story that is approximately 100 words long.
 
 ## Early Progress
