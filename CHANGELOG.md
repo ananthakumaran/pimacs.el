@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.8.0 - 2026-09-24
+
 ### Added
 
 - `M-x pimacs-resume` can resume persisted sessions without an active chat, either from the current project or across all projects.
