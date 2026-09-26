@@ -1051,6 +1051,65 @@
                    (marker-position (widget-get pimacs--prompt-widget :from))
                    (marker-position (widget-get pimacs--prompt-after-widget :from))))))))
 
+(defun pimacs-tests--setup-chat-widgets ()
+  (setq pimacs--prompt-widget
+        (widget-create 'editable-field :format "%[user>%] %v" :value ""))
+  (setq pimacs--prompt-after-widget
+        (widget-create 'pimacs-item :face 'pimacs-widget-face pimacs--empty-widget-text))
+  (setq pimacs--status-widget
+        (widget-create 'pimacs-item :face 'pimacs-status-face pimacs--empty-widget-text))
+  (setq pimacs--prompt-widget-lines (make-hash-table :test 'equal))
+  (setq pimacs--status-texts (make-hash-table :test 'equal))
+  (widget-setup))
+
+(ert-deftest pimacs--widget-save-excursion-anchors-view-when-scrolled-away ()
+  "Inserting output while scrolled away must not move the view."
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (pimacs-tests--setup-chat-widgets)
+    (pimacs--widget-save-excursion
+      (pimacs-section--create-section 'info pimacs-section--root-section
+        (insert "first\nsecond\nthird\nfourth\nfifth\n")))
+    (let ((window 'pimacs-test-window)
+          (visible-end (save-excursion
+                         (goto-char (point-min))
+                         (forward-line 2)
+                         (point))))
+      (cl-letf (((symbol-function 'get-buffer-window) (lambda (&rest _) window))
+                ((symbol-function 'selected-window) (lambda () window))
+                ((symbol-function 'pimacs--follow-tail-p) (lambda () nil))
+                ((symbol-function 'window-end) (lambda (&rest _) visible-end))
+                ((symbol-function 'window-start) (lambda (&rest _) (point-min)))
+                ((symbol-function 'pimacs--recenter-chat)
+                 (lambda () (ert-fail "recentered while scrolled away"))))
+        (should-not pimacs--prompt-detached)
+        (pimacs--widget-save-excursion
+          (pimacs-section--create-section 'info pimacs-section--root-section
+            (insert "new streaming output\n")))
+        (should pimacs--prompt-detached)
+        (should (= (point) (1- visible-end)))))))
+
+(ert-deftest pimacs--widget-save-excursion-returns-to-prompt-at-tail ()
+  "Following resumes once the tail is visible again."
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (pimacs-tests--setup-chat-widgets)
+    (pimacs--widget-save-excursion
+      (pimacs-section--create-section 'info pimacs-section--root-section
+        (insert "content\n")))
+    (setq pimacs--prompt-detached t)
+    (let (recentered)
+      (cl-letf (((symbol-function 'get-buffer-window) (lambda (&rest _) 'pimacs-test-window))
+                ((symbol-function 'pimacs--point-in-prompt-p) (lambda () t))
+                ((symbol-function 'pimacs--window-at-tail-p) (lambda () t))
+                ((symbol-function 'pimacs--recenter-chat) (lambda () (setq recentered t))))
+        (pimacs--widget-save-excursion
+          (pimacs-section--create-section 'info pimacs-section--root-section
+            (insert "more output\n")))
+        (should-not pimacs--prompt-detached)
+        (should recentered)
+        (should (= (point) (widget-field-text-end pimacs--prompt-widget)))))))
+
 (ert-deftest pimacs--history-split-entries-keeps-tool-call-with-result ()
   (let* ((prefix (cl-loop for index below 9
                           collect (list :type "session_info"
