@@ -3072,7 +3072,7 @@ With a prefix argument, show a transient for setting NAME and ROOT."
         (if (one-window-p)
             (bury-buffer)
           (delete-window chat-window)))
-    (pimacs-chat)))
+    (pimacs-chat--create nil nil)))
 
 (defun pimacs-quit-chat ()
   "Quit the current chat window."
@@ -3106,7 +3106,7 @@ If non-nil, call CB after the session refresh finishes."
     (user-error "Session file no longer exists: %s" session-file))
   (unless (file-directory-p cwd)
     (user-error "Session directory no longer exists: %s" cwd))
-  (with-current-buffer (pimacs-chat nil cwd)
+  (with-current-buffer (pimacs-chat--create nil cwd)
     (pimacs--switch-session session-file "Resumed session")))
 
 (setq pimacs-search-resume-function #'pimacs-resume-session-file)
@@ -3152,7 +3152,7 @@ If non-nil, call CB after the session refresh finishes."
   (let ((root default-directory))
     (pimacs-quit-chat)
     (let ((default-directory root))
-      (pimacs-chat))))
+      (pimacs-chat--create nil nil))))
 
 (provide 'pimacs)
 
