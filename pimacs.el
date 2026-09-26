@@ -523,6 +523,7 @@ with the message plist to insert the custom message content."
   (pimacs--render-insert pimacs-thinking-renderer text streaming))
 
 (pimacs--def-permanent-buffer-local pimacs--prompt-widget nil)
+(pimacs--def-permanent-buffer-local pimacs--prompt-detached nil)
 (pimacs--def-permanent-buffer-local pimacs--attached-images (vector))
 (pimacs--def-permanent-buffer-local pimacs--attached-images-widget nil)
 (pimacs--def-permanent-buffer-local pimacs--prompt-before-widget nil)
@@ -598,18 +599,49 @@ with the message plist to insert the custom message content."
     (>= (window-point window)
         (widget-get pimacs--prompt-widget :from))))
 
+(defun pimacs--window-at-tail-p (&optional window)
+  "Non-nil when WINDOW is showing the end of the current buffer."
+  (let ((window (or window (get-buffer-window (current-buffer) t))))
+    (and (window-live-p window)
+         (with-current-buffer (window-buffer window)
+           (or (>= (or (window-end window t) 0) (point-max))
+               ;; Last line may be partially visible.
+               (pos-visible-in-window-p (point-max) window t))))))
+
+(defun pimacs--follow-tail-p ()
+  "Non-nil when point is in the prompt and the window shows the tail."
+  (and (pimacs--point-in-prompt-p)
+       (pimacs--window-at-tail-p)))
+
 
 (defmacro pimacs--widget-save-excursion-preserving-undo (&rest body)
   "Insert BODY before PROMPT-WIDGET and restore focus, preserving undo."
   (declare (indent 0))
-  (let ((follow-p (make-symbol "follow-p")))
-    `(let* ((inhibit-read-only t)
-            (,follow-p (pimacs--point-in-prompt-p)))
-       (save-excursion
-         (goto-char (widget-get pimacs--prompt-widget :from))
-         ,@body)
-       (when ,follow-p
-         (pimacs--recenter-chat)))))
+  (let ((follow-p (make-symbol "follow-p"))
+        (window (make-symbol "window"))
+        (visible-end (make-symbol "visible-end")))
+    `(progn
+       ;; Tail visible again: resume following.
+       (when (and pimacs--prompt-detached (pimacs--window-at-tail-p))
+         (pimacs-focus-prompt)
+         (setq pimacs--prompt-detached nil))
+       (let* ((inhibit-read-only t)
+              (,window (get-buffer-window (current-buffer) t))
+              (,follow-p (pimacs--follow-tail-p))
+              (,visible-end (and ,window (not ,follow-p)
+                                 (eq ,window (selected-window))
+                                 (window-end ,window))))
+         (save-excursion
+           (goto-char (widget-get pimacs--prompt-widget :from))
+           ,@body)
+         (cond
+          (,follow-p
+           (pimacs--recenter-chat))
+          ;; Scrolled away: output inserts before the prompt and would push
+          ;; point off-screen, so pin the view to the last visible line.
+          ((and ,visible-end (> (point) ,visible-end))
+           (setq pimacs--prompt-detached t)
+           (goto-char (max (window-start ,window) (1- ,visible-end)))))))))
 
 (defmacro pimacs--widget-save-excursion (&rest body)
   "Insert generated BODY before PROMPT-WIDGET and restore focus."
@@ -1725,7 +1757,7 @@ is non-nil, insert an ellipsis instead of ARGS."
   (pimacs--recenter-chat))
 
 (defun pimacs--autohide-sections ()
-  (when (pimacs--point-in-prompt-p)
+  (when (pimacs--follow-tail-p)
     (pimacs-section-autohide)
     (pimacs--recenter-chat)))
 
