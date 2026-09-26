@@ -30,6 +30,23 @@
 (defun pimacs--json-read-object ()
   (json-parse-buffer :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
 
+(defun pimacs--json-parse-string (string)
+  (json-parse-string string :object-type 'plist :null-object 'json-null :false-object 'json-false :array-type 'list))
+
+(defun pimacs--json-null-p (value)
+  (eq value 'json-null))
+
+(defun pimacs--json-nullish-p (value)
+  (or (null value) (pimacs--json-null-p value)))
+
+(defun pimacs--json-false-p (value)
+  (eq value 'json-false))
+
+(defun pimacs--json-get (object key)
+  (let ((value (plist-get object key)))
+    (unless (pimacs--json-null-p value)
+      value)))
+
 (defun pimacs--json-encode (obj)
   "Encode OBJ into a JSON string.  JSON arrays must be represented with vectors."
   (json-serialize obj :null-object 'json-null :false-object 'json-false))
@@ -387,7 +404,7 @@ PRED is called with KEY VALUE."
   (cl-reduce
    (lambda (object key)
      (when object
-       (plist-get object key)))
+       (pimacs--json-get object key)))
    args
    :initial-value list))
 

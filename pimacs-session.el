@@ -121,8 +121,8 @@
                                    (member (plist-get entry :type)
                                            '("text" "thinking")))
                                  items)))
-      (when-let ((header (car (split-string (or (plist-get item :text)
-                                                (plist-get item :thinking))
+      (when-let ((header (car (split-string (or (pimacs--json-get item :text)
+                                                (pimacs--json-get item :thinking))
                                             "\n" t))))
         (string-trim header)))))
 
@@ -145,23 +145,23 @@
                            (line-beginning-position) (line-end-position))))
                 (unless (string-empty-p line)
                   (condition-case nil
-                      (let ((record (json-parse-string line :object-type 'plist)))
+                      (let ((record (pimacs--json-parse-string line)))
                         (pcase (intern (plist-get record :type))
                           ('session
-                           (setq id (plist-get record :id)
-                                 timestamp (plist-get record :timestamp)
-                                 cwd (plist-get record :cwd)
-                                 parent-path (when-let ((parent (plist-get record :parentSession)))
+                           (setq id (pimacs--json-get record :id)
+                                 timestamp (pimacs--json-get record :timestamp)
+                                 cwd (pimacs--json-get record :cwd)
+                                 parent-path (when-let ((parent (pimacs--json-get record :parentSession)))
                                                (expand-file-name parent (file-name-directory file)))
                                  parent-id (pimacs-session--parent-id parent-path)))
                           ('session_info
-                           (setq name (plist-get record :name)))
+                           (setq name (pimacs--json-get record :name)))
                           ('message
                            (when (and (not preview)
                                       (equal (plist-get (plist-get record :message) :role) "user"))
                              (setq preview
                                    (pimacs-session--content-preview
-                                    (plist-get (plist-get record :message) :content)))))))
+                                    (pimacs--json-get (pimacs--json-get record :message) :content)))))))
                     (error nil))))
               (forward-line 1)
               (cl-incf lines-read))

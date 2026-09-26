@@ -153,7 +153,7 @@ See `pimacs-header-line-format' for available components."
 
 (defun pimacs--format-state-line-value (value)
   (cond
-   ((memq value '(nil json-null)) "?")
+   ((pimacs--json-nullish-p value) "?")
    (t (format "%s" value))))
 
 (defun pimacs--format-state-line-model (state)
@@ -376,13 +376,13 @@ Unlike `replace-regexp-in-string', this preserves TEXT's properties."
      "get_state" '()
      (lambda (resp)
        (when (pimacs--response-success-p resp)
-         (setq state-result (plist-get resp :data))
+         (setq state-result (pimacs--json-get resp :data))
          (funcall try-update))))
     (pimacs--send-command
      "get_session_stats" '()
      (lambda (resp)
        (when (pimacs--response-success-p resp)
-         (setq stats-result (plist-get resp :data))
+         (setq stats-result (pimacs--json-get resp :data))
          (funcall try-update))))))
 
 (timeout-debounce 'pimacs--update-header-line 1)

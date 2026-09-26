@@ -349,7 +349,7 @@ with the message plist to insert the custom message content."
     `(let ((,resp-sym ,response))
        (if (pimacs--response-success-p ,resp-sym)
            (progn ,@body)
-         (when-let (err (plist-get ,resp-sym :error))
+         (when-let (err (pimacs--json-get ,resp-sym :error))
            (pimacs--widget-save-excursion
              (pimacs-section--create-section 'error pimacs-section--root-section
                (pimacs--insert-error (format "%s" err))))
@@ -692,22 +692,23 @@ with the message plist to insert the custom message content."
 ;;; Chat
 
 (defun pimacs--message-role (message)
-  (or (plist-get message :role) "unknown"))
+  (or (pimacs--json-get message :role) "unknown"))
 
 (defun pimacs--content-text (content)
   (let ((content (pimacs--content-normalize content)))
     (mapconcat
      (lambda (item)
        (if (equal (plist-get item :type) "text")
-           (or (plist-get item :text) "")
+           (or (pimacs--json-get item :text) "")
          ""))
      content
      "")))
 
 (defun pimacs--content-normalize (content)
-  (if (stringp content)
-      (list (list :type "text" :text content))
-    content))
+  (cond
+   ((pimacs--json-null-p content) nil)
+   ((stringp content) (list (list :type "text" :text content)))
+   (t content)))
 
 (defmacro pimacs--docontent (spec &rest body)
   (declare (indent 1) (debug ((symbolp form) body)))
@@ -721,22 +722,24 @@ with the message plist to insert the custom message content."
     (when-let ((item (cl-find-if (lambda (i)
                                    (member (plist-get i :type) '("text" "thinking")))
                                  content)))
-      (pimacs--section-header (or (plist-get item :text)
-                                  (plist-get item :thinking))))))
+      (pimacs--section-header (or (pimacs--json-get item :text)
+                                  (pimacs--json-get item :thinking))))))
 
 (defun pimacs--insert-content-item (item &optional markdown-p)
   (pcase (plist-get item :type)
     ("text"
-     (if markdown-p
-         (pimacs--render-insert pimacs-markdown-renderer (plist-get item :text) nil)
-       (insert (plist-get item :text))))
+     (when-let ((text (pimacs--json-get item :text)))
+       (if markdown-p
+           (pimacs--render-insert pimacs-markdown-renderer text nil)
+         (insert text))))
     ("image"
      (when-let ((image (pimacs--create-image item)))
        (insert "\n")
        (insert-image image)
        (insert "\n")))
     ("thinking"
-     (pimacs--thinking-insert (plist-get item :thinking) nil))
+     (when-let ((thinking (pimacs--json-get item :thinking)))
+       (pimacs--thinking-insert thinking nil)))
     (_
      (insert (prin1-to-string item)))))
 
@@ -762,8 +765,8 @@ with the message plist to insert the custom message content."
 
 (defun pimacs--create-image (item)
   (when (display-images-p)
-    (when-let ((data (plist-get item :data))
-               (mime-type (plist-get item :mimeType))
+    (when-let ((data (pimacs--json-get item :data))
+               (mime-type (pimacs--json-get item :mimeType))
                (image-type (pimacs--alist-get-equal mime-type pimacs--image-type-alist))
                (raw-data (base64-decode-string data))
                (max-width (floor (* 0.9 (window-pixel-width))))
@@ -800,8 +803,8 @@ with the message plist to insert the custom message content."
 
 (defun pimacs--insert-custom-message (message)
   (let ((display (plist-get message :display))
-        (custom-type (plist-get message :customType)))
-    (unless (eq display 'json-false)
+        (custom-type (pimacs--json-get message :customType)))
+    (unless (pimacs--json-false-p display)
       (if-let ((inserter (pimacs--alist-get-equal custom-type pimacs-insert-custom-message-functions)))
           (funcall inserter message)
         ;; Default rendering: use customType as role, render content
@@ -871,8 +874,8 @@ with the message plist to insert the custom message content."
          (remhash tool-call-id pimacs--tool-calls))))
 
     ("bashExecution"
-     (let* ((args (list :command (plist-get message :command)))
-            (content (pimacs--content-normalize (plist-get message :output))))
+     (let* ((args (list :command (pimacs--json-get message :command)))
+            (content (pimacs--content-normalize (pimacs--json-get message :output))))
        (pimacs--widget-save-excursion
          (let* ((call-section (pimacs-section--new-section 'tool-call pimacs-section--root-section :padding "\n"))
                 (result-section (pimacs-section--new-section 'tool-result call-section)))
@@ -991,7 +994,7 @@ with the message plist to insert the custom message content."
 
 (defun pimacs--handle-message-end (event)
   (let* ((message (plist-get event :message))
-         (error-message (plist-get message :errorMessage))
+         (error-message (pimacs--json-get message :errorMessage))
          (role (pimacs--message-role message)))
     (pcase role
       ("assistant"
@@ -1005,7 +1008,7 @@ with the message plist to insert the custom message content."
                                             (pimacs-content-section-content content-section)))
                      (operations (and rendered-content
                                       (pimacs--render-content-update
-                                       rendered-content (plist-get item :thinking) nil))))
+                                       rendered-content (pimacs--json-get item :thinking) nil))))
                 (when rendered-content
                   (pimacs--render-clear-content rendered-content))
                 (pimacs--widget-save-excursion
@@ -1030,7 +1033,7 @@ with the message plist to insert the custom message content."
                                             (pimacs-content-section-content content-section)))
                      (operations (and rendered-content
                                       (pimacs--render-content-update
-                                       rendered-content (plist-get item :text) nil))))
+                                       rendered-content (pimacs--json-get item :text) nil))))
                 (when rendered-content
                   (pimacs--render-clear-content rendered-content))
                 (pimacs--widget-save-excursion
@@ -1062,9 +1065,9 @@ with the message plist to insert the custom message content."
 
 ;; read
 (defun pimacs--insert-read-args (args)
-  (when-let ((path (plist-get args :path)))
-    (let* ((offset (plist-get args :offset))
-           (limit (plist-get args :limit))
+  (when-let ((path (pimacs--json-get args :path)))
+    (let* ((offset (pimacs--json-get args :offset))
+           (limit (pimacs--json-get args :limit))
            (start-line (or offset 1))
            (suffix (cond
                     ((and (null offset) (null limit)) "")
@@ -1074,12 +1077,12 @@ with the message plist to insert the custom message content."
       (pimacs--insert-file-link path (pimacs--project-root) suffix))))
 
 (defun pimacs--insert-read-result (content _details args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (dolist (item content)
       (pcase (plist-get item :type)
         ("text"
-         (let ((text (plist-get item :text)))
-           (when (not (string-empty-p text))
+         (let ((text (pimacs--json-get item :text)))
+           (when (and (stringp text) (not (string-empty-p text)))
              (pcase-let ((`(,clean-text . ,truncated-line) (pimacs--extract-truncation-notice text)))
                (insert (pimacs--render-content (expand-file-name path (pimacs--project-root)) clean-text))
                (when truncated-line
@@ -1091,21 +1094,21 @@ with the message plist to insert the custom message content."
            (insert "\n")))))))
 
 (defun pimacs--visit-read-result (_details args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (let ((section-line (pimacs-section--section-line)))
       (list :file (expand-file-name path (pimacs--project-root))
-            :line (+ (or (plist-get args :offset) 1) section-line)
+            :line (+ (or (pimacs--json-get args :offset) 1) section-line)
             :column (- (point) (line-beginning-position))))))
 
 (defun pimacs--visit-read-call (args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (list :file (expand-file-name path (pimacs--project-root))
-          :line (or (plist-get args :offset) 1))))
+          :line (or (pimacs--json-get args :offset) 1))))
 
 ;; write
 (defun pimacs--insert-write-args (args)
-  (when-let ((path (plist-get args :path))
-             (content (plist-get args :content)))
+  (when-let ((path (pimacs--json-get args :path))
+             (content (pimacs--json-get args :content)))
     (pimacs--insert-file-link path (pimacs--project-root))
     (when (not (string-empty-p content))
       (insert "\n")
@@ -1115,11 +1118,11 @@ with the message plist to insert the custom message content."
   (pimacs--insert-content content))
 
 (defun pimacs--visit-write-result (_details args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (list :file (expand-file-name path (pimacs--project-root)))))
 
 (defun pimacs--visit-write-call (args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (let ((section-line (pimacs-section--section-line)))
       (list :file (expand-file-name path (pimacs--project-root))
             :line (max 1 section-line)
@@ -1129,23 +1132,23 @@ with the message plist to insert the custom message content."
 
 ;; edit
 (defun pimacs--insert-edit-args (args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (pimacs--insert-file-link path (pimacs--project-root))))
 
 (defun pimacs--insert-edit-result (content details _args)
-  (when-let ((patch (or (plist-get details :patch)
-                        (plist-get details :diff))))
+  (when-let ((patch (or (pimacs--json-get details :patch)
+                        (pimacs--json-get details :diff))))
     (insert (pimacs--render-diff patch)))
   (let ((text (pimacs--content-text content)))
     (when (not (string-empty-p text))
       (insert (format "\n\n%s" text)))))
 
 (defun pimacs--visit-edit-call (args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (list :file (expand-file-name path (pimacs--project-root)) :line 1)))
 
 (defun pimacs--visit-edit-result (_details args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (let* ((section (pimacs-section--current-section))
            (location
             (save-restriction
@@ -1158,13 +1161,13 @@ with the message plist to insert the custom message content."
 
 ;; bash
 (defun pimacs--insert-bash-args (args)
-  (when-let ((command (plist-get args :command)))
+  (when-let ((command (pimacs--json-get args :command)))
     (insert (pimacs--render-content "tmp.sh" command))))
 
 (defun pimacs--insert-bash-result (content details _args)
   (let* ((exit-code (plist-get details :exitCode))
          (cancelled (plist-get details :cancelled))
-         (full-output-path (plist-get details :fullOutputPath))
+         (full-output-path (pimacs--json-get details :fullOutputPath))
          (text (pimacs--apply-ansi-colors (pimacs--content-text content))))
     (when (not (string-empty-p text))
       (insert (format "%s" text)))
@@ -1179,12 +1182,12 @@ with the message plist to insert the custom message content."
 ;; grep
 (defun pimacs--insert-grep-args (args)
   (let ((pattern (plist-get args :pattern))
-        (path (plist-get args :path))
-        (glob (plist-get args :glob))
+        (path (pimacs--json-get args :path))
+        (glob (pimacs--json-get args :glob))
         (ignore-case (eq (plist-get args :ignoreCase) t))
         (literal (eq (plist-get args :literal) t))
-        (context (plist-get args :context))
-        (limit (plist-get args :limit)))
+        (context (pimacs--json-get args :context))
+        (limit (pimacs--json-get args :limit)))
     (insert (propertize (format "/%s/" pattern) 'face 'font-lock-string-face))
     (when path
       (insert (format " in %s" (abbreviate-file-name path))))
@@ -1246,7 +1249,7 @@ with the message plist to insert the custom message content."
               (forward-line 1))))))))
 
 (defun pimacs--normalize-grep-file (file args)
-  (if-let ((path (plist-get args :path)))
+  (if-let ((path (pimacs--json-get args :path)))
       (if (file-directory-p path)
           (expand-file-name file path)
         path)
@@ -1276,8 +1279,8 @@ with the message plist to insert the custom message content."
 ;; find
 (defun pimacs--insert-find-args (args)
   (let ((pattern (plist-get args :pattern))
-        (path (plist-get args :path))
-        (limit (plist-get args :limit)))
+        (path (pimacs--json-get args :path))
+        (limit (pimacs--json-get args :limit)))
     (insert (propertize (format "/%s/" pattern) 'face 'font-lock-string-face))
     (when path
       (insert (format " in %s" (abbreviate-file-name path))))
@@ -1289,9 +1292,9 @@ with the message plist to insert the custom message content."
 
 ;; ls
 (defun pimacs--insert-ls-args (args)
-  (when-let ((path (plist-get args :path)))
+  (when-let ((path (pimacs--json-get args :path)))
     (insert (abbreviate-file-name path)))
-  (when-let ((limit (plist-get args :limit)))
+  (when-let ((limit (pimacs--json-get args :limit)))
     (insert (format " limit %d" limit))))
 
 (defun pimacs--insert-ls-result (content _details _args)
@@ -1399,7 +1402,7 @@ is non-nil, insert an ellipsis instead of ARGS."
   (let ((attempt (plist-get event :attempt))
         (max-attempts (plist-get event :maxAttempts))
         (delay-ms (plist-get event :delayMs))
-        (error-message (plist-get event :errorMessage)))
+        (error-message (pimacs--json-get event :errorMessage)))
     (when (and error-message (not (string-empty-p error-message)))
       (pimacs--widget-save-excursion
         (pimacs-section--create-section 'error pimacs-section--root-section
@@ -1410,7 +1413,7 @@ is non-nil, insert an ellipsis instead of ARGS."
 (defun pimacs--handle-auto-retry-end (event)
   (setq pimacs--retry-in-progress nil)
   (let ((attempt (plist-get event :attempt))
-        (final-error (plist-get event :finalError)))
+        (final-error (pimacs--json-get event :finalError)))
     (unless (pimacs--response-success-p event)
       (pimacs--widget-save-excursion
         (pimacs-section--create-section 'error pimacs-section--root-section
@@ -1418,8 +1421,8 @@ is non-nil, insert an ellipsis instead of ARGS."
            (format "Error: Retry failed after %d attempts: %s" attempt final-error)))))))
 
 (defun pimacs--handle-queue-update (event)
-  (let* ((steering (plist-get event :steering))
-         (follow-up (plist-get event :followUp))
+  (let* ((steering (pimacs--json-get event :steering))
+         (follow-up (pimacs--json-get event :followUp))
          (has-content (or (consp steering)
                           (consp follow-up))))
     (when has-content
@@ -1432,16 +1435,16 @@ is non-nil, insert an ellipsis instead of ARGS."
             (insert (format "\n Follow-up: %s" item))))))))
 
 (defun pimacs--handle-compaction-end (event)
-  (let* ((result (plist-get event :result))
-         (error-message (plist-get event :errorMessage)))
+  (let* ((result (pimacs--json-get event :result))
+         (error-message (pimacs--json-get event :errorMessage)))
     (cond
      (error-message
       (pimacs--widget-save-excursion
         (pimacs-section--create-section 'error pimacs-section--root-section
           (pimacs--insert-error error-message))))
      (result
-      (let ((summary (plist-get result :summary))
-            (tokens-before (plist-get result :tokensBefore)))
+      (let ((summary (pimacs--json-get result :summary))
+            (tokens-before (pimacs--json-get result :tokensBefore)))
         (pimacs--widget-save-excursion
           (pimacs--insert-compaction summary tokens-before)))))))
 
@@ -1456,7 +1459,7 @@ is non-nil, insert an ellipsis instead of ARGS."
 
 (defun pimacs--handle-notify (event)
   (pimacs--notify (plist-get event :message)
-                  (plist-get event :notifyType)))
+                  (pimacs--json-get event :notifyType)))
 
 (defun pimacs--widget-lines (widget)
   (let ((text (widget-value widget)))
@@ -1501,8 +1504,8 @@ is non-nil, insert an ellipsis instead of ARGS."
 
 (defun pimacs--handle-set-widget (event)
   (let* ((widget-key (plist-get event :widgetKey))
-         (widget-lines (plist-get event :widgetLines))
-         (widget-placement (or (plist-get event :widgetPlacement) "aboveEditor")))
+         (widget-lines (pimacs--json-get event :widgetLines))
+         (widget-placement (or (pimacs--json-get event :widgetPlacement) "aboveEditor")))
     (if (or (not widget-lines)
             (null widget-lines))
         (remhash widget-key pimacs--prompt-widget-lines)
@@ -1528,14 +1531,14 @@ is non-nil, insert an ellipsis instead of ARGS."
 
 (defun pimacs--handle-set-status (event)
   (let* ((status-key (plist-get event :statusKey))
-         (status-text (plist-get event :statusText)))
+         (status-text (pimacs--json-get event :statusText)))
     (if (or (not status-text) (string-empty-p status-text))
         (remhash status-key pimacs--status-texts)
       (puthash status-key status-text pimacs--status-texts))
     (pimacs--update-status-widget)))
 
 (defun pimacs--handle-set-editor-text (event)
-  (let ((text (plist-get event :text))
+  (let ((text (or (pimacs--json-get event :text) ""))
         (current (widget-value pimacs--prompt-widget)))
     (unless (string-empty-p current)
       (pimacs--clear-prompt current))
@@ -1585,7 +1588,7 @@ is non-nil, insert an ellipsis instead of ARGS."
 (defun pimacs--handle-input (event)
   (let* ((id (plist-get event :id))
          (title (plist-get event :title))
-         (placeholder (plist-get event :placeholder)))
+         (placeholder (pimacs--json-get event :placeholder)))
     (pimacs--widget-save-excursion
       (pimacs-section--create-section 'input pimacs-section--root-section
         (insert (propertize (format "%s:" title) 'face 'pimacs-chat-title-face))
@@ -1604,7 +1607,7 @@ is non-nil, insert an ellipsis instead of ARGS."
 (defun pimacs--handle-editor (event)
   (let* ((id (plist-get event :id))
          (title (plist-get event :title))
-         (prefill (plist-get event :prefill)))
+         (prefill (pimacs--json-get event :prefill)))
     (pimacs--widget-save-excursion
       (pimacs-section--create-section 'input pimacs-section--root-section
         (insert (propertize (format "%s:" title) 'face 'pimacs-chat-title-face))))
@@ -1621,7 +1624,7 @@ is non-nil, insert an ellipsis instead of ARGS."
         prefill)))))
 
 (defun pimacs--handle-set-title (event)
-  (let ((title (plist-get event :title)))
+  (let ((title (pimacs--json-get event :title)))
     (when title
       (rename-buffer (pimacs--chat-buffer-name title) t))))
 
@@ -2031,8 +2034,8 @@ If `pimacs-prompt-streaming-behavior' is `followUp', use `steer' and vice versa.
      "clear_queue" '()
      (pimacs--on-response-success-callback resp
        (let* ((data (plist-get resp :data))
-              (steering-count (length (plist-get data :steering)))
-              (follow-up-count (length (plist-get data :followUp)))
+              (steering-count (length (pimacs--json-get data :steering)))
+              (follow-up-count (length (pimacs--json-get data :followUp)))
               (message-count (+ steering-count follow-up-count)))
          (if (zerop message-count)
              (pimacs--notify "No queued messages to clear." "warning")
@@ -2044,8 +2047,8 @@ If `pimacs-prompt-streaming-behavior' is `followUp', use `steer' and vice versa.
                             (ngettext "message" "messages" follow-up-count)))))))))
 
 (defun pimacs--restore-queued-messages (data)
-  (let* ((messages (append (plist-get data :steering)
-                           (plist-get data :followUp)))
+  (let* ((messages (append (pimacs--json-get data :steering)
+                           (pimacs--json-get data :followUp)))
          (current-prompt (widget-value pimacs--prompt-widget))
          (prompt (string-join
                   (append messages
@@ -2179,7 +2182,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
      "get_available_thinking_levels" '()
      (pimacs--on-response-success-callback resp
        (let ((supported-levels (pimacs--plist-get resp :data :levels))
-             (current-level (plist-get pimacs--header-line-state :thinkingLevel)))
+             (current-level (pimacs--json-get pimacs--header-line-state :thinkingLevel)))
          (if (null supported-levels)
              (message "No thinking levels available for this model.")
            (let* ((options
@@ -2208,7 +2211,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (pimacs--send-command
      "cycle_model" '()
      (pimacs--on-response-success-callback resp
-       (let ((data (plist-get resp :data)))
+       (let ((data (pimacs--json-get resp :data)))
          (if (null data)
              (message "No more models to cycle through.")
            (let ((model (plist-get data :model))
@@ -2231,7 +2234,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
      "get_state" '()
      (pimacs--on-response-success-callback resp
        (let* ((data (plist-get resp :data))
-              (current-mode (plist-get data :steeringMode))
+              (current-mode (pimacs--json-get data :steeringMode))
               (choice (pimacs--read-option pimacs--prompt-modes current-mode "Set steering mode")))
          (when choice
            (pimacs--send-command
@@ -2250,7 +2253,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
      "get_state" '()
      (pimacs--on-response-success-callback resp
        (let* ((data (plist-get resp :data))
-              (current-mode (plist-get data :followUpMode))
+              (current-mode (pimacs--json-get data :followUpMode))
               (choice (pimacs--read-option pimacs--prompt-modes current-mode "Set follow-up mode")))
          (when choice
            (pimacs--send-command
@@ -2268,7 +2271,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (pimacs--send-command
      "cycle_thinking_level" '()
      (pimacs--on-response-success-callback resp
-       (let ((data (plist-get resp :data)))
+       (let ((data (pimacs--json-get resp :data)))
          (if (null data)
              (message "No more thinking levels to cycle through.")
            (let ((level (plist-get data :level)))
@@ -2366,7 +2369,7 @@ SCOPE, when non-nil, searches resumable sessions across all projects."
     ("custom_message"
      (pimacs--insert-custom-message entry))
     ("session_info"
-     (when-let ((name (plist-get entry :name)))
+     (when-let ((name (pimacs--json-get entry :name)))
        (pimacs--insert-session-info name)))
     (_ nil)))
 
@@ -2576,7 +2579,7 @@ CALLBACK is called after a successful refresh."
     (pimacs--send-command
      "get_last_assistant_text" '()
      (pimacs--on-response-success-callback resp
-       (let ((text (plist-get (plist-get resp :data) :text)))
+       (let ((text (pimacs--json-get (plist-get resp :data) :text)))
          (if text
              (progn
                (kill-new text)
@@ -2709,8 +2712,8 @@ summarization."
   (mapconcat
    (lambda (item)
      (pcase (plist-get item :type)
-       ("text" (or (plist-get item :text) ""))
-       ("thinking" (or (plist-get item :thinking) ""))
+       ("text" (or (pimacs--json-get item :text) ""))
+       ("thinking" (or (pimacs--json-get item :thinking) ""))
        (_ "")))
    (pimacs--content-normalize content)
    ""))
@@ -2732,11 +2735,11 @@ summarization."
      (pimacs-section-user-info-content info))))
 
 (defun pimacs--copy-edit-result (details _args)
-  (or (plist-get details :patch)
-      (plist-get details :diff)))
+  (or (pimacs--json-get details :patch)
+      (pimacs--json-get details :diff)))
 
 (defun pimacs--copy-bash-call (args)
-  (plist-get args :command))
+  (pimacs--json-get args :command))
 
 (defun pimacs--copy-tool-result-section (section)
   (when-let* ((info (pimacs-section-info section))

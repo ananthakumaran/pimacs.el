@@ -554,7 +554,7 @@ select(.type == \"match\")
 (defun pimacs-search--jq-arguments (request)
   (list "--unbuffered" "-c"
         "--argjson" "filters"
-        (json-serialize
+        (pimacs--json-encode
          (vconcat
           (mapcar #'symbol-name
                   (pimacs-search-request-filters request))))
@@ -645,7 +645,7 @@ select(.type == \"match\")
 
 
 (defun pimacs-search--session-short-id (path)
-  (or (plist-get (gethash path pimacs-search--session-metadata) :id)
+  (or (pimacs--json-get (gethash path pimacs-search--session-metadata) :id)
       (when (string-match "_\\(.+\\)\\'" (file-name-base path))
         (match-string 1 (file-name-base path)))
       "unknown"))
@@ -685,13 +685,13 @@ select(.type == \"match\")
          (metadata (copy-sequence (gethash path pimacs-search--session-metadata))))
     (pcase (plist-get record :kind)
       ("session"
-       (setq metadata (plist-put metadata :id (plist-get record :id))
-             metadata (plist-put metadata :cwd (plist-get record :cwd))
-             metadata (plist-put metadata :timestamp (plist-get record :timestamp))
+       (setq metadata (plist-put metadata :id (pimacs--json-get record :id))
+             metadata (plist-put metadata :cwd (pimacs--json-get record :cwd))
+             metadata (plist-put metadata :timestamp (pimacs--json-get record :timestamp))
              metadata (plist-put metadata :modified
                                  (pimacs-session-modification-time path))))
       ("session-info"
-       (setq metadata (plist-put metadata :name (plist-get record :name)))))
+       (setq metadata (plist-put metadata :name (pimacs--json-get record :name)))))
     (puthash path metadata pimacs-search--session-metadata)
     (when-let ((section (gethash path pimacs-search--session-sections)))
       (pimacs-search--render-session-heading path section))))
@@ -736,7 +736,7 @@ select(.type == \"match\")
     (mapconcat
      (lambda (item)
        (if (equal (plist-get item :type) "text")
-           (or (plist-get item :text) "")
+           (or (pimacs--json-get item :text) "")
          ""))
      content ""))
    (t "")))
@@ -838,12 +838,12 @@ select(.type == \"match\")
 
 (defun pimacs-search--json-string (value)
   (condition-case nil
-      (json-serialize value)
+      (pimacs--json-encode value)
     (error (format "%s" value))))
 
 (defun pimacs-search--render-tool-call-entry (result item render-context)
-  (let* ((name (or (plist-get item :name) "unknown"))
-         (arguments (plist-get item :arguments))
+  (let* ((name (or (pimacs--json-get item :name) "unknown"))
+         (arguments (pimacs--json-get item :arguments))
          (text (concat (propertize (format "%s " name)
                                    'face 'pimacs-tool-name-face)
                        (if arguments
@@ -862,10 +862,11 @@ select(.type == \"match\")
                 rendered)))
     (when (memq 'thinking filters)
       (dolist (item (pimacs-search--message-content-items message "thinking"))
-        (setq rendered
-              (or (pimacs-search--render-text-entry
-                   result "assistant" (plist-get item :thinking) render-context)
-                  rendered))))
+        (when-let ((thinking (pimacs--json-get item :thinking)))
+          (setq rendered
+                (or (pimacs-search--render-text-entry
+                     result "assistant" thinking render-context)
+                    rendered)))))
     (when (memq 'tool-call filters)
       (dolist (item (pimacs-search--message-content-items message "toolCall"))
         (setq rendered
@@ -882,7 +883,7 @@ select(.type == \"match\")
 
 (defun pimacs-search--render-bash-entry (result entry render-context)
   (let* ((message (plist-get entry :message))
-         (command (or (plist-get message :command) ""))
+         (command (or (pimacs--json-get message :command) ""))
          (output (pimacs-search--plain-text (plist-get message :output)))
          (text (concat (propertize "bash " 'face 'pimacs-tool-name-face)
                        command
@@ -892,7 +893,7 @@ select(.type == \"match\")
 
 (defun pimacs-search--render-compaction-entry (result entry render-context)
   (let ((summary (plist-get entry :summary))
-        (tokens-before (plist-get entry :tokensBefore)))
+        (tokens-before (pimacs--json-get entry :tokensBefore)))
     (when (stringp summary)
       (pimacs-search--render-text-entry
        result "assistant"
@@ -983,7 +984,7 @@ select(.type == \"match\")
     (condition-case error-data
         (progn
           (pimacs-search--enqueue-entry
-           (json-parse-string line :object-type 'plist :array-type 'list)))
+           (pimacs--json-parse-string line)))
       (error
        (setq pimacs-search--parse-error
              (error-message-string error-data))))))

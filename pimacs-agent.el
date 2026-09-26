@@ -64,9 +64,8 @@
     (write-region (concat "{\"type\": \"" type "\", \"message\": " json "}\n") nil pimacs-log-rpc-file t 'inhibit-message)))
 
 (defun pimacs--response-success-p (response)
-  (and response
-       (plist-get response :success)
-       (not (eq (plist-get response :success) 'json-false))))
+  (let ((success (pimacs--json-get response :success)))
+    (and response success (not (pimacs--json-false-p success)))))
 
 (defvar pimacs--agents (make-hash-table :test 'equal))
 (defvar pimacs--response-callbacks (make-hash-table :test 'equal))
