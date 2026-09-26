@@ -1,0 +1,1 @@
+UUID  DISPLAY_TIMESTAMP  Use the read tool to inspect green-triangle.png, then describe the image.

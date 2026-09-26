@@ -87,6 +87,7 @@
            (progn
              ,@body
              (pimacs-drain-process-output)
+             (pimacs-integration-check-resume-candidates)
              (pimacs-render-pending-history)
              (pimacs--with-chat-buffer
                (pimacs--force-update-header-line)
@@ -122,6 +123,19 @@
     (while pimacs--history-render-pending
       (pimacs--history-render-idle
        (current-buffer) pimacs--history-render-generation))))
+
+(defun pimacs-integration-check-resume-candidates ()
+  (let* ((directory (expand-file-name "sessions" pimacs-project-agent-directory))
+         (records (pimacs-session-with-ancestors
+                   (pimacs-session-recent-records
+                    directory t pimacs-resume-max-sessions)))
+         (candidates (pimacs-session--resume-candidates records)))
+    (pimacs-check-tape
+     (symbol-name (ert-test-name (ert-running-test))) "-resume-tree.txt"
+     (mapconcat (lambda (candidate)
+                  (substring-no-properties (car candidate)))
+                candidates "\n"))))
+
 
 (defmacro pimacs-with-editor-buffer (&rest body)
   (declare (indent 0))

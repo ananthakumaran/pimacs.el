@@ -1,0 +1,2 @@
+UUID  DISPLAY_TIMESTAMP  [clone-test]  say hello
+UUID  DISPLAY_TIMESTAMP  └─ [clone-test]  say hello

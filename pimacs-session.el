@@ -27,6 +27,7 @@
 (require 'seq)
 (require 'subr-x)
 (require 'pimacs-utils)
+(require 'pimacs-core)
 
 (defcustom pimacs-session-directory
   (expand-file-name "sessions/" "~/.pi/agent/")
@@ -40,7 +41,7 @@
   :group 'pimacs)
 
 (cl-defstruct pimacs-session-record
-  id timestamp modified cwd path parent-id name preview)
+  id timestamp modified cwd path parent-path parent-id name preview)
 
 (defun pimacs-session--timestamp-time (timestamp)
   (if (stringp timestamp)
@@ -120,8 +121,10 @@
                                    (member (plist-get entry :type)
                                            '("text" "thinking")))
                                  items)))
-      (pimacs--section-header (or (plist-get item :text)
-                                  (plist-get item :thinking))))))
+      (when-let ((header (car (split-string (or (plist-get item :text)
+                                                (plist-get item :thinking))
+                                            "\n" t))))
+        (string-trim header)))))
 
 (defun pimacs-session-read-record (file)
   (when (pimacs-session--regular-file-p file)
@@ -132,6 +135,7 @@
           (let ((id nil)
                 (timestamp nil)
                 (cwd nil)
+                (parent-path nil)
                 (parent-id nil)
                 (preview nil)
                 (name nil)
@@ -147,8 +151,9 @@
                            (setq id (plist-get record :id)
                                  timestamp (plist-get record :timestamp)
                                  cwd (plist-get record :cwd)
-                                 parent-id (pimacs-session--parent-id
-                                            (plist-get record :parentSession))))
+                                 parent-path (when-let ((parent (plist-get record :parentSession)))
+                                               (expand-file-name parent (file-name-directory file)))
+                                 parent-id (pimacs-session--parent-id parent-path)))
                           ('session_info
                            (setq name (plist-get record :name)))
                           ('message
@@ -169,15 +174,160 @@
              :modified (pimacs-session-modification-time file)
              :cwd cwd
              :path file
+             :parent-path parent-path
              :parent-id parent-id
              :name name
              :preview preview)))
       (file-error nil))))
 
+(defun pimacs-session-with-ancestors (records)
+  (let ((seen (make-hash-table :test 'equal))
+        (pending (copy-sequence records))
+        ancestors)
+    (dolist (record records)
+      (puthash (pimacs-session-record-path record) t seen))
+    (while pending
+      (when-let ((parent (pimacs-session-record-parent-path (pop pending))))
+        (unless (gethash parent seen)
+          (puthash parent t seen)
+          (when-let ((record (pimacs-session-read-record parent)))
+            (push record ancestors)
+            (push record pending)))))
+    (append records (nreverse ancestors))))
+
 (defun pimacs-session-recent-records (directory recursive limit)
   (delq nil
         (mapcar #'pimacs-session-read-record
                 (pimacs-session-recent-files directory recursive limit))))
+
+(defun pimacs-session-tree (records)
+  (let ((by-path (make-hash-table :test 'equal))
+        (children (make-hash-table :test 'equal))
+        (visited (make-hash-table :test 'eq))
+        (recent (make-hash-table :test 'eq))
+        roots result)
+    (dolist (record records)
+      (puthash (pimacs-session-record-path record) record by-path))
+    (dolist (record records)
+      (let ((parent (pimacs-session-record-parent-path record)))
+        (if (and parent (gethash parent by-path))
+            (push record (gethash parent children))
+          (push record roots))))
+    (maphash (lambda (key value)
+               (puthash key (nreverse value) children))
+             children)
+    (cl-labels ((latest (record)
+                  (or (gethash record recent)
+                      (let ((time (or (pimacs-session-record-modified record)
+                                      (seconds-to-time 0))))
+                        (puthash record time recent)
+                        (dolist (child (gethash (pimacs-session-record-path record) children))
+                          (let ((child-time (latest child)))
+                            (when (time-less-p time child-time)
+                              (setq time child-time))))
+                        (puthash record time recent))))
+                (newer (left right)
+                  (time-less-p (latest right) (latest left)))
+                (walk (record indent lastp rootp)
+                  (unless (gethash record visited)
+                    (puthash record t visited)
+                    (let* ((parent (pimacs-session-record-parent-path record))
+                           (missing (and parent (not (gethash parent by-path))))
+                           (prefix (concat indent (unless rootp (if lastp "└─ " "├─ "))
+                                           (if missing "↳ " "")))
+                           (next-indent (if rootp "" (concat indent (if lastp "   " "│  "))))
+                           (descendants (cl-stable-sort
+                                         (copy-sequence (gethash (pimacs-session-record-path record) children))
+                                         #'newer)))
+                      (push (list record prefix missing) result)
+                      (cl-loop for child in descendants
+                               for tail on descendants
+                               do (walk child next-indent (null (cdr tail)) nil))))))
+      (let ((roots (cl-stable-sort (nreverse roots) #'newer)))
+        (cl-loop for root in roots
+                 for tail on roots
+                 do (walk root "" (null (cdr tail)) t)))
+      (dolist (record records)
+        (unless (gethash record visited)
+          (walk record "" t t))))
+    (nreverse result)))
+
+
+(defun pimacs-session-resumable-record-p (record)
+  (when-let ((cwd (pimacs-session-record-cwd record)))
+    (file-directory-p cwd)))
+
+(defun pimacs-session--resume-annotation-suffix (record include-cwd)
+  (let ((cwd (pimacs-session-record-cwd record))
+        (relative-time (pimacs-session-format-relative-time
+                        (pimacs-session-record-modified record))))
+    (string-join
+     (delq nil
+           (list (when (and include-cwd cwd)
+                   (propertize (abbreviate-file-name cwd)
+                               'face 'pimacs-session-directory-face))
+                 (when relative-time
+                   (propertize relative-time 'face 'shadow))))
+     "  ")))
+
+(defun pimacs-session--resume-candidates (records &optional include-cwd)
+  (mapcar
+   (lambda (node)
+     (pcase-let ((`(,record ,prefix ,missing) node))
+       (let* ((modified (pimacs-session-record-modified record))
+              (id (propertize (or (pimacs--short-uuid
+                                   (pimacs-session-record-id record))
+                                  "unknown")
+                              'face 'pimacs-session-name-face))
+              (date (when-let ((date (pimacs-session-format-timestamp modified)))
+                      (propertize date 'face 'shadow)))
+              (session-name (when-let ((name (pimacs-session-record-name record)))
+                              (propertize (format "[%s]" name)
+                                          'face 'pimacs-session-name-face)))
+              (text (string-join
+                     (delq nil
+                           (list session-name
+                                 (pimacs-session-record-preview record)
+                                 (when missing
+                                   (concat "(parent unavailable"
+                                           (when-let ((parent-id (pimacs--short-uuid
+                                                                  (pimacs-session-record-parent-id record))))
+                                             (concat ": " (propertize parent-id
+                                                                      'face 'pimacs-session-name-face)))
+                                           ")"))))
+                     "  "))
+              (head (string-join (delq nil (list id date)) "  "))
+              (suffix (pimacs-session--resume-annotation-suffix record include-cwd))
+              (width (- (window-body-width (minibuffer-window))
+                        (if (string-empty-p suffix) 0 (+ 2 (string-width suffix)))
+                        (string-width head) 2 (string-width prefix) 3)))
+         (when (> (string-width text) (max 0 width))
+           (put-text-property (length (truncate-string-to-width text (max 0 (1- width))))
+                              (length text) 'display
+                              (if (> width 0) (propertize "…" 'face 'shadow) "")
+                              text))
+         (cons (concat head "  " (propertize prefix 'face 'shadow) text) record))))
+   (pimacs-session-tree records)))
+
+(defun pimacs-session--resume-annotation-function (candidates include-cwd)
+  (lambda (candidate)
+    (when-let ((record (pimacs--alist-get-equal candidate candidates)))
+      (let ((suffix (pimacs-session--resume-annotation-suffix record include-cwd)))
+        (unless (string-empty-p suffix)
+          (concat (propertize " "
+                              'display `(space :align-to (- right ,(string-width suffix))))
+                  suffix))))))
+
+(defun pimacs-session-read-resume-record (records &optional include-cwd)
+  (when records
+    (let* ((records (pimacs-session-with-ancestors records))
+           (candidates (pimacs-session--resume-candidates records include-cwd))
+           (annotation-function
+            (pimacs-session--resume-annotation-function candidates include-cwd))
+           (selected (let ((completion-styles (cons 'substring completion-styles)))
+                       (pimacs--completing-read "Resume session: " candidates
+                                                annotation-function))))
+      (pimacs--alist-get-equal selected candidates))))
 
 (provide 'pimacs-session)
 

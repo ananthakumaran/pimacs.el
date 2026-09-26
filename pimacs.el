@@ -2278,61 +2278,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                  (insert (format "Cycled thinking level to: %s" level)))))))))))
 
 
-(defun pimacs--resume-session-candidates (records)
-  (mapcar
-   (lambda (record)
-     (let* ((modified (pimacs-session-record-modified record))
-            (id (propertize (or (pimacs--short-uuid
-                                 (pimacs-session-record-id record))
-                                "unknown")
-                            'face 'pimacs-session-name-face))
-            (date (when-let ((date (pimacs-session-format-timestamp modified)))
-                    (propertize date 'face 'shadow)))
-            (session-name (when-let ((name (pimacs-session-record-name record)))
-                            (propertize (format "[%s]" name)
-                                        'face 'pimacs-session-name-face)))
-            (text (string-join
-                   (delq nil
-                         (list session-name
-                               (pimacs-session-record-preview record)
-                               (when-let ((parent-id
-                                           (pimacs--short-uuid
-                                            (pimacs-session-record-parent-id record))))
-                                 (concat "(parent: "
-                                         (propertize parent-id
-                                                     'face 'pimacs-session-name-face)
-                                         ")"))))
-                   "  ")))
-       (cons (string-join (delq nil (list id date text)) "  ") record)))
-   records))
 
-(defun pimacs--resume-session-annotation-function (candidates include-cwd)
-  (lambda (candidate)
-    (when-let ((record (pimacs--alist-get-equal candidate candidates)))
-      (let* ((cwd (pimacs-session-record-cwd record))
-             (relative-time (pimacs-session-format-relative-time
-                             (pimacs-session-record-modified record)))
-             (suffix (string-join
-                      (delq nil
-                            (list (when (and include-cwd cwd)
-                                    (propertize (abbreviate-file-name cwd)
-                                                'face 'pimacs-session-directory-face))
-                                  (when relative-time
-                                    (propertize relative-time 'face 'shadow))))
-                      "  ")))
-        (unless (string-empty-p suffix)
-          (concat (propertize " "
-                              'display `(space :align-to (- right ,(string-width suffix))))
-                  suffix))))))
 
-(defun pimacs--read-resume-record (records &optional include-cwd)
-  (when records
-    (let* ((candidates (pimacs--resume-session-candidates records))
-           (annotation-function
-            (pimacs--resume-session-annotation-function candidates include-cwd))
-           (selected (pimacs--completing-read "Resume session: " candidates
-                                              annotation-function)))
-      (pimacs--alist-get-equal selected candidates))))
 
 (defun pimacs--resume-chat ()
   (pimacs--send-command
@@ -2345,7 +2292,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
               (records (when session-dir
                          (pimacs-session-recent-records
                           session-dir nil pimacs-resume-max-sessions))))
-         (if-let ((record (pimacs--read-resume-record records)))
+         (if-let ((record (pimacs-session-read-resume-record records)))
              (pimacs--switch-session (pimacs-session-record-path record)
                                      "Resumed session")
            (message "No session files found in %s"
@@ -2359,9 +2306,6 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     ('all (expand-file-name pimacs-session-directory))
     (_ (error "Unknown resume scope: %S" scope))))
 
-(defun pimacs--resumable-session-record-p (record)
-  (when-let ((cwd (pimacs-session-record-cwd record)))
-    (file-directory-p cwd)))
 
 (defun pimacs--resume-standalone (scope)
   (let ((directory (pimacs--resume-standalone-directory scope)))
@@ -2369,10 +2313,10 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
       (user-error "Session directory does not exist: %s"
                   (abbreviate-file-name directory)))
     (let ((records
-           (seq-filter #'pimacs--resumable-session-record-p
+           (seq-filter #'pimacs-session-resumable-record-p
                        (pimacs-session-recent-records
                         directory (eq scope 'all) pimacs-resume-max-sessions))))
-      (if-let ((record (pimacs--read-resume-record records t)))
+      (if-let ((record (pimacs-session-read-resume-record records t)))
           (pimacs-resume-session-file (pimacs-session-record-path record)
                                       (pimacs-session-record-cwd record))
         (message "No resumable session files found in %s"
