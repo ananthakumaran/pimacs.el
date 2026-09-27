@@ -356,7 +356,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
 (defvar pimacs--reading-point-remapped nil)
 (defvar pimacs--reading-point-transaction-owner nil)
 
-(defconst pimacs--point-alignment-max-seconds 0.002)
+(defconst pimacs--point-alignment-max-seconds 0.01)
 
 (defun pimacs--align-point (old new old-offset)
   (if (and (> old-offset 0) (= old-offset (length old))
