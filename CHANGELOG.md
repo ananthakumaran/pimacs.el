@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Added
+
+- `pimacs-copy-section` (`w`) copies the content of the section at point to the kill ring, including tool calls and results.
+
+### Changed
+
+- Session resume candidates now show parent/child relationships as a tree.
+
+### Fixed
+
+- Keep point near the same text when streamed content is re-rendered.
+- Handle JSON `null` values consistently in agent responses and session data.
+- Prevent prefix arguments from leaking into nested chat commands.
+
 ## v0.8.0 - 2026-09-24
 
 ### Added

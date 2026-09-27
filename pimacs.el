@@ -273,7 +273,8 @@ ARGS) and returns text to copy, or nil to use the section body."
   :group 'pimacs)
 
 (defcustom pimacs-copy-tool-call-functions
-  '(("bash" . pimacs--copy-bash-call))
+  '(("bash" . pimacs--copy-bash-call)
+    ("write" . pimacs--copy-write-call))
   "Alist mapping tool names to tool-call copy functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called with ARGS and
@@ -2749,6 +2750,9 @@ summarization."
 
 (defun pimacs--copy-bash-call (args)
   (pimacs--json-get args :command))
+
+(defun pimacs--copy-write-call (args)
+  (pimacs--json-get args :content))
 
 (defun pimacs--copy-tool-result-section (section)
   (when-let* ((info (pimacs-section-info section))

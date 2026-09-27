@@ -344,6 +344,9 @@ point.  ‘M-1’, ‘M-2’, and ‘M-3’ do the same for every top-level sect
 See *note Keybindings:: for the complete list of visibility and
 navigation commands.
 
+   Press ‘w’ to copy the section at point to the kill ring with
+‘pimacs-copy-section’.
+
    As a conversation grows, Pimacs automatically hides older top-level
 sections.  ‘pimacs-section-autohide-count’ sets how many eligible recent
 sections remain visible; its default is 2, and ‘nil’ disables automatic
@@ -535,6 +538,8 @@ Key            Command                Description
 ‘P’            ‘pimacs-goto-previous-user-message’Move to the previous user message
 ‘l’, ‘M-g l’   ‘pimacs-goto-last-section’Jump to the most recent section
 ‘i’            ‘pimacs-focus-prompt’  Focus the prompt input field
+‘w’            ‘pimacs-copy-section’  Copy the section at point to the
+                                      kill ring
 ‘q’            ‘pimacs-quit-chat’     Quit the chat buffer
 
 8.2 Prompt Input Keybindings
@@ -731,8 +736,10 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      (DETAILS ARGS) and returns text to copy, or nil to use the section
      body.
 
- -- User Option: pimacs-copy-tool-call-functions '(("bash" .
-          pimacs--copy-bash-call))
+ -- User Option: pimacs-copy-tool-call-functions
+
+          '(("bash" . pimacs--copy-bash-call)
+            ("write" . pimacs--copy-write-call))
 
      Alist mapping tool names to tool-call copy functions.
 
@@ -1272,12 +1279,12 @@ Node: State Lines8224
 Node: Managing Chats9549
 Node: Searching and Resuming Sessions10142
 Node: Section Visibility11901
-Node: UI Customization13945
-Node: Sandbox17216
-Node: How It Works17609
-Node: Keybindings18761
-Node: Custom Variables22994
-Node: Custom Faces40517
+Node: UI Customization14041
+Node: Sandbox17312
+Node: How It Works17705
+Node: Keybindings18857
+Node: Custom Variables23217
+Node: Custom Faces40789
 
 End Tag Table
 

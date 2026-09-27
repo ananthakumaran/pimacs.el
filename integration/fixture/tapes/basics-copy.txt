@@ -67,7 +67,7 @@ create a new filed name test.txt
 The user wants me to create a new file named test.txt. I'll use the write function to create this file. Since they didn't specify content, I'll create an empty file or add a basic content to it.
 
 == 15 tool-call (write) ==
-(:path "test.txt" :content "# Test file created")
+# Test file created
 
 == 16 tool-result (write) ==
 Successfully wrote to test.txt
@@ -191,10 +191,10 @@ create test.txt with some text
 The user wants me to create a new file named test.txt with some text content. I'll use the write function to create this file.
 
 == 39 tool-call (write) ==
-(:path "test.txt" :content "This is a test file.
+This is a test file.
 
 It was just created with some text content.
-This might be useful for testing purposes.")
+This might be useful for testing purposes.
 
 == 40 tool-result (write) ==
 Successfully wrote to test.txt

@@ -391,6 +391,9 @@ Use @kbd{S-TAB} to cycle the visibility of the entire chat, or @kbd{1},
 See @ref{Keybindings} for the complete list of visibility and navigation
 commands.
 
+Press @kbd{w} to copy the section at point to the kill ring with
+@code{pimacs-copy-section}.
+
 As a conversation grows, Pimacs automatically hides older top-level sections.
 @code{pimacs-section-autohide-count} sets how many eligible recent sections
 remain visible; its default is 2, and @code{nil} disables automatic hiding.
@@ -597,6 +600,9 @@ in another window
 @item @kbd{i}
 @tab @code{pimacs-focus-prompt}
 @tab Focus the prompt input field
+@item @kbd{w}
+@tab @code{pimacs-copy-section}
+@tab Copy the section at point to the kill ring
 @item @kbd{q}
 @tab @code{pimacs-quit-chat}
 @tab Quit the chat buffer
@@ -824,7 +830,12 @@ Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called with (DETAILS
 ARGS) and returns text to copy, or nil to use the section body.
 @end defopt
 
-@defopt pimacs-copy-tool-call-functions @code{'(("bash" . pimacs--copy-bash-call))}
+@defopt pimacs-copy-tool-call-functions
+
+@lisp
+'(("bash" . pimacs--copy-bash-call)
+  ("write" . pimacs--copy-write-call))
+@end lisp
 
 Alist mapping tool names to tool-call copy functions.
 

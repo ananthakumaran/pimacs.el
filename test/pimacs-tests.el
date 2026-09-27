@@ -797,6 +797,14 @@
           (should (= (plist-get read-result :column) expected-column))
           (should (= (plist-get write-result :column) expected-column)))))))
 
+(ert-deftest pimacs--copy-write-call-copies-content ()
+  (should (equal (pimacs--copy-write-call
+                  '(:path "file.txt" :content "first line\nsecond line\n"))
+                 "first line\nsecond line\n"))
+  (should (equal (pimacs--copy-write-call '(:path "empty.txt" :content "")) ""))
+  (should (eq (pimacs--alist-get-equal "write" pimacs-copy-tool-call-functions)
+              'pimacs--copy-write-call)))
+
 (ert-deftest pimacs--visit-grep-result-reports-character-offset-after-tab ()
   (with-temp-buffer
     (insert "example.el:7: \tfoo")
