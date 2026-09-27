@@ -1269,7 +1269,7 @@
   (widget-setup))
 
 (ert-deftest pimacs--widget-save-excursion-anchors-view-when-scrolled-away ()
-  "Inserting output while scrolled away must not move the view."
+  "Inserting output while scrolled away must not move the view when point stays in the prompt."
   (with-temp-buffer
     (pimacs-section--create-root-section)
     (pimacs-tests--setup-chat-widgets)
@@ -1317,6 +1317,43 @@
         (should-not pimacs--prompt-detached)
         (should recentered)
         (should (= (point) (widget-field-text-end pimacs--prompt-widget)))))))
+
+(ert-deftest pimacs--widget-save-excursion-preserves-restored-reading-point ()
+  "Re-rendering the section under point must not pin to the old window end."
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (pimacs-tests--setup-chat-widgets)
+    (let (section)
+      (pimacs--widget-save-excursion
+        (setq section
+              (pimacs-section--create-section 'info pimacs-section--root-section
+                (insert "aaa\nbbb\nccc\n"))))
+      (goto-char (pimacs-section-beginning section))
+      (search-forward "ccc")
+      (backward-char)
+      (let ((window 'pimacs-test-window)
+            (visible-end (save-excursion
+                           (goto-char (pimacs-section-beginning section))
+                           (forward-line 1)
+                           (point)))
+            (reading-offset (- (point) (pimacs-section-beginning section))))
+        (should (> (point) visible-end))
+        (cl-letf (((symbol-function 'get-buffer-window) (lambda (&rest _) window))
+                  ((symbol-function 'selected-window) (lambda () window))
+                  ((symbol-function 'window-point) (lambda (&rest _) (point)))
+                  ((symbol-function 'pimacs--follow-tail-p) (lambda () nil))
+                  ((symbol-function 'window-end) (lambda (&rest _) visible-end))
+                  ((symbol-function 'window-start) (lambda (&rest _) (point-min)))
+                  ((symbol-function 'pimacs--recenter-chat)
+                   (lambda () (ert-fail "recentered while reading"))))
+          (pimacs--widget-save-excursion
+            (pimacs-section--replace-section section
+              (insert "prefix\naaa\nbbb\nccc\n")))
+          (should-not pimacs--prompt-detached)
+          (should (< (point) (widget-get pimacs--prompt-widget :from)))
+          (should-not (= (point) (1- visible-end)))
+          (should (= (- (point) (pimacs-section-beginning section))
+                     (+ (length "prefix\n") reading-offset))))))))
 
 (ert-deftest pimacs--history-split-entries-keeps-tool-call-with-result ()
   (let* ((prefix (cl-loop for index below 9
