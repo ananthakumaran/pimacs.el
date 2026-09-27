@@ -1,0 +1,8 @@
+alpha
+beta█
+---------
+(:kind operations :operations ((:replace-suffix 4 "BETA") (:append "\ngamma")))
+---------
+alpha
+BETA█
+gamma

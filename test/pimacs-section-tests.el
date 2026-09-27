@@ -227,6 +227,37 @@
         (insert "  [-] Tests\n"))
       (should (null (pimacs-section-children tests))))))
 
+(ert-deftest pimacs-section-replace-clamps-point-when-shortened ()
+  (pimacs-with-root-section
+    (let ((section (pimacs-section--new-section 'example pimacs-section--root-section)))
+      (pimacs-section--insert-section section
+        (insert "hello world"))
+      (goto-char (+ (pimacs-section-beginning section) 8))
+      (pimacs-section--replace-section section
+        (insert "hi"))
+      (should (= (point) (pimacs-section-end section))))))
+
+(ert-deftest pimacs--align-point-falls-back-when-diff-times-out ()
+  (cl-letf (((symbol-function 'replace-buffer-contents)
+             (lambda (&rest _) nil)))
+    (should (= (pimacs--align-point "abcXYZdef" "abcdef" 5) 5))))
+
+(ert-deftest pimacs-section-point-restoration-after-save-excursion ()
+  (pimacs-with-root-section
+    (let ((section (pimacs-section--new-section 'example pimacs-section--root-section)))
+      (pimacs-section--insert-section section
+        (insert "hello world"))
+      (goto-char (+ (pimacs-section-beginning section) 8))
+      (should (eq (pimacs-section--with-point-restoration
+                    (pimacs-section--with-point-restoration
+                      (save-excursion
+                        (pimacs-section--replace-section section
+                          (insert "hello there")))
+                      :inner)
+                    :outer)
+                  :outer))
+      (should (= (point) (+ (pimacs-section-beginning section) 8)))
+      (should-not pimacs--reading-point-marker))))
 
 ;; ─── pimacs-section--replace-section-body ───────────────────────────────────────────
 
@@ -285,6 +316,19 @@
       (should (eq (car (pimacs-section-children parent)) child))
       (pimacs-section--set-visibility parent :show)
       (should (equal (buffer-string) "new title\nchild\n")))))
+
+(ert-deftest pimacs-section-replace-body-preserves-point-inside ()
+  (pimacs-with-root-section
+    (let* ((parent (pimacs-section--new-section 'parent pimacs-section--root-section))
+           (child (pimacs-section--new-section 'child parent)))
+      (pimacs-section--insert-section parent
+        (insert "old title"))
+      (pimacs-section--insert-section child
+        (insert "child"))
+      (goto-char (+ (pimacs-section-beginning parent) 4))
+      (pimacs-section--replace-section-body parent
+        (insert "new title"))
+      (should (= (point) (+ (pimacs-section-beginning parent) 4))))))
 
 ;; ─── pimacs-section--current-section / pimacs-section--section-at ────────────────────────────────
 

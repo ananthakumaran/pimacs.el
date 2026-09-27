@@ -379,8 +379,9 @@ select(.type == \"match\")
 
 (defun pimacs-search--render-controls (&optional control)
   (let ((inhibit-read-only t))
-    (pimacs-section--replace-section pimacs-search--controls-section
-      (pimacs-search--insert-controls))
+    (pimacs-section--with-point-restoration
+      (pimacs-section--replace-section pimacs-search--controls-section
+        (pimacs-search--insert-controls)))
     (when-let ((position (and control
                               (text-property-any
                                (point-min) (point-max)
@@ -393,9 +394,10 @@ select(.type == \"match\")
 
 (defun pimacs-search--set-status (message)
   (let ((inhibit-read-only t))
-    (save-excursion
-      (pimacs-section--replace-section pimacs-search--status-section
-        (insert message)))))
+    (pimacs-section--with-point-restoration
+      (save-excursion
+        (pimacs-section--replace-section pimacs-search--status-section
+          (insert message))))))
 
 (defun pimacs-search--set-search-type (button)
   (setf (pimacs-search-request-search-type pimacs-search--request)
@@ -677,8 +679,9 @@ select(.type == \"match\")
                 (propertize relative-time 'face 'shadow))))))
 
 (defun pimacs-search--render-session-heading (path section)
-  (pimacs-section--replace-section-body section
-    (pimacs-search--insert-session-info path)))
+  (pimacs-section--with-point-restoration
+    (pimacs-section--replace-section-body section
+      (pimacs-search--insert-session-info path))))
 
 (defun pimacs-search--update-session-metadata (record)
   (let* ((path (plist-get record :path))
@@ -966,18 +969,19 @@ select(.type == \"match\")
         (let ((count 0)
               (render-context pimacs-search--render-context)
               (inhibit-read-only t))
-          (save-excursion
-            (while (and pimacs-search--entry-queue
-                        (< count pimacs-search--render-batch-size))
-              (let ((entry (pop pimacs-search--entry-queue)))
-                (unless pimacs-search--entry-queue
-                  (setq pimacs-search--entry-queue-tail nil))
-                (when (pimacs-search--render-record entry render-context)
-                  (cl-incf pimacs-search--rendered-count))
-                (cl-incf count))))
-          (when pimacs-search--entry-queue
-            (pimacs-search--schedule-drain))
-          (pimacs-search--update-status))))))
+          (pimacs-section--with-point-restoration
+            (save-excursion
+              (while (and pimacs-search--entry-queue
+                          (< count pimacs-search--render-batch-size))
+                (let ((entry (pop pimacs-search--entry-queue)))
+                  (unless pimacs-search--entry-queue
+                    (setq pimacs-search--entry-queue-tail nil))
+                  (when (pimacs-search--render-record entry render-context)
+                    (cl-incf pimacs-search--rendered-count))
+                  (cl-incf count))))
+            (when pimacs-search--entry-queue
+              (pimacs-search--schedule-drain))
+            (pimacs-search--update-status)))))))
 
 (defun pimacs-search--parse-entry (line)
   (unless (equal line "")

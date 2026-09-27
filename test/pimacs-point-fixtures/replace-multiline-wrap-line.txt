@@ -1,0 +1,10 @@
+intro
+read this█ sentence
+end
+---------
+(:kind operations :operations ((:replace-suffix 28 "intro\nread this\nsentence\nend")))
+---------
+intro
+read this█
+sentence
+end

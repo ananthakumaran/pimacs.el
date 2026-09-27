@@ -1,0 +1,19 @@
+alpha
+keep reading
+
+Next section
+
+dra█ft
+
+---------
+(:kind section :result "alpha\nkeep reading" :adjacent "Next section" :prompt "draft"
+ :operations ((:replace "New\nalpha\nkeep reading")))
+---------
+New
+alpha
+keep reading
+
+Next section
+
+dra█ft
+

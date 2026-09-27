@@ -1,0 +1,9 @@
+# Summary
+First line.
+Second line█
+---------
+(:kind operations :operations ((:replace-suffix 33 "# Summary\nFirst line changed.\nSecond line")))
+---------
+# Summary
+First line changed.
+Second line█

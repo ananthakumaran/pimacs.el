@@ -1,0 +1,10 @@
+alpha
+beta█
+gamma
+---------
+(:kind operations :operations ((:replace-suffix 16 "alpha\ninserted\nbeta\ngamma")))
+---------
+alpha
+inserted
+beta█
+gamma

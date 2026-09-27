@@ -1,0 +1,5 @@
+π 😀 test█
+---------
+(:kind operations :operations ((:replace-suffix 8 "π 😀 TEST")))
+---------
+π 😀 TEST█

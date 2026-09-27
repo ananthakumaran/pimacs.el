@@ -1,0 +1,9 @@
+first line
+second li█ne
+third line
+---------
+(:kind operations :operations ((:replace-suffix 33 "first LINE\nsecond line\nthird line")))
+---------
+first LINE
+second li█ne
+third line

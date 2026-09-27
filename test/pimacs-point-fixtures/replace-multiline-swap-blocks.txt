@@ -1,0 +1,9 @@
+first
+second█
+third
+---------
+(:kind operations :operations ((:replace-suffix 18 "second\nfirst\nthird")))
+---------
+second█
+first
+third

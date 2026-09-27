@@ -1,0 +1,7 @@
+alpha
+beta█
+---------
+(:kind operations :operations ((:delete 4) (:append "BETA long")))
+---------
+alpha
+BETA█ long

@@ -1,0 +1,5 @@
+hello█
+---------
+(:kind operations :operations ((:replace-suffix 5 "hello!")))
+---------
+hello█!

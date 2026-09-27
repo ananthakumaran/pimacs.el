@@ -1,0 +1,15 @@
+alpha
+keep█ reading
+
+
+---------
+(:kind section :result "alpha\nkeep reading"
+ :operations ((:append "\nstreamed")
+              (:replace "alpha\ninserted\nkeep reading\nstreamed")))
+---------
+alpha
+inserted
+keep█ reading
+streamed
+
+

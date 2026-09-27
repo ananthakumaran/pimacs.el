@@ -1,0 +1,5 @@
+hello world█
+---------
+(:kind operations :operations ((:replace-suffix 11 #("hello world" 0 5 (face bold)))))
+---------
+hello world█

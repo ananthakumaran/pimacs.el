@@ -1,0 +1,7 @@
+alpha
+█
+---------
+(:kind operations :operations ((:replace-suffix 6 "alpha changed\nmore")))
+---------
+alpha changed
+█more

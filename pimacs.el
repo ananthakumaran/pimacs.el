@@ -418,50 +418,60 @@ with the message plist to insert the custom message content."
             (pimacs--buffer-string-common-prefix-length
              (current-buffer) start-position end-position text))
            (replacement-start (+ start-position prefix-length)))
-      (delete-region replacement-start end-position)
-      (goto-char replacement-start)
-      (insert (substring text prefix-length))
-      (set-marker content-end (point))
-      (cl-incf (pimacs-render-context-rendered-length context)
-               (- (length text) count)))))
+      (pimacs--with-point-transaction
+          (replacement-start end-position)
+          (replacement-start (pimacs-render-context-content-end context))
+          :align-end
+        (delete-region replacement-start end-position)
+        (goto-char replacement-start)
+        (insert (substring text prefix-length))
+        (set-marker content-end (point))
+        (cl-incf (pimacs-render-context-rendered-length context)
+                 (- (length text) count))))))
 
 (defun pimacs--render-apply-operations (context operations)
-  (dolist (operation operations)
-    (pcase operation
-      (`(:append ,text . ,_)
-       (unless (stringp text)
-         (error "Renderer append operation requires a string: %S" operation))
-       (goto-char (pimacs-render-context-content-end context))
-       (let ((start (point))
-             (buffer (current-buffer))
-             (after-insert (plist-get (cddr operation) :after-insert))
-             (data (plist-get (cddr operation) :data)))
-         (insert text)
-         (set-marker (pimacs-render-context-content-end context) (point))
-         (cl-incf (pimacs-render-context-rendered-length context) (length text))
-         (when after-insert
-           (unless (and (symbolp after-insert) (fboundp after-insert))
-             (error "Renderer after-insert hook must be a function symbol: %S" operation))
-           (let ((size (buffer-size)))
-             (with-current-buffer buffer
-               (funcall after-insert start (point) data))
-             (unless (= size (buffer-size))
-               (error "Renderer after-insert hook modified the buffer: %S" operation))))))
-      (`(:delete ,count)
-       (unless (and (integerp count) (>= count 0))
-         (error "Renderer delete operation requires a non-negative integer: %S" operation))
-       (let* ((content-begin (pimacs-render-context-content-begin context))
-              (content-end (pimacs-render-context-content-end context))
-              (end-position (marker-position content-end)))
-         (when (> count (- end-position (marker-position content-begin)))
-           (error "Renderer delete operation exceeds the content range: %S" operation))
-         (delete-region (- end-position count) end-position)
-         (set-marker content-end (- end-position count))
-         (cl-decf (pimacs-render-context-rendered-length context) count)))
-      (`(:replace-suffix ,count ,text)
-       (pimacs--render-replace-suffix context count text))
-      (_
-       (error "Unknown Markdown operation: %S" operation)))))
+  (let ((content-begin (pimacs-render-context-content-begin context))
+        (content-end (pimacs-render-context-content-end context)))
+    (pimacs--with-point-transaction
+        ((marker-position content-begin) (marker-position content-end))
+        ((marker-position content-begin) (marker-position content-end))
+        :align-end
+      (dolist (operation operations)
+        (pcase operation
+          (`(:append ,text . ,_)
+           (unless (stringp text)
+             (error "Renderer append operation requires a string: %S" operation))
+           (goto-char (pimacs-render-context-content-end context))
+           (let ((start (point))
+                 (buffer (current-buffer))
+                 (after-insert (plist-get (cddr operation) :after-insert))
+                 (data (plist-get (cddr operation) :data)))
+             (insert text)
+             (set-marker (pimacs-render-context-content-end context) (point))
+             (cl-incf (pimacs-render-context-rendered-length context) (length text))
+             (when after-insert
+               (unless (and (symbolp after-insert) (fboundp after-insert))
+                 (error "Renderer after-insert hook must be a function symbol: %S" operation))
+               (let ((size (buffer-size)))
+                 (with-current-buffer buffer
+                   (funcall after-insert start (point) data))
+                 (unless (= size (buffer-size))
+                   (error "Renderer after-insert hook modified the buffer: %S" operation))))))
+          (`(:delete ,count)
+           (unless (and (integerp count) (>= count 0))
+             (error "Renderer delete operation requires a non-negative integer: %S" operation))
+           (let* ((content-begin (pimacs-render-context-content-begin context))
+                  (content-end (pimacs-render-context-content-end context))
+                  (end-position (marker-position content-end)))
+             (when (> count (- end-position (marker-position content-begin)))
+               (error "Renderer delete operation exceeds the content range: %S" operation))
+             (delete-region (- end-position count) end-position)
+             (set-marker content-end (- end-position count))
+             (cl-decf (pimacs-render-context-rendered-length context) count)))
+          (`(:replace-suffix ,count ,text)
+           (pimacs--render-replace-suffix context count text))
+          (_
+           (error "Unknown Markdown operation: %S" operation)))))))
 
 (defun pimacs--renderer-create (renderer)
   (make-pimacs--renderer-session
@@ -603,11 +613,12 @@ with the message plist to insert the custom message content."
   "Insert BODY before PROMPT-WIDGET and restore focus, preserving undo."
   (declare (indent 0))
   (let ((follow-p (make-symbol "follow-p")))
-    `(let* ((inhibit-read-only t)
-            (,follow-p (pimacs--point-in-prompt-p)))
-       (save-excursion
-         (goto-char (widget-get pimacs--prompt-widget :from))
-         ,@body)
+    `(let ((inhibit-read-only t)
+           (,follow-p (pimacs--point-in-prompt-p)))
+       (pimacs-section--with-point-restoration
+         (save-excursion
+           (goto-char (widget-get pimacs--prompt-widget :from))
+           ,@body))
        (when ,follow-p
          (pimacs--recenter-chat)))))
 
@@ -1016,8 +1027,7 @@ with the message plist to insert the custom message content."
                          (pimacs-section--create-or-replace-section
                              (and content-section
                                   (pimacs-content-section-section content-section))
-                             'thinking
-                             pimacs-section--root-section
+                             'thinking pimacs-section--root-section
                            (pimacs-ui--insert-role-prefix role)
                            (if rendered-content
                                (pimacs--insert-rendered-content operations)
@@ -1041,8 +1051,7 @@ with the message plist to insert the custom message content."
                          (pimacs-section--create-or-replace-section
                              (and content-section
                                   (pimacs-content-section-section content-section))
-                             'assistant
-                             pimacs-section--root-section
+                             'assistant pimacs-section--root-section
                            (pimacs-ui--insert-role-prefix role)
                            (if rendered-content
                                (pimacs--insert-rendered-content operations)

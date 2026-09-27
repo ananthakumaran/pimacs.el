@@ -1,0 +1,8 @@
+alpha
+beta█
+gamma
+---------
+(:kind operations :operations ((:replace-suffix 16 "alpha\nx")))
+---------
+alpha
+x█

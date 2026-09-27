@@ -1,0 +1,7 @@
+▪ alpha
+▪ b█e
+---------
+(:kind markdown :source "- alpha\n- be" :deltas ("ta"))
+---------
+▪ alpha
+▪ b█eta

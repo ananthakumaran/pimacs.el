@@ -1,0 +1,7 @@
+a
+b█
+---------
+(:kind operations :operations ((:append "\nnew") (:delete 4) (:replace-suffix 1 "B")))
+---------
+a
+B█

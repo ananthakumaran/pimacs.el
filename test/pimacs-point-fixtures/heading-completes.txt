@@ -1,0 +1,5 @@
+### h█ea
+---------
+(:kind markdown :source "### hea" :deltas ("ding"))
+---------
+h█eading

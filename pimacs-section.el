@@ -352,6 +352,114 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
     (setq pimacs-section--root-section root)
     root))
 
+(defvar pimacs--reading-point-marker nil)
+(defvar pimacs--reading-point-remapped nil)
+(defvar pimacs--reading-point-transaction-owner nil)
+
+(defconst pimacs--point-alignment-max-seconds 0.002)
+
+(defun pimacs--align-point (old new old-offset)
+  (if (and (> old-offset 0) (= old-offset (length old))
+           (/= (aref old (1- old-offset)) ?\n))
+      (min (length new)
+           (1+ (pimacs--align-point old new (1- old-offset))))
+    (let ((fallback (min old-offset (length new))))
+      (if (and (<= old-offset (length new))
+               (eq (compare-strings old 0 old-offset new 0 old-offset) t))
+          old-offset
+        (let ((old-buffer (pimacs--make-temp-buffer " *pimacs-point-old*"))
+              (new-buffer (pimacs--make-temp-buffer " *pimacs-point-new*")))
+          (unwind-protect
+              (progn
+                (with-current-buffer old-buffer (insert old))
+                (with-current-buffer new-buffer (insert new))
+                (with-current-buffer old-buffer
+                  (let* ((marker (copy-marker (+ (point-min) old-offset)))
+                         (aligned (replace-buffer-contents
+                                   new-buffer pimacs--point-alignment-max-seconds))
+                         (new-offset (- (marker-position marker) (point-min))))
+                    (if (and aligned
+                             (<= 0 new-offset (length new))
+                             (or (zerop old-offset)
+                                 (and (> new-offset 0)
+                                      (= (aref old (1- old-offset))
+                                         (aref new (1- new-offset)))))
+                             (or (= old-offset (length old))
+                                 (and (< new-offset (length new))
+                                      (= (aref old old-offset)
+                                         (aref new new-offset)))))
+                        new-offset
+                      fallback))))
+            (kill-buffer old-buffer)
+            (kill-buffer new-buffer)))))))
+
+(defmacro pimacs--with-point-transaction (old-range new-range end-policy &rest body)
+  (declare (indent 3) (debug ((form form) (form form) form body)))
+  (let ((old-start (make-symbol "old-start"))
+        (old-end (make-symbol "old-end"))
+        (new-start (make-symbol "new-start"))
+        (new-end (make-symbol "new-end"))
+        (policy (make-symbol "end-policy"))
+        (marker (make-symbol "marker"))
+        (owned-marker (make-symbol "owned-marker"))
+        (offset (make-symbol "offset"))
+        (old-text (make-symbol "old-text"))
+        (result (make-symbol "result")))
+    `(if pimacs--reading-point-transaction-owner
+         (progn ,@body)
+       (let* ((,old-start ,(car old-range))
+              (,old-end ,(cadr old-range))
+              (,policy ,end-policy)
+              (,owned-marker (not pimacs--reading-point-marker))
+              (,marker (or pimacs--reading-point-marker (point-marker)))
+              (,offset (when (and (<= ,old-start (marker-position ,marker))
+                                  (or (< (marker-position ,marker) ,old-end)
+                                      (and (eq ,policy :align-end)
+                                           (< ,old-start ,old-end)
+                                           (= (marker-position ,marker) ,old-end))))
+                         (- (marker-position ,marker) ,old-start)))
+              (,old-text (when ,offset
+                           (buffer-substring-no-properties ,old-start ,old-end))))
+         (unwind-protect
+             (let ((,result (let ((pimacs--reading-point-transaction-owner
+                                   (and ,offset ,marker)))
+                              ,@body)))
+               (when ,offset
+                 (let ((,new-start ,(car new-range))
+                       (,new-end ,(cadr new-range)))
+                   (set-marker ,marker
+                               (+ ,new-start
+                                  (pimacs--align-point
+                                   ,old-text
+                                   (buffer-substring-no-properties ,new-start ,new-end)
+                                   ,offset)))
+                   (if ,owned-marker
+                       (goto-char ,marker)
+                     (setq pimacs--reading-point-remapped t))))
+               ,result)
+           (when ,owned-marker
+             (set-marker ,marker nil)))))))
+
+(defmacro pimacs-section--with-point-restoration (&rest body)
+  (declare (indent 0) (debug t))
+  (let ((window (make-symbol "window"))
+        (result (make-symbol "result")))
+    `(if pimacs--reading-point-marker
+         (progn ,@body)
+       (let* ((,window (get-buffer-window (current-buffer) t))
+              (pimacs--reading-point-marker
+               (copy-marker (if ,window (window-point ,window) (point))))
+              (pimacs--reading-point-remapped nil))
+         (unwind-protect
+             (let ((,result (progn ,@body)))
+               (when pimacs--reading-point-remapped
+                 (goto-char pimacs--reading-point-marker)
+                 (when (and (window-live-p ,window)
+                            (eq (window-buffer ,window) (current-buffer)))
+                   (set-window-point ,window pimacs--reading-point-marker)))
+               ,result)
+           (set-marker pimacs--reading-point-marker nil))))))
+
 (defmacro pimacs-section--insert-section (section &rest body)
   (declare (indent 1)
            (debug (symbolp body)))
@@ -424,24 +532,28 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
         (body-beginning (make-symbol "*body-beginning*"))
         (padding-beginning (make-symbol "*padding-beginning*")))
     `(let* ((,s ,section))
-       (delete-region (pimacs-section-beginning ,s) (pimacs-section-end ,s))
-       (setf (pimacs-section-children ,s) nil)
-       (goto-char (pimacs-section-beginning ,s))
-       (setf (pimacs-section-beginning ,s) (point-marker))
-       (let ((,body-beginning (point)))
-         ,@body
-         (let ((,padding-beginning (point)))
-           (insert (pimacs-section-padding ,s))
-           (remove-text-properties ,padding-beginning (point)
-                                   '(face nil pimacs-section-face-order nil)))
-         (pimacs-section--apply-face ,s ,body-beginning (point)))
-       (setf (pimacs-section-beginning ,s) (pimacs-section--advance-pointer-maker (pimacs-section-beginning ,s)))
-       (pimacs-section--update-section-end ,s (point-marker))
-       (pimacs-section--propertize-section ,s)
-       (if (pimacs-section--hidden-p ,s)
-           (pimacs-section--set-visibility ,s (pimacs-section-visibility ,s))
-         (pimacs-section--update-visibility-indicator ,s))
-       ,s)))
+       (pimacs--with-point-transaction
+           ((pimacs-section-beginning ,s) (pimacs-section-end ,s))
+           ((pimacs-section-beginning ,s) (pimacs-section-end ,s))
+           :outside
+         (delete-region (pimacs-section-beginning ,s) (pimacs-section-end ,s))
+         (setf (pimacs-section-children ,s) nil)
+         (goto-char (pimacs-section-beginning ,s))
+         (setf (pimacs-section-beginning ,s) (point-marker))
+         (let ((,body-beginning (point)))
+           ,@body
+           (let ((,padding-beginning (point)))
+             (insert (pimacs-section-padding ,s))
+             (remove-text-properties ,padding-beginning (point)
+                                     '(face nil pimacs-section-face-order nil)))
+           (pimacs-section--apply-face ,s ,body-beginning (point)))
+         (setf (pimacs-section-beginning ,s) (pimacs-section--advance-pointer-maker (pimacs-section-beginning ,s)))
+         (pimacs-section--update-section-end ,s (point-marker))
+         (pimacs-section--propertize-section ,s)
+         (if (pimacs-section--hidden-p ,s)
+             (pimacs-section--set-visibility ,s (pimacs-section-visibility ,s))
+           (pimacs-section--update-visibility-indicator ,s))
+         ,s))))
 
 (defmacro pimacs-section--replace-section-body (section &rest body)
   (declare (indent 1)
@@ -454,26 +566,30 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
     `(let* ((,s ,section)
             (,body-end (pimacs-section--section-body-end ,s))
             (,body-is-section (= ,body-end (pimacs-section-end ,s))))
-       (delete-region (pimacs-section-beginning ,s) ,body-end)
-       (goto-char (pimacs-section-beginning ,s))
-       (setf (pimacs-section-beginning ,s) (point-marker))
-       (let ((,body-beginning (point)))
-         ,@body
-         (let ((,padding-beginning (point)))
-           (insert (pimacs-section-padding ,s))
-           (remove-text-properties ,padding-beginning (point)
-                                   '(face nil pimacs-section-face-order nil)))
-         (pimacs-section--apply-face ,s ,body-beginning (point)))
-       (setf (pimacs-section-beginning ,s)
-             (pimacs-section--advance-pointer-maker
-              (pimacs-section-beginning ,s)))
-       (when ,body-is-section
-         (pimacs-section--update-section-end ,s (point-marker)))
-       (pimacs-section--propertize-section ,s (point))
-       (if (pimacs-section--hidden-p ,s)
-           (pimacs-section--set-visibility ,s (pimacs-section-visibility ,s))
-         (pimacs-section--update-visibility-indicator ,s))
-       ,s)))
+       (pimacs--with-point-transaction
+           ((pimacs-section-beginning ,s) ,body-end)
+           ((pimacs-section-beginning ,s) (pimacs-section--section-body-end ,s))
+           :outside
+         (delete-region (pimacs-section-beginning ,s) ,body-end)
+         (goto-char (pimacs-section-beginning ,s))
+         (setf (pimacs-section-beginning ,s) (point-marker))
+         (let ((,body-beginning (point)))
+           ,@body
+           (let ((,padding-beginning (point)))
+             (insert (pimacs-section-padding ,s))
+             (remove-text-properties ,padding-beginning (point)
+                                     '(face nil pimacs-section-face-order nil)))
+           (pimacs-section--apply-face ,s ,body-beginning (point)))
+         (setf (pimacs-section-beginning ,s)
+               (pimacs-section--advance-pointer-maker
+                (pimacs-section-beginning ,s)))
+         (when ,body-is-section
+           (pimacs-section--update-section-end ,s (point-marker)))
+         (pimacs-section--propertize-section ,s (point))
+         (if (pimacs-section--hidden-p ,s)
+             (pimacs-section--set-visibility ,s (pimacs-section-visibility ,s))
+           (pimacs-section--update-visibility-indicator ,s))
+         ,s))))
 
 (defmacro pimacs-section--create-or-replace-section (section type parent &rest body)
   "Create or replace SECTION of TYPE under PARENT, inserting BODY."

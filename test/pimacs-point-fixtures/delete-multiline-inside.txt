@@ -1,0 +1,8 @@
+one
+two█
+three
+---------
+(:kind operations :operations ((:delete 6)))
+---------
+one
+two█

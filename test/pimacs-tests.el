@@ -387,6 +387,166 @@
         (should (= (pimacs-render-context-rendered-length context)
                    (length shortened)))))))
 
+(defun pimacs-tests--point-fixture-actual (&optional end)
+  (let* ((text (buffer-substring-no-properties (point-min) (or end (point-max))))
+         (position (- (point) (point-min))))
+    (concat (substring text 0 position) "█" (substring text position))))
+
+(defun pimacs-tests--run-point-fixtures (kind runner)
+  (let (failures (matched 0))
+    (dolist (file (directory-files
+                   (expand-file-name "pimacs-point-fixtures" pimacs-tests--directory)
+                   t "\\.txt\\'"))
+      (with-temp-buffer
+        (insert-file-contents file)
+        (pcase-let ((`(,old ,fixture-text ,expected)
+                     (split-string (string-remove-suffix "\n" (buffer-string))
+                                   "\n---------\n")))
+          (let ((fixture (let ((read-eval nil))
+                           (car (read-from-string fixture-text)))))
+            (unless (memq (plist-get fixture :kind) '(operations section markdown))
+              (ert-fail (list :fixture file :invalid-kind (plist-get fixture :kind))))
+            (when (eq kind (plist-get fixture :kind))
+              (cl-incf matched)
+              (ert-info ((format "Point fixture: %s" file))
+                (unless (and (= (cl-count ?█ old) 1)
+                             (= (cl-count ?█ expected) 1))
+                  (ert-fail (list :fixture file :invalid-cursor-markers t)))
+                (let* ((result (funcall runner fixture old))
+                       (initial (replace-regexp-in-string "█" "" old))
+                       (failure (cond
+                                 ((not (equal initial (plist-get result :initial)))
+                                  (list :expected-initial initial
+                                        :actual-initial (plist-get result :initial)))
+                                 ((plist-get result :failure)
+                                  (plist-get result :failure))
+                                 ((not (equal expected (plist-get result :actual)))
+                                  (list :expected expected
+                                        :actual (plist-get result :actual))))))
+                  (when failure
+                    (push (append (list :fixture
+                                        (file-relative-name file pimacs-tests--directory)
+                                        :operations (plist-get result :operations))
+                                  failure)
+                          failures)))))))))
+    (when (zerop matched)
+      (ert-fail (list :kind kind :error :no-point-fixtures)))
+    (when failures
+      (ert-fail (list :failures (nreverse failures))))))
+
+(defun pimacs-tests--run-operation-point-fixture (fixture old)
+  (let ((initial (replace-regexp-in-string "█" "" old))
+        (operations (plist-get fixture :operations)))
+    (erase-buffer)
+    (let ((context (pimacs--render-create-context)))
+      (pimacs--render-apply-operations context (list (list :append initial)))
+      (let ((actual-initial (buffer-substring-no-properties
+                             (pimacs-render-context-content-begin context)
+                             (pimacs-render-context-content-end context))))
+        (if (not (equal actual-initial initial))
+            (list :initial actual-initial :operations operations)
+          (setq pimacs--prompt-widget
+                (widget-create 'editable-field :format "%v" :value ""))
+          (widget-setup)
+          (goto-char (+ (point-min) (cl-position ?█ old)))
+          (pimacs--widget-save-excursion-preserving-undo
+            (pimacs--render-apply-operations context operations))
+          (list :initial actual-initial :operations operations
+                :actual (pimacs-tests--point-fixture-actual
+                         (widget-get pimacs--prompt-widget :from))))))))
+
+(ert-deftest pimacs--streaming-operation-fixtures ()
+  (pimacs-tests--run-point-fixtures
+   'operations #'pimacs-tests--run-operation-point-fixture))
+
+(defun pimacs-tests--run-section-point-fixture (fixture old)
+  (let ((operations (plist-get fixture :operations))
+        (pimacs-section-padding "\n\n"))
+    (erase-buffer)
+    (pimacs-section--create-root-section)
+    (let ((result (pimacs-section--new-section
+                   'tool-result pimacs-section--root-section)))
+      (pimacs-section--insert-section result
+        (insert (plist-get fixture :result)))
+      (when-let ((adjacent (plist-get fixture :adjacent)))
+        (pimacs-section--create-section 'example pimacs-section--root-section
+          (insert adjacent)))
+      (when-let ((prompt (plist-get fixture :prompt)))
+        (setq pimacs--prompt-widget
+              (widget-create 'editable-field :format "%v" :value prompt))
+        (widget-setup))
+      (let ((actual-initial (buffer-substring-no-properties (point-min) (point-max))))
+        (if (not (equal actual-initial (replace-regexp-in-string "█" "" old)))
+            (list :initial actual-initial :operations operations)
+          (goto-char (+ (point-min) (cl-position ?█ old)))
+          (cl-labels ((apply-operations ()
+                        (dolist (operation operations)
+                          (pcase operation
+                            (`(:append ,text)
+                             (pimacs-section--append-section result
+                               (insert text)))
+                            (`(:replace ,text)
+                             (pimacs-section--replace-section result
+                               (insert text)))))))
+            (if pimacs--prompt-widget
+                (pimacs--widget-save-excursion-preserving-undo
+                  (apply-operations))
+              (pimacs-section--with-point-restoration
+                (save-excursion (apply-operations)))))
+          (list :initial actual-initial :operations operations
+                :actual (pimacs-tests--point-fixture-actual)))))))
+
+(ert-deftest pimacs--section-point-fixtures ()
+  (pimacs-tests--run-point-fixtures
+   'section #'pimacs-tests--run-section-point-fixture))
+
+(defun pimacs-tests--run-markdown-point-fixture (fixture old)
+  (let ((initial (replace-regexp-in-string "█" "" old))
+        applied unexpected)
+    (erase-buffer)
+    (let ((context (pimacs--render-create-context))
+          (state (pimacs--render-markdown :create)))
+      (unwind-protect
+          (progn
+            (pimacs--render-apply-operations
+             context (pimacs--render-markdown :stream state
+                                              (plist-get fixture :source)))
+            (let ((actual-initial
+                   (buffer-substring-no-properties
+                    (pimacs-render-context-content-begin context)
+                    (pimacs-render-context-content-end context))))
+              (if (not (equal actual-initial initial))
+                  (list :initial actual-initial)
+                (setq pimacs--prompt-widget
+                      (widget-create 'editable-field :format "%v" :value ""))
+                (widget-setup)
+                (goto-char (+ (point-min) (cl-position ?█ old)))
+                (pimacs--widget-save-excursion-preserving-undo
+                  (dolist (delta (plist-get fixture :deltas))
+                    (let ((operations (pimacs--render-markdown :stream state delta)))
+                      (unless (cl-some (lambda (operation)
+                                         (pcase operation
+                                           (`(:replace-suffix ,count ,_)
+                                            (> count 0))))
+                                       operations)
+                        (setq unexpected
+                              (list :delta delta :actual-operations operations
+                                    :expected-operation :replace-suffix)))
+                      (push operations applied)
+                      (pimacs--render-apply-operations context operations))))
+                (list :initial actual-initial :operations (nreverse applied)
+                      :failure unexpected
+                      :actual (pimacs-tests--point-fixture-actual
+                               (widget-get pimacs--prompt-widget :from))))))
+        (pimacs--render-markdown :destroy state)))))
+
+(ert-deftest pimacs--markdown-point-fixtures ()
+  (require 'pimacs-markdown)
+  (unless (pimacs--markdown-available-p)
+    (ert-skip "Tree-sitter Markdown grammars are unavailable"))
+  (pimacs-tests--run-point-fixtures
+   'markdown #'pimacs-tests--run-markdown-point-fixture))
+
 (ert-deftest pimacs--join-test ()
   (should (equal (pimacs--join nil) ""))
   (should (equal (pimacs--join '()) ""))
@@ -893,6 +1053,44 @@
       (should-not (string-match-p "stream: Hello" (buffer-string)))
       (should (equal (nreverse operations)
                      '(:create :stream :stream :final :destroy))))))
+
+(ert-deftest pimacs--handle-message-end-preserves-reading-point ()
+  (dolist (type '("text" "thinking"))
+    (dolist (location '(inside prompt))
+      (with-temp-buffer
+        (pimacs-section--create-root-section)
+        (setq pimacs--content-sections (make-hash-table :test 'eql))
+        (setq pimacs--prompt-widget
+              (widget-create 'editable-field :format "%v" :value ""))
+        (widget-setup)
+        (let* ((renderer (lambda (operation &optional _state text)
+                           (pcase operation
+                             (:create nil)
+                             ((or :stream :final) (list (list :append text))))))
+               (pimacs-markdown-renderer renderer)
+               (pimacs-thinking-renderer renderer))
+          (pimacs--handle-message-update
+           `(:assistantMessageEvent
+             (:type ,(if (equal type "text") "text_delta" "thinking_delta")
+                    :delta "Hello world" :contentIndex 0)))
+          (let* ((section (pimacs-content-section-section
+                           (gethash 0 pimacs--content-sections)))
+                 (position (if (eq location 'inside)
+                               (save-excursion
+                                 (goto-char (pimacs-section-beginning section))
+                                 (search-forward "world")
+                                 (- (point) 3))
+                             (widget-field-start pimacs--prompt-widget)))
+                 (offset (- position (pimacs-section-beginning section))))
+            (goto-char position)
+            (pimacs--handle-message-end
+             `(:message (:role "assistant"
+                               :content ((:type ,type
+                                                ,(if (equal type "text") :text :thinking)
+                                                "Hello world")))))
+            (if (eq location 'inside)
+                (should (= (- (point) (pimacs-section-beginning section)) offset))
+              (should (= (point) (widget-field-start pimacs--prompt-widget))))))))))
 
 (ert-deftest pimacs-section-applies-configured-face ()
   (with-temp-buffer

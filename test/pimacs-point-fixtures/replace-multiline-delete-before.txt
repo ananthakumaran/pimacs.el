@@ -1,0 +1,8 @@
+alpha
+remove this
+keep█ reading
+---------
+(:kind operations :operations ((:replace-suffix 30 "alpha\nkeep reading")))
+---------
+alpha
+keep█ reading

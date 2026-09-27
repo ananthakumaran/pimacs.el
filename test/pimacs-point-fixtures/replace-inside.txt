@@ -1,0 +1,5 @@
+the quick fox█jumped over the
+---------
+(:kind operations :operations ((:replace-suffix 28 "the Quick foxjumped over the")))
+---------
+the Quick fox█jumped over the

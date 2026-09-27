@@ -1,0 +1,5 @@
+the quick fox█
+---------
+(:kind operations :operations ((:replace-suffix 13 "the Quick fox!")))
+---------
+the Quick fox█!

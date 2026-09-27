@@ -1,0 +1,5 @@
+one█
+---------
+(:kind operations :operations ((:append " extra") (:delete 6)))
+---------
+one█

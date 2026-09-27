@@ -1,0 +1,5 @@
+before █read after
+---------
+(:kind operations :operations ((:replace-suffix 10 "read more after")))
+---------
+before █read more after

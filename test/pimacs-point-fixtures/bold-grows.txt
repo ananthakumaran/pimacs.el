@@ -1,0 +1,5 @@
+**ab█c
+---------
+(:kind markdown :source "**abc" :deltas ("def"))
+---------
+**ab█cdef

@@ -1,0 +1,17 @@
+alpha
+keep█ reading
+
+Next section
+
+
+---------
+(:kind section :result "alpha\nkeep reading" :adjacent "Next section"
+ :operations ((:replace "alpha\ninserted\nkeep reading")))
+---------
+alpha
+inserted
+keep█ reading
+
+Next section
+
+
