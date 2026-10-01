@@ -430,49 +430,67 @@ with the message plist to insert the custom message content."
         (cl-incf (pimacs-render-context-rendered-length context)
                  (- (length text) count))))))
 
+(defun pimacs--render-apply-operation (context operation)
+  "Apply a single renderer OPERATION to CONTEXT."
+  (pcase operation
+    (`(:append ,text . ,_)
+     (unless (stringp text)
+       (error "Renderer append operation requires a string: %S" operation))
+     (goto-char (pimacs-render-context-content-end context))
+     (let ((start (point))
+           (buffer (current-buffer))
+           (after-insert (plist-get (cddr operation) :after-insert))
+           (data (plist-get (cddr operation) :data)))
+       (insert text)
+       (set-marker (pimacs-render-context-content-end context) (point))
+       (cl-incf (pimacs-render-context-rendered-length context) (length text))
+       (when after-insert
+         (unless (and (symbolp after-insert) (fboundp after-insert))
+           (error "Renderer after-insert hook must be a function symbol: %S" operation))
+         (let ((size (buffer-size)))
+           (with-current-buffer buffer
+             (funcall after-insert start (point) data))
+           (unless (= size (buffer-size))
+             (error "Renderer after-insert hook modified the buffer: %S" operation))))))
+    (`(:delete ,count)
+     (unless (and (integerp count) (>= count 0))
+       (error "Renderer delete operation requires a non-negative integer: %S" operation))
+     (let* ((content-begin (pimacs-render-context-content-begin context))
+            (content-end (pimacs-render-context-content-end context))
+            (end-position (marker-position content-end)))
+       (when (> count (- end-position (marker-position content-begin)))
+         (error "Renderer delete operation exceeds the content range: %S" operation))
+       (delete-region (- end-position count) end-position)
+       (set-marker content-end (- end-position count))
+       (cl-decf (pimacs-render-context-rendered-length context) count)))
+    (`(:replace-suffix ,count ,text)
+     (pimacs--render-replace-suffix context count text))
+    (_
+     (error "Unknown Markdown operation: %S" operation))))
+
 (defun pimacs--render-apply-operations (context operations)
-  (let ((content-begin (pimacs-render-context-content-begin context))
-        (content-end (pimacs-render-context-content-end context)))
-    (pimacs--with-point-transaction
-        ((marker-position content-begin) (marker-position content-end))
-        ((marker-position content-begin) (marker-position content-end))
-        :align-end
-      (dolist (operation operations)
-        (pcase operation
-          (`(:append ,text . ,_)
-           (unless (stringp text)
-             (error "Renderer append operation requires a string: %S" operation))
-           (goto-char (pimacs-render-context-content-end context))
-           (let ((start (point))
-                 (buffer (current-buffer))
-                 (after-insert (plist-get (cddr operation) :after-insert))
-                 (data (plist-get (cddr operation) :data)))
-             (insert text)
-             (set-marker (pimacs-render-context-content-end context) (point))
-             (cl-incf (pimacs-render-context-rendered-length context) (length text))
-             (when after-insert
-               (unless (and (symbolp after-insert) (fboundp after-insert))
-                 (error "Renderer after-insert hook must be a function symbol: %S" operation))
-               (let ((size (buffer-size)))
-                 (with-current-buffer buffer
-                   (funcall after-insert start (point) data))
-                 (unless (= size (buffer-size))
-                   (error "Renderer after-insert hook modified the buffer: %S" operation))))))
-          (`(:delete ,count)
-           (unless (and (integerp count) (>= count 0))
-             (error "Renderer delete operation requires a non-negative integer: %S" operation))
-           (let* ((content-begin (pimacs-render-context-content-begin context))
-                  (content-end (pimacs-render-context-content-end context))
-                  (end-position (marker-position content-end)))
-             (when (> count (- end-position (marker-position content-begin)))
-               (error "Renderer delete operation exceeds the content range: %S" operation))
-             (delete-region (- end-position count) end-position)
-             (set-marker content-end (- end-position count))
-             (cl-decf (pimacs-render-context-rendered-length context) count)))
-          (`(:replace-suffix ,count ,text)
-           (pimacs--render-replace-suffix context count text))
-          (_
-           (error "Unknown Markdown operation: %S" operation)))))))
+  "Apply renderer OPERATIONS to CONTEXT, preserving the reading point.
+Single appends need no alignment; single suffix replacements align only
+their changed tail.  Other batches align against their final result."
+  (cond
+   ((null operations) nil)
+   ((and (null (cdr operations))
+         (memq (caar operations) '(:append :replace-suffix)))
+    ;; Do not let a message-wide transaction suppress the suffix helper's
+    ;; narrower transaction, or snapshot unchanged content on an append.
+    (pimacs--render-apply-operation context (car operations))
+    nil)
+   (t
+    (let ((content-begin (pimacs-render-context-content-begin context))
+          (content-end (pimacs-render-context-content-end context)))
+      ;; Mixed operations must map point once, against the final text, not
+      ;; intermediate states such as a delete followed by an append.
+      (pimacs--with-point-transaction
+          ((marker-position content-begin) (marker-position content-end))
+          ((marker-position content-begin) (marker-position content-end))
+          :align-end
+        (dolist (operation operations)
+          (pimacs--render-apply-operation context operation)))))))
 
 (defun pimacs--renderer-create (renderer)
   (make-pimacs--renderer-session
@@ -1792,7 +1810,7 @@ is non-nil, insert an ellipsis instead of ARGS."
   (pimacs--recenter-chat))
 
 (defun pimacs--autohide-sections ()
-  ;; Folding nearby sections would shift a scrolled reading view.
+  "Autohide sections only when following the tail, preserving scrolled views."
   (when (pimacs--follow-tail-p)
     (pimacs-section-autohide)
     (pimacs--recenter-chat)))

@@ -387,6 +387,46 @@
         (should (= (pimacs-render-context-rendered-length context)
                    (length shortened)))))))
 
+(ert-deftest pimacs--render-point-aligns-only-changed-tail ()
+  (with-temp-buffer
+    (let* ((context (pimacs--render-create-context))
+           (prefix (make-string 12926 ?x))
+           (initial (concat prefix "old tail"))
+           (align-point (symbol-function 'pimacs--align-point))
+           (calls 0))
+      (pimacs--render-apply-operations context (list (list :append initial)))
+      (goto-char (- (pimacs-render-context-content-end context) 4))
+      (cl-letf (((symbol-function 'pimacs--align-point)
+                 (lambda (old new offset)
+                   (cl-incf calls)
+                   (should (equal old "old tail"))
+                   (should (equal new "new tail"))
+                   (should (= offset 4))
+                   (funcall align-point old new offset))))
+        (pimacs-section--with-point-restoration
+          (save-excursion
+            (pimacs--render-apply-operations
+             context (list (list :replace-suffix (length initial)
+                                 (concat prefix "new tail")))))))
+      (should (= calls 1)))))
+
+(ert-deftest pimacs--render-point-unchanged-needs-no-snapshots ()
+  (dolist (operations '(nil
+                        ((:append "!"))
+                        ((:replace-suffix 10 "prefix new"))
+                        ((:replace-suffix 10 "prefix old"))))
+    (with-temp-buffer
+      (let ((context (pimacs--render-create-context)))
+        (pimacs--render-apply-operations context '((:append "prefix old")))
+        (goto-char (+ (point-min) 2))
+        (cl-letf (((symbol-function 'pimacs--align-point)
+                   (lambda (&rest _) (ert-fail "Unchanged point was aligned")))
+                  ((symbol-function 'buffer-substring-no-properties)
+                   (lambda (&rest _) (ert-fail "Unchanged content was copied"))))
+          (pimacs-section--with-point-restoration
+            (save-excursion
+              (pimacs--render-apply-operations context operations))))))))
+
 (defun pimacs-tests--point-fixture-actual (&optional end)
   (let* ((text (buffer-substring-no-properties (point-min) (or end (point-max))))
          (position (- (point) (point-min))))
