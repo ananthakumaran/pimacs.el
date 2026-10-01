@@ -262,7 +262,7 @@
                 (pcase operation
                   (`(:replace-suffix ,count ,text)
                    (setq output
-                         (concat (substring output 0 (- count)) text)))))
+                         (concat (substring output 0 (- (length output) count)) text)))))
               (setq position end)
               (setq chunk-size (1+ (% chunk-size 7)))))
           output)

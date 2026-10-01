@@ -534,6 +534,7 @@ with the message plist to insert the custom message content."
   (pimacs--render-insert pimacs-thinking-renderer text streaming))
 
 (pimacs--def-permanent-buffer-local pimacs--prompt-widget nil)
+(pimacs--def-permanent-buffer-local pimacs--prompt-detached nil) ; point pinned out of the prompt to hold a scrolled view
 (pimacs--def-permanent-buffer-local pimacs--attached-images (vector))
 (pimacs--def-permanent-buffer-local pimacs--attached-images-widget nil)
 (pimacs--def-permanent-buffer-local pimacs--prompt-before-widget nil)
@@ -609,19 +610,65 @@ with the message plist to insert the custom message content."
     (>= (window-point window)
         (widget-get pimacs--prompt-widget :from))))
 
+(defun pimacs--window-at-tail-p (&optional window)
+  "Non-nil when WINDOW is showing the end of the current buffer."
+  (let ((window (or window (get-buffer-window (current-buffer) t))))
+    (and (window-live-p window)
+         (with-current-buffer (window-buffer window)
+           (or (>= (or (window-end window t) 0) (point-max))
+               ;; Last line may be partially visible.
+               (pos-visible-in-window-p (point-max) window t))))))
+
+(defun pimacs--follow-tail-p ()
+  "Non-nil when the selected chat view is following new output.
+
+Point can sit in the prompt while the window is scrolled up, so
+prompt membership alone is not enough."
+  (and (pimacs--point-in-prompt-p)
+       (pimacs--window-at-tail-p)))
 
 (defmacro pimacs--widget-save-excursion-preserving-undo (&rest body)
-  "Insert BODY before PROMPT-WIDGET and restore focus, preserving undo."
+  "Insert BODY before the prompt, preserving undo and the window view.
+
+If the window is following the tail, recenter onto the prompt after
+BODY.  If the user has scrolled away, keep that view still.
+
+Inserts happen before the prompt.  Point often remains in the prompt,
+so the insert can push it past `window-end' and redisplay jumps to the
+bottom.  Pin point to the last visible line only in that case.  When
+point restoration has placed point back into buffer content (the user
+is reading the text being re-rendered), leave it there.
+
+If a previous pin set `pimacs--prompt-detached' and the window shows
+the tail again, move point back to the prompt and resume following."
   (declare (indent 0))
-  (let ((follow-p (make-symbol "follow-p")))
-    `(let ((inhibit-read-only t)
-           (,follow-p (pimacs--point-in-prompt-p)))
-       (pimacs-section--with-point-restoration
-         (save-excursion
-           (goto-char (widget-get pimacs--prompt-widget :from))
-           ,@body))
-       (when ,follow-p
-         (pimacs--recenter-chat)))))
+  (let ((follow-p (make-symbol "follow-p"))
+        (window (make-symbol "window"))
+        (visible-end (make-symbol "visible-end")))
+    `(progn
+       (when (and pimacs--prompt-detached (pimacs--window-at-tail-p))
+         (pimacs-focus-prompt)
+         (setq pimacs--prompt-detached nil))
+       (let* ((inhibit-read-only t)
+              (,window (get-buffer-window (current-buffer) t))
+              (,follow-p (pimacs--follow-tail-p))
+              ;; Snapshot before BODY; `window-end' without UPDATE is the
+              ;; last displayed end, which is the view we want to hold.
+              (,visible-end (and ,window (not ,follow-p)
+                                 (eq ,window (selected-window))
+                                 (window-end ,window))))
+         (pimacs-section--with-point-restoration
+           (save-excursion
+             (goto-char (widget-get pimacs--prompt-widget :from))
+             ,@body))
+         (cond
+          (,follow-p
+           (pimacs--recenter-chat))
+          ((and ,visible-end
+                (> (point) ,visible-end)
+                (>= (point) (widget-get pimacs--prompt-widget :from)))
+           (setq pimacs--prompt-detached t)
+           (goto-char (max (window-start ,window) (1- ,visible-end)))))))))
 
 (defmacro pimacs--widget-save-excursion (&rest body)
   "Insert generated BODY before PROMPT-WIDGET and restore focus."
@@ -1735,7 +1782,8 @@ is non-nil, insert an ellipsis instead of ARGS."
   (pimacs--recenter-chat))
 
 (defun pimacs--autohide-sections ()
-  (when (pimacs--point-in-prompt-p)
+  ;; Folding nearby sections would shift a scrolled reading view.
+  (when (pimacs--follow-tail-p)
     (pimacs-section-autohide)
     (pimacs--recenter-chat)))
 
