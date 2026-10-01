@@ -627,6 +627,8 @@ prompt membership alone is not enough."
   (and (pimacs--point-in-prompt-p)
        (pimacs--window-at-tail-p)))
 
+(defvar pimacs--view-update-buffer nil)
+
 (defmacro pimacs--widget-save-excursion-preserving-undo (&rest body)
   "Insert BODY before the prompt, preserving undo and the window view.
 
@@ -642,33 +644,41 @@ is reading the text being re-rendered), leave it there.
 If a previous pin set `pimacs--prompt-detached' and the window shows
 the tail again, move point back to the prompt and resume following."
   (declare (indent 0))
-  (let ((follow-p (make-symbol "follow-p"))
+  (let ((insert-body
+         `(let ((inhibit-read-only t))
+            (pimacs-section--with-point-restoration
+              (save-excursion
+                (goto-char (widget-get pimacs--prompt-widget :from))
+                ,@body))))
         (window (make-symbol "window"))
+        (at-tail (make-symbol "at-tail"))
+        (follow-p (make-symbol "follow-p"))
         (visible-end (make-symbol "visible-end")))
-    `(progn
-       (when (and pimacs--prompt-detached (pimacs--window-at-tail-p))
-         (pimacs-focus-prompt)
-         (setq pimacs--prompt-detached nil))
-       (let* ((inhibit-read-only t)
+    `(if (eq pimacs--view-update-buffer (current-buffer))
+         ,insert-body
+       (let* ((pimacs--view-update-buffer (current-buffer))
               (,window (get-buffer-window (current-buffer) t))
-              (,follow-p (pimacs--follow-tail-p))
-              ;; Snapshot before BODY; `window-end' without UPDATE is the
-              ;; last displayed end, which is the view we want to hold.
-              (,visible-end (and ,window (not ,follow-p)
-                                 (eq ,window (selected-window))
-                                 (window-end ,window))))
-         (pimacs-section--with-point-restoration
-           (save-excursion
-             (goto-char (widget-get pimacs--prompt-widget :from))
-             ,@body))
-         (cond
-          (,follow-p
-           (pimacs--recenter-chat))
-          ((and ,visible-end
-                (> (point) ,visible-end)
-                (>= (point) (widget-get pimacs--prompt-widget :from)))
-           (setq pimacs--prompt-detached t)
-           (goto-char (max (window-start ,window) (1- ,visible-end)))))))))
+              (,at-tail
+               (and (or pimacs--prompt-detached
+                        (pimacs--point-in-prompt-p))
+                    (pimacs--window-at-tail-p ,window))))
+         (when (and pimacs--prompt-detached ,at-tail)
+           (pimacs-focus-prompt)
+           (setq pimacs--prompt-detached nil))
+         (let* ((,follow-p (and ,at-tail (pimacs--point-in-prompt-p)))
+                ;; Snapshot before BODY; nested inserts must not refresh it.
+                (,visible-end (and ,window (not ,follow-p)
+                                   (eq ,window (selected-window))
+                                   (window-end ,window))))
+           ,insert-body
+           (cond
+            (,follow-p
+             (pimacs--recenter-chat))
+            ((and ,visible-end
+                  (> (point) ,visible-end)
+                  (>= (point) (widget-get pimacs--prompt-widget :from)))
+             (setq pimacs--prompt-detached t)
+             (goto-char (max (window-start ,window) (1- ,visible-end))))))))))
 
 (defmacro pimacs--widget-save-excursion (&rest body)
   "Insert generated BODY before PROMPT-WIDGET and restore focus."

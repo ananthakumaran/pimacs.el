@@ -1268,6 +1268,42 @@
   (setq pimacs--status-texts (make-hash-table :test 'equal))
   (widget-setup))
 
+(ert-deftest pimacs--widget-save-excursion-checks-tail-once-for-nested-inserts ()
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (pimacs-tests--setup-chat-widgets)
+    (pimacs-focus-prompt)
+    (setq pimacs--prompt-detached t)
+    (let ((tail-checks 0)
+          (recenters 0)
+          (window 'pimacs-test-window))
+      (cl-letf (((symbol-function 'get-buffer-window) (lambda (&rest _) window))
+                ((symbol-function 'window-point) (lambda (&rest _) (point)))
+                ((symbol-function 'pimacs--window-at-tail-p)
+                 (lambda (&optional _)
+                   (cl-incf tail-checks)
+                   (should (= tail-checks 1))
+                   t))
+                ((symbol-function 'pimacs--recenter-chat)
+                 (lambda ()
+                   (cl-incf recenters)
+                   (should (string-match-p "first" (buffer-string)))
+                   (should (string-match-p "second" (buffer-string))))))
+        (pimacs--widget-save-excursion
+          (pimacs--widget-save-excursion
+            (pimacs-section--create-section 'info pimacs-section--root-section
+              (insert "first\n")))
+          (should (= recenters 0))
+          (pimacs--widget-save-excursion
+            (pimacs-section--create-section 'info pimacs-section--root-section
+              (insert "second\n")))
+          (should (= recenters 0)))
+        (should (= tail-checks 1))
+        (should (= recenters 1))
+        (should-not pimacs--prompt-detached)
+        (should-not pimacs--view-update-buffer)
+        (should (= (point) (widget-field-text-end pimacs--prompt-widget)))))))
+
 (ert-deftest pimacs--widget-save-excursion-anchors-view-when-scrolled-away ()
   "Inserting output while scrolled away must not move the view when point stays in the prompt."
   (with-temp-buffer
@@ -1284,15 +1320,17 @@
       (cl-letf (((symbol-function 'get-buffer-window) (lambda (&rest _) window))
                 ((symbol-function 'selected-window) (lambda () window))
                 ((symbol-function 'window-point) (lambda (&rest _) (point)))
-                ((symbol-function 'pimacs--follow-tail-p) (lambda () nil))
+                ((symbol-function 'pimacs--window-at-tail-p) (lambda (&optional _) nil))
                 ((symbol-function 'window-end) (lambda (&rest _) visible-end))
                 ((symbol-function 'window-start) (lambda (&rest _) (point-min)))
                 ((symbol-function 'pimacs--recenter-chat)
                  (lambda () (ert-fail "recentered while scrolled away"))))
         (should-not pimacs--prompt-detached)
         (pimacs--widget-save-excursion
-          (pimacs-section--create-section 'info pimacs-section--root-section
-            (insert "new streaming output\n")))
+          (pimacs--widget-save-excursion
+            (pimacs-section--create-section 'info pimacs-section--root-section
+              (insert "new streaming output\n")))
+          (should-not pimacs--prompt-detached))
         (should pimacs--prompt-detached)
         (should (= (point) (1- visible-end)))))))
 
@@ -1309,7 +1347,7 @@
       (cl-letf (((symbol-function 'get-buffer-window) (lambda (&rest _) 'pimacs-test-window))
                 ((symbol-function 'window-point) (lambda (&rest _) (point)))
                 ((symbol-function 'pimacs--point-in-prompt-p) (lambda () t))
-                ((symbol-function 'pimacs--window-at-tail-p) (lambda () t))
+                ((symbol-function 'pimacs--window-at-tail-p) (lambda (&optional _) t))
                 ((symbol-function 'pimacs--recenter-chat) (lambda () (setq recentered t))))
         (pimacs--widget-save-excursion
           (pimacs-section--create-section 'info pimacs-section--root-section
@@ -1341,14 +1379,16 @@
         (cl-letf (((symbol-function 'get-buffer-window) (lambda (&rest _) window))
                   ((symbol-function 'selected-window) (lambda () window))
                   ((symbol-function 'window-point) (lambda (&rest _) (point)))
-                  ((symbol-function 'pimacs--follow-tail-p) (lambda () nil))
+                  ((symbol-function 'pimacs--window-at-tail-p)
+                   (lambda (&optional _) (ert-fail "checked tail while reading")))
                   ((symbol-function 'window-end) (lambda (&rest _) visible-end))
                   ((symbol-function 'window-start) (lambda (&rest _) (point-min)))
                   ((symbol-function 'pimacs--recenter-chat)
                    (lambda () (ert-fail "recentered while reading"))))
           (pimacs--widget-save-excursion
-            (pimacs-section--replace-section section
-              (insert "prefix\naaa\nbbb\nccc\n")))
+            (pimacs--widget-save-excursion
+              (pimacs-section--replace-section section
+                (insert "prefix\naaa\nbbb\nccc\n"))))
           (should-not pimacs--prompt-detached)
           (should (< (point) (widget-get pimacs--prompt-widget :from)))
           (should-not (= (point) (1- visible-end)))
