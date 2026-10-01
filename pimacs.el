@@ -3123,18 +3123,26 @@ With a prefix argument, show a transient for setting NAME and ROOT."
 SESSION-FILE is the path to the session file to switch to.
 MESSAGE is shown as a notification when complete.
 If non-nil, call CB after the session refresh finishes."
-  (pimacs--widget-save-excursion
-    (pimacs--clear-session-widgets))
-  (pimacs--send-command
-   "switch_session" (list :sessionPath session-file)
-   (pimacs--on-response-success-callback resp
-     (pimacs--update-header-line)
-     (pimacs--unless-cancelled resp "Session switch"
-       (pimacs-refresh-session (lambda ()
-                                 (pimacs--notify message)
-                                 (when cb
-                                   (funcall cb))))))))
-
+  (let ((buffer (current-buffer)))
+    (pimacs--widget-save-excursion
+      (pimacs--clear-session-widgets))
+    (pimacs--send-command
+     "switch_session" (list :sessionPath session-file)
+     (pimacs--on-response-success-callback resp
+       (pimacs--update-header-line)
+       (pimacs--unless-cancelled resp "Session switch"
+         (pimacs--send-command
+          "get_state" '()
+          (pimacs--on-response-success-callback state-resp
+            (let ((session-name
+                   (pimacs--json-get (plist-get state-resp :data) :sessionName)))
+              (pimacs-refresh-session (lambda ()
+                                        (with-current-buffer buffer
+                                          (rename-buffer
+                                           (pimacs--chat-buffer-name session-name) t))
+                                        (pimacs--notify message)
+                                        (when cb
+                                          (funcall cb))))))))))))
 
 (defun pimacs-resume-session-file (session-file cwd)
   "Resume SESSION-FILE in a chat rooted at CWD."
