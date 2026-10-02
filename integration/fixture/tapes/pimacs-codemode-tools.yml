@@ -1,0 +1,457 @@
+http_interactions:
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:55918
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '10927'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- read: Read file contents\n-
+          bash: Execute bash commands (ls, grep, find, etc.)\n- edit: Make
+          precise file edits with exact text replacement, including multiple
+          disjoint edits in one call\n- write: Create or overwrite files\n-
+          grep: Search file contents for patterns (respects .gitignore)\n- find:
+          Find files by glob pattern (respects .gitignore)\n- ls: List directory
+          contents\n- codemode: Run JavaScript that calls other tools\n\nIn
+          addition to the tools above, you may have access to other custom tools
+          depending on the project.\n</tools>\n\n<rules>\n- Use read to examine
+          files instead of cat or sed.\n- You can inspect PI_* environment
+          variables for current model and session details.\n- Use edit for
+          precise changes (edits[].oldText must match exactly)\n- When changing
+          multiple separate locations in one file, use one edit call with
+          multiple entries in edits[] instead of multiple edit calls\n- Each
+          edits[].oldText is matched against the original file, not after
+          earlier edits are applied. Do not emit overlapping or nested edits.
+          Merge nearby changes into one edit.\n- Keep edits[].oldText as small
+          as possible while still being unique in the file. Do not pad with
+          large unchanged regions.\n- Use write only for new files or complete
+          rewrites.\n- Use codemode to batch independent tool calls
+          (Promise.allSettled), chain them, or filter large output, instead of
+          many separate calls.\n- Be concise in your responses\n- Show file
+          paths clearly when working with files\n</rules>\n\n<docs>\nPi
+          documentation (read only when the user asks about pi itself, its SDK,
+          extensions, themes, skills, or TUI):\n- Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once. Do not retry or fix errors;
+          reply done afterward.\nawait tools.write({path: 'codemode-test.py',
+          content: 'alpha\\nbeta\\ngamma\\n'});\nawait tools.read({path:
+          'codemode-test.py', offset: 2, limit: 2});\nawait tools.edit({path:
+          'codemode-test.py', oldText: 'gamma', newText: 'delta'});\nawait
+          tools.read({path: 'codemode-test.py'});\nawait tools.grep({pattern:
+          'delta', path: 'codemode-test.py'});\nawait tools.find({pattern:
+          'codemode-test.py', path: '.'});\nawait tools.ls({path: '.'});\nawait
+          tools.cowsay({message:
+          'nested-cow'});\ntext('tools-done');"}]}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"read","description":"Read
+          the contents of a file. Supports text files and images (jpg, png, gif,
+          webp, bmp). Images are sent as attachments. For text files, output is
+          truncated to 2000 lines or 50KB (whichever is hit first). Use
+          offset/limit for large files. When you need the full file, continue
+          with offset until complete.\n\nCodemode: `tools.read(args)` resolves
+          to a
+          string.","parameters":{"type":"object","required":["path"],"properties":{"path":{"type":"string","description":"Path
+          to the file to read (relative or
+          absolute)"},"offset":{"type":"number","description":"Line number to
+          start reading from
+          (1-indexed)"},"limit":{"type":"number","description":"Maximum number
+          of lines to
+          read"}}}}},{"type":"function","function":{"name":"bash","description":"Execute
+          a bash command in the current working directory. Returns stdout and
+          stderr. Output is truncated to last 2000 lines or 50KB (whichever is
+          hit first). If truncated, full output is saved to a temp file.
+          Optionally provide a timeout in seconds.\n\nCodemode:
+          `tools.bash(args)` resolves to `{ output, truncated,
+          full_output_path?, exit_code, wall_time_seconds
+          }`.","parameters":{"type":"object","required":["command"],"properties":{"command":{"type":"string","description":"Shell
+          command to execute"},"timeout":{"type":"number","description":"Timeout
+          in seconds (optional, no default
+          timeout)"}}}}},{"type":"function","function":{"name":"edit","description":"Edit
+          a single file using exact text replacement. Every edits[].oldText must
+          match a unique, non-overlapping region of the original file. If two
+          changes affect the same block or nearby lines, merge them into one
+          edit instead of emitting overlapping edits. Do not include large
+          unchanged regions just to connect distant changes.\n\nCodemode:
+          `tools.edit(args)` resolves to a
+          string.","parameters":{"type":"object","required":["path","edits"],"properties":{"path":{"type":"string","description":"Path
+          to the file to edit (relative or
+          absolute)"},"edits":{"type":"array","items":{"type":"object","required":["oldText","newText"],"properties":{"oldText":{"type":"string","description":"Exact
+          text for one targeted replacement. It must be unique in the original
+          file and must not overlap with any other edits[].oldText in the same
+          call."},"newText":{"type":"string","description":"Replacement text for
+          this targeted edit."}}},"description":"One or more targeted
+          replacements. Each edit is matched against the original file, not
+          incrementally. Do not include overlapping or nested edits. If two
+          changes touch the same block or nearby lines, merge them into one edit
+          instead."}}}}},{"type":"function","function":{"name":"write","description":"Write
+          content to a file. Creates the file if it doesn't exist, overwrites if
+          it does. Automatically creates parent directories.\n\nCodemode:
+          `tools.write(args)` resolves to a
+          string.","parameters":{"type":"object","required":["path","content"],"properties":{"path":{"type":"string","description":"Path
+          to the file to write (relative or
+          absolute)"},"content":{"type":"string","description":"Content to write
+          to the
+          file"}}}}},{"type":"function","function":{"name":"grep","description":"Search
+          file contents for a pattern. Returns matching lines with file paths
+          and line numbers. Respects .gitignore. Output is truncated to 100
+          matches or 50KB (whichever is hit first). Long lines are truncated to
+          500 chars.\n\nCodemode: `tools.grep(args)` resolves to a
+          string.","parameters":{"type":"object","required":["pattern"],"properties":{"pattern":{"type":"string","description":"Search
+          pattern (regex or literal
+          string)"},"path":{"type":"string","description":"Directory or file to
+          search (default: current
+          directory)"},"glob":{"type":"string","description":"Filter files by
+          glob pattern, e.g. '*.ts' or
+          '**/*.spec.ts'"},"ignoreCase":{"type":"boolean","description":"Case-insensitive
+          search (default:
+          false)"},"literal":{"type":"boolean","description":"Treat pattern as
+          literal string instead of regex (default:
+          false)"},"context":{"type":"number","description":"Number of lines to
+          show before and after each match (default:
+          0)"},"limit":{"type":"number","description":"Maximum number of matches
+          to return (default:
+          100)"}}}}},{"type":"function","function":{"name":"find","description":"Search
+          for files by glob pattern. Returns matching file paths relative to the
+          search directory. Respects .gitignore. Output is truncated to 1000
+          results or 50KB (whichever is hit first).\n\nCodemode:
+          `tools.find(args)` resolves to a
+          string.","parameters":{"type":"object","required":["pattern"],"properties":{"pattern":{"type":"string","description":"Glob
+          pattern to match files, e.g. '*.ts', '**/*.json', or
+          'src/**/*.spec.ts'"},"path":{"type":"string","description":"Directory
+          to search in (default: current
+          directory)"},"limit":{"type":"number","description":"Maximum number of
+          results (default:
+          1000)"}}}}},{"type":"function","function":{"name":"ls","description":"List
+          directory contents. Returns entries sorted alphabetically, with '/'
+          suffix for directories. Includes dotfiles. Output is truncated to 500
+          entries or 50KB (whichever is hit first).\n\nCodemode:
+          `tools.ls(args)` resolves to a
+          string.","parameters":{"type":"object","properties":{"path":{"type":"string","description":"Directory
+          to list (default: current
+          directory)"},"limit":{"type":"number","description":"Maximum number of
+          entries to return (default:
+          500)"}}}}},{"type":"function","function":{"name":"cowsay","description":"Say
+          a message using a cow.\n\nCodemode: `tools.cowsay(args)` resolves to a
+          string.","parameters":{"type":"object","required":["message"],"properties":{"message":{"type":"string","description":"The
+          message for the cow to
+          say."}}}}},{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 08:59:20 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-758","object":"chat.completion.chunk","created":1790931560,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_3xk3qjjz","index":0,"type":"function","function":{"name":"codemode","arguments":"{\"code\":\"await
+          tools.write({path: 'codemode-test.py', content:
+          'alpha\\\\nbeta\\\\ngamma\\\\n'});\\nawait tools.read({path:
+          'codemode-test.py', offset: 2, limit: 2});\\nawait tools.edit({path:
+          'codemode-test.py', oldText: 'gamma', newText: 'delta'});\\nawait
+          tools.read({path: 'codemode-test.py'});\\nawait tools.grep({pattern:
+          'delta', path: 'codemode-test.py'});\\nawait tools.find({pattern:
+          'codemode-test.py', path: '.'});\\nawait tools.ls({path:
+          '.'});\\nawait tools.cowsay({message:
+          'nested-cow'});\\ntext('tools-done');\"}"}}]},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-758","object":"chat.completion.chunk","created":1790931560,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"tool_calls"}]}
+
+
+          data:
+          {"id":"chatcmpl-758","object":"chat.completion.chunk","created":1790931560,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":2743,"completion_tokens":195,"total_tokens":2938}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:55918
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '11719'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- read: Read file contents\n-
+          bash: Execute bash commands (ls, grep, find, etc.)\n- edit: Make
+          precise file edits with exact text replacement, including multiple
+          disjoint edits in one call\n- write: Create or overwrite files\n-
+          grep: Search file contents for patterns (respects .gitignore)\n- find:
+          Find files by glob pattern (respects .gitignore)\n- ls: List directory
+          contents\n- codemode: Run JavaScript that calls other tools\n\nIn
+          addition to the tools above, you may have access to other custom tools
+          depending on the project.\n</tools>\n\n<rules>\n- Use read to examine
+          files instead of cat or sed.\n- You can inspect PI_* environment
+          variables for current model and session details.\n- Use edit for
+          precise changes (edits[].oldText must match exactly)\n- When changing
+          multiple separate locations in one file, use one edit call with
+          multiple entries in edits[] instead of multiple edit calls\n- Each
+          edits[].oldText is matched against the original file, not after
+          earlier edits are applied. Do not emit overlapping or nested edits.
+          Merge nearby changes into one edit.\n- Keep edits[].oldText as small
+          as possible while still being unique in the file. Do not pad with
+          large unchanged regions.\n- Use write only for new files or complete
+          rewrites.\n- Use codemode to batch independent tool calls
+          (Promise.allSettled), chain them, or filter large output, instead of
+          many separate calls.\n- Be concise in your responses\n- Show file
+          paths clearly when working with files\n</rules>\n\n<docs>\nPi
+          documentation (read only when the user asks about pi itself, its SDK,
+          extensions, themes, skills, or TUI):\n- Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once. Do not retry or fix errors;
+          reply done afterward.\nawait tools.write({path: 'codemode-test.py',
+          content: 'alpha\\nbeta\\ngamma\\n'});\nawait tools.read({path:
+          'codemode-test.py', offset: 2, limit: 2});\nawait tools.edit({path:
+          'codemode-test.py', oldText: 'gamma', newText: 'delta'});\nawait
+          tools.read({path: 'codemode-test.py'});\nawait tools.grep({pattern:
+          'delta', path: 'codemode-test.py'});\nawait tools.find({pattern:
+          'codemode-test.py', path: '.'});\nawait tools.ls({path: '.'});\nawait
+          tools.cowsay({message:
+          'nested-cow'});\ntext('tools-done');"}]},{"role":"assistant","content":null,"tool_calls":[{"id":"call_3xk3qjjz","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"await
+          tools.write({path: 'codemode-test.py', content:
+          'alpha\\\\nbeta\\\\ngamma\\\\n'});\\nawait tools.read({path:
+          'codemode-test.py', offset: 2, limit: 2});\\nawait tools.edit({path:
+          'codemode-test.py', oldText: 'gamma', newText: 'delta'});\\nawait
+          tools.read({path: 'codemode-test.py'});\\nawait tools.grep({pattern:
+          'delta', path: 'codemode-test.py'});\\nawait tools.find({pattern:
+          'codemode-test.py', path: '.'});\\nawait tools.ls({path:
+          '.'});\\nawait tools.cowsay({message:
+          'nested-cow'});\\ntext('tools-done');\"}"}}]},{"role":"tool","content":"Script
+          completed\nWall time 0.1
+          seconds\nOutput:\n\ntools-done","tool_call_id":"call_3xk3qjjz"}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"read","description":"Read
+          the contents of a file. Supports text files and images (jpg, png, gif,
+          webp, bmp). Images are sent as attachments. For text files, output is
+          truncated to 2000 lines or 50KB (whichever is hit first). Use
+          offset/limit for large files. When you need the full file, continue
+          with offset until complete.\n\nCodemode: `tools.read(args)` resolves
+          to a
+          string.","parameters":{"type":"object","required":["path"],"properties":{"path":{"type":"string","description":"Path
+          to the file to read (relative or
+          absolute)"},"offset":{"type":"number","description":"Line number to
+          start reading from
+          (1-indexed)"},"limit":{"type":"number","description":"Maximum number
+          of lines to
+          read"}}}}},{"type":"function","function":{"name":"bash","description":"Execute
+          a bash command in the current working directory. Returns stdout and
+          stderr. Output is truncated to last 2000 lines or 50KB (whichever is
+          hit first). If truncated, full output is saved to a temp file.
+          Optionally provide a timeout in seconds.\n\nCodemode:
+          `tools.bash(args)` resolves to `{ output, truncated,
+          full_output_path?, exit_code, wall_time_seconds
+          }`.","parameters":{"type":"object","required":["command"],"properties":{"command":{"type":"string","description":"Shell
+          command to execute"},"timeout":{"type":"number","description":"Timeout
+          in seconds (optional, no default
+          timeout)"}}}}},{"type":"function","function":{"name":"edit","description":"Edit
+          a single file using exact text replacement. Every edits[].oldText must
+          match a unique, non-overlapping region of the original file. If two
+          changes affect the same block or nearby lines, merge them into one
+          edit instead of emitting overlapping edits. Do not include large
+          unchanged regions just to connect distant changes.\n\nCodemode:
+          `tools.edit(args)` resolves to a
+          string.","parameters":{"type":"object","required":["path","edits"],"properties":{"path":{"type":"string","description":"Path
+          to the file to edit (relative or
+          absolute)"},"edits":{"type":"array","items":{"type":"object","required":["oldText","newText"],"properties":{"oldText":{"type":"string","description":"Exact
+          text for one targeted replacement. It must be unique in the original
+          file and must not overlap with any other edits[].oldText in the same
+          call."},"newText":{"type":"string","description":"Replacement text for
+          this targeted edit."}}},"description":"One or more targeted
+          replacements. Each edit is matched against the original file, not
+          incrementally. Do not include overlapping or nested edits. If two
+          changes touch the same block or nearby lines, merge them into one edit
+          instead."}}}}},{"type":"function","function":{"name":"write","description":"Write
+          content to a file. Creates the file if it doesn't exist, overwrites if
+          it does. Automatically creates parent directories.\n\nCodemode:
+          `tools.write(args)` resolves to a
+          string.","parameters":{"type":"object","required":["path","content"],"properties":{"path":{"type":"string","description":"Path
+          to the file to write (relative or
+          absolute)"},"content":{"type":"string","description":"Content to write
+          to the
+          file"}}}}},{"type":"function","function":{"name":"grep","description":"Search
+          file contents for a pattern. Returns matching lines with file paths
+          and line numbers. Respects .gitignore. Output is truncated to 100
+          matches or 50KB (whichever is hit first). Long lines are truncated to
+          500 chars.\n\nCodemode: `tools.grep(args)` resolves to a
+          string.","parameters":{"type":"object","required":["pattern"],"properties":{"pattern":{"type":"string","description":"Search
+          pattern (regex or literal
+          string)"},"path":{"type":"string","description":"Directory or file to
+          search (default: current
+          directory)"},"glob":{"type":"string","description":"Filter files by
+          glob pattern, e.g. '*.ts' or
+          '**/*.spec.ts'"},"ignoreCase":{"type":"boolean","description":"Case-insensitive
+          search (default:
+          false)"},"literal":{"type":"boolean","description":"Treat pattern as
+          literal string instead of regex (default:
+          false)"},"context":{"type":"number","description":"Number of lines to
+          show before and after each match (default:
+          0)"},"limit":{"type":"number","description":"Maximum number of matches
+          to return (default:
+          100)"}}}}},{"type":"function","function":{"name":"find","description":"Search
+          for files by glob pattern. Returns matching file paths relative to the
+          search directory. Respects .gitignore. Output is truncated to 1000
+          results or 50KB (whichever is hit first).\n\nCodemode:
+          `tools.find(args)` resolves to a
+          string.","parameters":{"type":"object","required":["pattern"],"properties":{"pattern":{"type":"string","description":"Glob
+          pattern to match files, e.g. '*.ts', '**/*.json', or
+          'src/**/*.spec.ts'"},"path":{"type":"string","description":"Directory
+          to search in (default: current
+          directory)"},"limit":{"type":"number","description":"Maximum number of
+          results (default:
+          1000)"}}}}},{"type":"function","function":{"name":"ls","description":"List
+          directory contents. Returns entries sorted alphabetically, with '/'
+          suffix for directories. Includes dotfiles. Output is truncated to 500
+          entries or 50KB (whichever is hit first).\n\nCodemode:
+          `tools.ls(args)` resolves to a
+          string.","parameters":{"type":"object","properties":{"path":{"type":"string","description":"Directory
+          to list (default: current
+          directory)"},"limit":{"type":"number","description":"Maximum number of
+          entries to return (default:
+          500)"}}}}},{"type":"function","function":{"name":"cowsay","description":"Say
+          a message using a cow.\n\nCodemode: `tools.cowsay(args)` resolves to a
+          string.","parameters":{"type":"object","required":["message"],"properties":{"message":{"type":"string","description":"The
+          message for the cow to
+          say."}}}}},{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 08:59:22 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-6","object":"chat.completion.chunk","created":1790931562,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-6","object":"chat.completion.chunk","created":1790931562,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop"}]}
+
+
+          data:
+          {"id":"chatcmpl-6","object":"chat.completion.chunk","created":1790931562,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":2963,"completion_tokens":6,"total_tokens":2969}}
+
+
+          data: [DONE]
+
+        compression: none

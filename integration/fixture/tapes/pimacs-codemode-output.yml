@@ -1,0 +1,1865 @@
+http_interactions:
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '3678'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:08 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"The"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          user"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          wants"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          me"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          to"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          execute"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          a"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935868,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          specific"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          piece"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          of"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          JavaScript"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          code"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          using"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          the"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"cod"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"em"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"ode"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          tool"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          and"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          respond"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          with"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          \""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          after"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          it"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          completes"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          successfully"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\n\nCode"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":":"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"console"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935869,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"log"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"('"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"console"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"-"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"output"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"');"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          text"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"('"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"text"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"-"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"output"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"');"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          return"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          {"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"answer"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":":"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          4"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"2"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"};"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\n\nPlan"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":":"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\n1"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":" 
+          Execute"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935870,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          the"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          code"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          using"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"cod"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"em"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"ode"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\n2"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":" 
+          Confirm"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          completion"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          by"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          replying"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          \""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935871,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935872,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_3joa57kl","index":0,"type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935872,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"tool_calls"}]}
+
+
+          data:
+          {"id":"chatcmpl-117","object":"chat.completion.chunk","created":1790935872,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":931,"completion_tokens":125,"total_tokens":1056}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '4402'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants me to execute a specific piece of JavaScript code using the
+          `codemode` tool and respond with \"done\" after it completes
+          successfully.\n\nCode: `console.log('console-output');
+          text('text-output'); return {answer: 42};`\n\nPlan:\n1.  Execute the
+          code using `codemode`.\n2.  Confirm completion by replying
+          \"done\".","tool_calls":[{"id":"call_3joa57kl","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},{"role":"tool","content":"Script completed\nWall time 0.0
+          seconds\nOutput:\n\nconsole-output\ntext-output\n{\"answer\":42}","tool_call_id":"call_3joa57kl"}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:14 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-62","object":"chat.completion.chunk","created":1790935874,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-62","object":"chat.completion.chunk","created":1790935874,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop"}]}
+
+
+          data:
+          {"id":"chatcmpl-62","object":"chat.completion.chunk","created":1790935874,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":1097,"completion_tokens":6,"total_tokens":1103}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '4574'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants me to execute a specific piece of JavaScript code using the
+          `codemode` tool and respond with \"done\" after it completes
+          successfully.\n\nCode: `console.log('console-output');
+          text('text-output'); return {answer: 42};`\n\nPlan:\n1.  Execute the
+          code using `codemode`.\n2.  Confirm completion by replying
+          \"done\".","tool_calls":[{"id":"call_3joa57kl","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},{"role":"tool","content":"Script completed\nWall time 0.0
+          seconds\nOutput:\n\nconsole-output\ntext-output\n{\"answer\":42}","tool_call_id":"call_3joa57kl"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done: const value
+          =
+          42;"}]}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:16 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935876,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"The"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935876,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          user"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935876,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          wants"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935876,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          to"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          execute"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          a"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          specific"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          piece"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          of"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          JavaScript"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          using"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          the"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"cod"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"em"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"ode"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          tool"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          and"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          then"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          reply"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          \""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\n\nScript"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":":"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"const"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          value"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          ="},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935877,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          4"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935878,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"2"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935878,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":";"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935878,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935878,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_xdwlsa2m","index":0,"type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          value = 42;\"}"}}]},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935878,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"tool_calls"}]}
+
+
+          data:
+          {"id":"chatcmpl-626","object":"chat.completion.chunk","created":1790935878,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":1040,"completion_tokens":61,"total_tokens":1101}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '5007'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants me to execute a specific piece of JavaScript code using the
+          `codemode` tool and respond with \"done\" after it completes
+          successfully.\n\nCode: `console.log('console-output');
+          text('text-output'); return {answer: 42};`\n\nPlan:\n1.  Execute the
+          code using `codemode`.\n2.  Confirm completion by replying
+          \"done\".","tool_calls":[{"id":"call_3joa57kl","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},{"role":"tool","content":"Script completed\nWall time 0.0
+          seconds\nOutput:\n\nconsole-output\ntext-output\n{\"answer\":42}","tool_call_id":"call_3joa57kl"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done: const value
+          = 42;"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants to execute a specific piece of JavaScript using the `codemode`
+          tool and then reply \"done\".\n\nScript: `const value =
+          42;`","tool_calls":[{"id":"call_xdwlsa2m","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          value = 42;\"}"}}]},{"role":"tool","content":"Script completed\nWall
+          time 0.0
+          seconds\nOutput:\n","tool_call_id":"call_xdwlsa2m"}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:19 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-573","object":"chat.completion.chunk","created":1790935879,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-573","object":"chat.completion.chunk","created":1790935879,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop"}]}
+
+
+          data:
+          {"id":"chatcmpl-573","object":"chat.completion.chunk","created":1790935879,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":1128,"completion_tokens":6,"total_tokens":1134}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '5208'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants me to execute a specific piece of JavaScript code using the
+          `codemode` tool and respond with \"done\" after it completes
+          successfully.\n\nCode: `console.log('console-output');
+          text('text-output'); return {answer: 42};`\n\nPlan:\n1.  Execute the
+          code using `codemode`.\n2.  Confirm completion by replying
+          \"done\".","tool_calls":[{"id":"call_3joa57kl","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},{"role":"tool","content":"Script completed\nWall time 0.0
+          seconds\nOutput:\n\nconsole-output\ntext-output\n{\"answer\":42}","tool_call_id":"call_3joa57kl"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done: const value
+          = 42;"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants to execute a specific piece of JavaScript using the `codemode`
+          tool and then reply \"done\".\n\nScript: `const value =
+          42;`","tool_calls":[{"id":"call_xdwlsa2m","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          value = 42;\"}"}}]},{"role":"tool","content":"Script completed\nWall
+          time 0.0
+          seconds\nOutput:\n","tool_call_id":"call_xdwlsa2m"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this invalid script once. Do not fix or retry
+          it; reply done afterward: const =
+          ;"}]}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:21 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"The"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          user"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          wants"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          me"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          to"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          run"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          an"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          invalid"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          JavaScript"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          snippet"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          (`"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"const"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          ="},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          ;"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`)"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          using"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"cod"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"em"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"ode"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          and"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          then"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          reply"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          \""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935881,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          If"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          the"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          command"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          fails"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":","},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          I"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          should"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          still"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          just"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          reply"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          \""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          because"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          the"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          prompt"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          asks"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          for"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          exactly"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          that"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          sequence"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          regardless"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          of"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          success"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"/"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"failure"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935882,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\n\nScript"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":":"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"const"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          ="},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          ;"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\nAction"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":":"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          call"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          `"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"cod"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"em"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"ode"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"`,"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          then"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          respond"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          with"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"
+          \""},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935883,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","reasoning":"\"."},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935884,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_ica4scu0","index":0,"type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          = ;\"}"}}]},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935884,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"tool_calls"}]}
+
+
+          data:
+          {"id":"chatcmpl-609","object":"chat.completion.chunk","created":1790935884,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":1124,"completion_tokens":98,"total_tokens":1222}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '5922'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants me to execute a specific piece of JavaScript code using the
+          `codemode` tool and respond with \"done\" after it completes
+          successfully.\n\nCode: `console.log('console-output');
+          text('text-output'); return {answer: 42};`\n\nPlan:\n1.  Execute the
+          code using `codemode`.\n2.  Confirm completion by replying
+          \"done\".","tool_calls":[{"id":"call_3joa57kl","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},{"role":"tool","content":"Script completed\nWall time 0.0
+          seconds\nOutput:\n\nconsole-output\ntext-output\n{\"answer\":42}","tool_call_id":"call_3joa57kl"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done: const value
+          = 42;"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants to execute a specific piece of JavaScript using the `codemode`
+          tool and then reply \"done\".\n\nScript: `const value =
+          42;`","tool_calls":[{"id":"call_xdwlsa2m","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          value = 42;\"}"}}]},{"role":"tool","content":"Script completed\nWall
+          time 0.0
+          seconds\nOutput:\n","tool_call_id":"call_xdwlsa2m"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this invalid script once. Do not fix or retry
+          it; reply done afterward: const =
+          ;"}]},{"role":"assistant","content":null,"reasoning":"The user wants
+          me to run an invalid JavaScript snippet (`const = ;`) using `codemode`
+          and then reply \"done\". If the command fails, I should still just
+          reply \"done\" because the prompt asks for exactly that sequence
+          regardless of success/failure.\n\nScript: `const = ;`\nAction: call
+          `codemode`, then respond with
+          \"done\".","tool_calls":[{"id":"call_ica4scu0","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          = ;\"}"}}]},{"role":"tool","content":"Script failed\nWall time 0.0
+          seconds\nOutput:\n\nScript error:\nSyntaxError: variable name
+          expected\n    at codemode.js:1:35\n\nNo tool calls were
+          made.","tool_call_id":"call_ica4scu0"}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:25 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-167","object":"chat.completion.chunk","created":1790935885,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-167","object":"chat.completion.chunk","created":1790935885,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop"}]}
+
+
+          data:
+          {"id":"chatcmpl-167","object":"chat.completion.chunk","created":1790935885,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":1279,"completion_tokens":6,"total_tokens":1285}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '6146'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants me to execute a specific piece of JavaScript code using the
+          `codemode` tool and respond with \"done\" after it completes
+          successfully.\n\nCode: `console.log('console-output');
+          text('text-output'); return {answer: 42};`\n\nPlan:\n1.  Execute the
+          code using `codemode`.\n2.  Confirm completion by replying
+          \"done\".","tool_calls":[{"id":"call_3joa57kl","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},{"role":"tool","content":"Script completed\nWall time 0.0
+          seconds\nOutput:\n\nconsole-output\ntext-output\n{\"answer\":42}","tool_call_id":"call_3joa57kl"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done: const value
+          = 42;"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants to execute a specific piece of JavaScript using the `codemode`
+          tool and then reply \"done\".\n\nScript: `const value =
+          42;`","tool_calls":[{"id":"call_xdwlsa2m","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          value = 42;\"}"}}]},{"role":"tool","content":"Script completed\nWall
+          time 0.0
+          seconds\nOutput:\n","tool_call_id":"call_xdwlsa2m"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this invalid script once. Do not fix or retry
+          it; reply done afterward: const =
+          ;"}]},{"role":"assistant","content":null,"reasoning":"The user wants
+          me to run an invalid JavaScript snippet (`const = ;`) using `codemode`
+          and then reply \"done\". If the command fails, I should still just
+          reply \"done\" because the prompt asks for exactly that sequence
+          regardless of success/failure.\n\nScript: `const = ;`\nAction: call
+          `codemode`, then respond with
+          \"done\".","tool_calls":[{"id":"call_ica4scu0","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          = ;\"}"}}]},{"role":"tool","content":"Script failed\nWall time 0.0
+          seconds\nOutput:\n\nScript error:\nSyntaxError: variable name
+          expected\n    at codemode.js:1:35\n\nNo tool calls were
+          made.","tool_call_id":"call_ica4scu0"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:\n//
+          @options: {\"max_output_tokens\": 16}\ntext('word
+          '.repeat(200));"}]}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:27 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-311","object":"chat.completion.chunk","created":1790935887,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"","tool_calls":[{"id":"call_ipsm8ayx","index":0,"type":"function","function":{"name":"codemode","arguments":"{\"code\":\"//
+          @options: {\\\"max_output_tokens\\\": 16}\\ntext('word
+          '.repeat(200));\"}"}}]},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-311","object":"chat.completion.chunk","created":1790935888,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"tool_calls"}]}
+
+
+          data:
+          {"id":"chatcmpl-311","object":"chat.completion.chunk","created":1790935888,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":1250,"completion_tokens":44,"total_tokens":1294}}
+
+
+          data: [DONE]
+
+        compression: none
+  - request:
+      method: POST
+      path: /v1/chat/completions
+      headers:
+        host: 127.0.0.1:57696
+        connection: keep-alive
+        accept: application/json
+        x-stainless-retry-count: '0'
+        x-stainless-timeout: '300'
+        x-stainless-lang: js
+        x-stainless-package-version: 7.19.0
+        x-stainless-os: MacOS
+        x-stainless-arch: arm64
+        x-stainless-runtime: node
+        x-stainless-runtime-version: v22.23.3
+        authorization: Bearer ollama
+        user-agent: pi (darwin 25.6.0; arm64)
+        content-type: application/json
+        accept-language: '*'
+        sec-fetch-mode: cors
+        accept-encoding: gzip, deflate
+        content-length: '6779'
+      body:
+        encoding: utf8
+        data: >-
+          {"model":"gemma4:12b","messages":[{"role":"developer","content":"You
+          are an expert coding assistant operating inside pi, a coding agent
+          harness. You help users by reading files, executing commands, editing
+          code, and writing new files.\n\n<tools>\n- codemode: Run JavaScript
+          that calls other tools\n\nIn addition to the tools above, you may have
+          access to other custom tools depending on the
+          project.\n</tools>\n\n<rules>\n- Use codemode to batch independent
+          tool calls (Promise.allSettled), chain them, or filter large output,
+          instead of many separate calls.\n- Be concise in your responses\n-
+          Show file paths clearly when working with
+          files\n</rules>\n\n<docs>\nPi documentation (read only when the user
+          asks about pi itself, its SDK, extensions, themes, skills, or TUI):\n-
+          Main documentation:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/README.md\n-
+          Additional docs:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs\n-
+          Examples:
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/examples
+          (extensions, custom tools, SDK)\n- When reading pi docs or examples,
+          resolve docs/... under Additional docs and examples/... under
+          Examples, not the current working directory\n- When asked about:
+          extensions (docs/extensions.md, examples/extensions/), themes
+          (docs/themes.md), skills (docs/skills.md), prompt templates
+          (docs/prompt-templates.md), TUI components (docs/tui.md), keybindings
+          (docs/keybindings.md), SDK integrations (docs/sdk.md), custom
+          providers (docs/custom-provider.md), adding models (docs/models.md),
+          pi packages (docs/packages.md), environment variables
+          (docs/environment-variables.md), MCP servers (docs/mcp.md), codemode
+          scripts and non-LLM models such as classifiers and image models
+          (docs/codemode.md)\n- When working on pi topics, read the docs and
+          examples, and follow .md cross-references before implementing\n-
+          Always read pi .md files completely and follow links to related docs
+          (e.g., tui.md for TUI API
+          details)\n</docs>\n\n<cwd>\n/Users/ananthakumaran/work/repos/pimacs.el/integration/project\n</cwd>"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:
+          console.log('console-output'); text('text-output'); return {answer:
+          42};"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants me to execute a specific piece of JavaScript code using the
+          `codemode` tool and respond with \"done\" after it completes
+          successfully.\n\nCode: `console.log('console-output');
+          text('text-output'); return {answer: 42};`\n\nPlan:\n1.  Execute the
+          code using `codemode`.\n2.  Confirm completion by replying
+          \"done\".","tool_calls":[{"id":"call_3joa57kl","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"console.log('console-output');
+          text('text-output'); return {answer:
+          42};\"}"}}]},{"role":"tool","content":"Script completed\nWall time 0.0
+          seconds\nOutput:\n\nconsole-output\ntext-output\n{\"answer\":42}","tool_call_id":"call_3joa57kl"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done: const value
+          = 42;"}]},{"role":"assistant","content":null,"reasoning":"The user
+          wants to execute a specific piece of JavaScript using the `codemode`
+          tool and then reply \"done\".\n\nScript: `const value =
+          42;`","tool_calls":[{"id":"call_xdwlsa2m","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          value = 42;\"}"}}]},{"role":"tool","content":"Script completed\nWall
+          time 0.0
+          seconds\nOutput:\n","tool_call_id":"call_xdwlsa2m"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this invalid script once. Do not fix or retry
+          it; reply done afterward: const =
+          ;"}]},{"role":"assistant","content":null,"reasoning":"The user wants
+          me to run an invalid JavaScript snippet (`const = ;`) using `codemode`
+          and then reply \"done\". If the command fails, I should still just
+          reply \"done\" because the prompt asks for exactly that sequence
+          regardless of success/failure.\n\nScript: `const = ;`\nAction: call
+          `codemode`, then respond with
+          \"done\".","tool_calls":[{"id":"call_ica4scu0","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"const
+          = ;\"}"}}]},{"role":"tool","content":"Script failed\nWall time 0.0
+          seconds\nOutput:\n\nScript error:\nSyntaxError: variable name
+          expected\n    at codemode.js:1:35\n\nNo tool calls were
+          made.","tool_call_id":"call_ica4scu0"},{"role":"assistant","content":"done"},{"role":"user","content":[{"type":"text","text":"Use
+          codemode to run exactly this script once, then reply done:\n//
+          @options: {\"max_output_tokens\": 16}\ntext('word
+          '.repeat(200));"}]},{"role":"assistant","content":null,"tool_calls":[{"id":"call_ipsm8ayx","type":"function","function":{"name":"codemode","arguments":"{\"code\":\"//
+          @options: {\\\"max_output_tokens\\\": 16}\\ntext('word
+          '.repeat(200));\"}"}}]},{"role":"tool","content":"Script
+          completed\nWall time 0.0 seconds\nOutput:\n\nWarning: truncated output
+          (original token count: 250)\nTotal output lines: 1\n\nword word word
+          word word word wo…234 tokens truncated…d word word word word word word
+          \n\n[Full output:
+          /var/folders/js/lq1q9j_501z6n37w9j8x0xs80000gq/T/pi-codemode-d08dc170492f182c.txt
+          (read with
+          offset/limit)]","tool_call_id":"call_ipsm8ayx"}],"stream":true,"stream_options":{"include_usage":true},"store":false,"max_completion_tokens":100000,"tools":[{"type":"function","function":{"name":"codemode","description":"Run
+          JavaScript that calls other tools. The input is raw JavaScript (not
+          JSON, no code fence), run as an async function body in a QuickJS
+          sandbox: top-level `await` and `return` work. No Node, file system,
+          network, or timers.\n- `await tools.<name>({ ...args })` resolves to a
+          string, or an object if the tool's declaration says so, and rejects
+          with an Error on failure. Calls still running when the script ends are
+          cancelled.\n- Optional first line: `// @options:
+          {\"max_output_tokens\": 10000, \"timeout_ms\": 60000}`\n\nGlobals:\n-
+          `text(value)`, `image(dataUrlOrImageBlock)`, `console.log(...)`, and
+          top-level `return` add output; `exit()` ends the script.\n-
+          `store(key, value)` and `load(key)` keep JSON values across codemode
+          calls.\n- `ALL_TOOLS`, `searchTools(query, { limit?, namespace? })`,
+          `describeTool(name)`, `describeNamespace(name)`: find unlisted tools,
+          such as MCP tools.\n- `models`: classifiers and image generation. Read
+          /Users/ananthakumaran/.npm/lib/node_modules/@earendil-works/pi-coding-agent/docs/codemode.md
+          first.","parameters":{"type":"object","required":["code"],"properties":{"code":{"type":"string","description":"Raw
+          JavaScript source."}}}}}],"reasoning_effort":"low"}
+        compression: none
+    response:
+      status:
+        code: 200
+      headers:
+        content-type: text/event-stream
+        date: Fri, 02 Oct 2026 10:11:29 GMT
+        transfer-encoding: chunked
+      body:
+        encoding: utf8
+        data: >+
+          data:
+          {"id":"chatcmpl-873","object":"chat.completion.chunk","created":1790935889,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":"done"},"finish_reason":null}]}
+
+
+          data:
+          {"id":"chatcmpl-873","object":"chat.completion.chunk","created":1790935889,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":"stop"}]}
+
+
+          data:
+          {"id":"chatcmpl-873","object":"chat.completion.chunk","created":1790935889,"model":"gemma4:12b","system_fingerprint":"fp_ollama","choices":[],"usage":{"prompt_tokens":1434,"completion_tokens":6,"total_tokens":1440}}
+
+
+          data: [DONE]
+
+        compression: none

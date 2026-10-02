@@ -226,6 +226,7 @@ description string."
     ("write" . pimacs--insert-write-args)
     ("edit" . pimacs--insert-edit-args)
     ("bash" . pimacs--insert-bash-args)
+    ("codemode" . pimacs--insert-codemode-args)
     ("grep" . pimacs--insert-grep-args)
     ("find" . pimacs--insert-find-args)
     ("ls" . pimacs--insert-ls-args))
@@ -238,6 +239,7 @@ with ARGS plist to insert formatted tool call arguments."
 
 (defcustom pimacs-insert-tool-result-functions
   '(("bash" . pimacs--insert-bash-result)
+    ("codemode" . pimacs--insert-codemode-result)
     ("read" . pimacs--insert-read-result)
     ("write" . pimacs--insert-write-result)
     ("edit" . pimacs--insert-edit-result)
@@ -289,6 +291,7 @@ ARGS) and returns text to copy, or nil to use the section body."
 
 (defcustom pimacs-copy-tool-call-functions
   '(("bash" . pimacs--copy-bash-call)
+    ("codemode" . pimacs--copy-codemode-call)
     ("write" . pimacs--copy-write-call))
   "Alist mapping tool names to tool-call copy functions.
 
@@ -970,6 +973,8 @@ the tail again, move point back to the prompt and resume following."
          (let ((result-section (pimacs-tool-call-result-section entry))
                (args (pimacs-tool-call-args entry)))
            (pimacs--widget-save-excursion
+             (pimacs--insert-nested-tool-calls
+              tool-call-id entry (pimacs--json-get message :nestedCalls))
              (pimacs-section--replace-section result-section
                (pimacs--insert-tool-result tool-name content is-error details args))
              (pimacs-section--set-info result-section (make-pimacs-section-tool-result-info :tool-name tool-name :details details :args args))))
@@ -1259,6 +1264,36 @@ the tail again, move point back to the prompt and resume following."
             :line (or (plist-get location :line) 1)
             :column (plist-get location :column)))))
 
+(defun pimacs--insert-tool-output (text full-output-path)
+  (if-let ((path-start (and full-output-path
+                           (string-match (regexp-quote full-output-path) text))))
+      (progn
+        (insert (substring text 0 path-start))
+        (pimacs--insert-file-link full-output-path (pimacs--project-root))
+        (insert (substring text (+ path-start (length full-output-path)))))
+    (insert text)))
+
+;; codemode
+(defun pimacs--insert-codemode-args (args)
+  (when-let ((code (pimacs--json-get args :code)))
+    (insert (pimacs--render-content "codemode.js" code))))
+
+(defun pimacs--insert-codemode-result (content details _args)
+  (let* ((content (pimacs--content-normalize content))
+         (first (car content))
+         (full-output-path (pimacs--json-get details :fullOutputPath)))
+    (when (and (equal (plist-get first :type) "text")
+               (string-match-p
+                "\\`Script \\(?:completed\\|failed\\)\nWall time [0-9.]+ seconds\nOutput:\n\\'"
+                (or (pimacs--json-get first :text) "")))
+      (setq content (cdr content)))
+    (dolist (item content)
+      (unless (bolp)
+        (insert "\n"))
+      (if (equal (plist-get item :type) "text")
+          (pimacs--insert-tool-output (pimacs--json-get item :text) full-output-path)
+        (pimacs--insert-content-item item)))))
+
 ;; bash
 (defun pimacs--insert-bash-args (args)
   (when-let ((command (pimacs--json-get args :command)))
@@ -1270,14 +1305,11 @@ the tail again, move point back to the prompt and resume following."
          (full-output-path (pimacs--json-get details :fullOutputPath))
          (text (pimacs--apply-ansi-colors (pimacs--content-text content))))
     (when (not (string-empty-p text))
-      (insert (format "%s" text)))
+      (pimacs--insert-tool-output text full-output-path))
     (when (eq cancelled t)
       (pimacs--insert-error "Cancelled"))
     (when (and (numberp exit-code) (not (zerop exit-code)))
-      (pimacs--insert-error (format "Command exited with code %d" exit-code)))
-    (when full-output-path
-      (insert "Output truncated. See full output at: ")
-      (pimacs--insert-file-link full-output-path (pimacs--project-root)))))
+      (pimacs--insert-error (format "Command exited with code %d" exit-code)))))
 
 ;; grep
 (defun pimacs--insert-grep-args (args)
@@ -1436,6 +1468,59 @@ is non-nil, insert an ellipsis instead of ARGS."
                                                 (buffer-substring-no-properties
                                                  args-begin args-end))))))
 
+(defun pimacs--create-child-tool-call (parent tool-name args &optional call-only)
+  (let ((parent-section (pimacs-tool-call-call-section parent))
+        (boundary (pimacs-tool-call-result-section parent))
+        entry)
+    (pimacs--widget-save-excursion
+      ;; Keep children before, and outside, the parent's replaceable output.
+      (pimacs-section--with-insertion-before parent-section boundary
+        (let ((call-section (pimacs-section--new-section
+                             'tool-call parent-section :padding "\n"))
+              result-section)
+          (pimacs--insert-tool-call call-section tool-name args)
+          (unless call-only
+            (setq result-section (pimacs-section--new-section 'tool-result call-section))
+            (pimacs-section--insert-section result-section))
+          (setq entry (make-pimacs-tool-call :call-section call-section
+                                             :result-section result-section
+                                             :prev-text ""
+                                             :tool-name tool-name
+                                             :args args)))))
+    entry))
+
+(defun pimacs--insert-nested-tool-calls (parent-id parent record)
+  "Restore tool-call metadata from RECORD beneath PARENT with id PARENT-ID.
+Pi persists child metadata, not results."
+  (let ((entries (make-hash-table :test 'equal)))
+    (puthash parent-id parent entries)
+    (dolist (call (pimacs--json-get record :calls))
+      (let* ((id (plist-get call :id))
+             (caller-id (substring id 0 (string-match "/[0-9]+\\'" id)))
+             (entry (pimacs--create-child-tool-call
+                     (gethash caller-id entries)
+                     (plist-get call :name) (plist-get call :arguments) t)))
+        (puthash id entry entries)
+        (unless (plist-member call :arguments)
+          (pimacs--widget-save-excursion
+            (pimacs-section--append-section (pimacs-tool-call-call-section entry)
+              (pimacs-section--insert-chrome " [arguments not retained]" 'shadow))))))
+    (when (pimacs--json-false-p (plist-get record :complete))
+      (pimacs--widget-save-excursion
+        (let ((parent-section (pimacs-tool-call-call-section parent)))
+          (pimacs-section--with-insertion-before parent-section
+              (pimacs-tool-call-result-section parent)
+            (pimacs-section--create-section 'info parent-section
+              (insert "Some nested calls or arguments were not retained."))))))))
+
+(defun pimacs--handle-tool-execution-start (event)
+  (when-let ((parent-id (plist-get event :parentToolCallId)))
+    (puthash (plist-get event :toolCallId)
+             (pimacs--create-child-tool-call
+              (gethash parent-id pimacs--tool-calls)
+              (plist-get event :toolName) (plist-get event :args))
+             pimacs--tool-calls)))
+
 (defun pimacs--insert-tool-result (tool-name content is-error &optional details args)
   (if (eq is-error t)
       (let ((text (pimacs--content-text content)))
@@ -1450,7 +1535,7 @@ is non-nil, insert an ellipsis instead of ARGS."
          (partial-result (plist-get event :partialResult))
          (new-text (pimacs--content-text (plist-get partial-result :content)))
          (entry (gethash tool-call-id pimacs--tool-calls)))
-    (when (and entry new-text)
+    (when entry
       (let ((prev-text (pimacs-tool-call-prev-text entry))
             (result-section (pimacs-tool-call-result-section entry)))
         (pimacs--widget-save-excursion
@@ -1756,6 +1841,7 @@ is non-nil, insert an ellipsis instead of ARGS."
   (pimacs--set-event-listener "message_end" 'pimacs #'pimacs--handle-message-end)
   (pimacs--set-event-listener "bash_execution_update" 'pimacs #'pimacs--handle-bash-execution-update)
 
+  (pimacs--set-event-listener "tool_execution_start" 'pimacs #'pimacs--handle-tool-execution-start)
   (pimacs--set-event-listener "tool_execution_update" 'pimacs #'pimacs--handle-tool-execution-update)
   (pimacs--set-event-listener "tool_execution_end" 'pimacs #'pimacs--handle-tool-execution-end)
 
@@ -1818,6 +1904,10 @@ is non-nil, insert an ellipsis instead of ARGS."
          (when-let ((tool-name (plist-get assistant-message-event :toolName)))
            (pimacs--update-agent-state
             (pimacs--agent-state-add-tool tool-name))))))
+    (tool_execution_start
+     (when (pimacs--json-get event :parentToolCallId)
+       (pimacs--update-agent-state
+        (pimacs--agent-state-add-tool (plist-get event :toolName)))))
     (tool_execution_end
      (pimacs--update-agent-state
       (pimacs--agent-state-remove-tool (plist-get event :toolName))))
@@ -2852,6 +2942,9 @@ summarization."
 
 (defun pimacs--copy-bash-call (args)
   (pimacs--json-get args :command))
+
+(defun pimacs--copy-codemode-call (args)
+  (pimacs--json-get args :code))
 
 (defun pimacs--copy-write-call (args)
   (pimacs--json-get args :content))

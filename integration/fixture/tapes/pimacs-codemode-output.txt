@@ -1,0 +1,65 @@
+user> Use codemode to run exactly this script once, then reply done: console.log('console-output'); text('text-output'); return {answer: 42};
+
+assistant> The user wants me to execute a specific piece of JavaScript code using the codemode tool and respond with "done" after it completes successfully.
+
+Code: console.log('console-output'); text('text-output'); return {answer: 42};
+
+Plan:
+1. Execute the code using codemode.
+2. Confirm completion by replying "done".
+
+codemode console.log('console-output'); text('text-output'); return {answer: 42};
+console-output
+text-output
+{"answer":42}
+
+assistant> done
+
+user> Use codemode to run exactly this script once, then reply done: const value = 42;
+
+assistant> The user wants to execute a specific piece of JavaScript using the codemode tool and then reply "done".
+
+Script: const value = 42;
+
+codemode const value = 42;
+
+
+assistant> done
+
+user> Use codemode to run exactly this invalid script once. Do not fix or retry it; reply done afterward: const = ;
+
+assistant> The user wants me to run an invalid JavaScript snippet (const = ;) using codemode and then reply "done". If the command fails, I should still just reply "done" because the prompt asks for exactly that sequence regardless of success/failure.
+
+Script: const = ;
+Action: call codemode, then respond with "done".
+
+codemode const = ;
+Script failed
+Wall time DURATION seconds
+Output:
+Script error:
+SyntaxError: variable name expected
+    at codemode.js:1:35
+
+No tool calls were made.
+
+assistant> done
+
+user> Use codemode to run exactly this script once, then reply done:
+// @options: {"max_output_tokens": 16}
+text('word '.repeat(200));
+
+codemode // @options: {"max_output_tokens": 16}
+text('word '.repeat(200));
+Warning: truncated output (original token count: 250)
+Total output lines: 1
+
+word word word word word word wo…234 tokens truncated…d word word word word word word 
+
+[Full output: CODEMODE_OUTPUT (read with offset/limit)]
+
+assistant> done
+
+
+ user> 
+  

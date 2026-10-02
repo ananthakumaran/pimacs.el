@@ -1,0 +1,83 @@
+== 1 user ==
+Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+const results = await Promise.allSettled([
+tools.bash({command: 'printf first; sleep 0.2; printf second'}),
+tools.read({path: 'README.md'}),
+tools.read({path: 'codemode-missing.txt'}),
+tools.bash({command: 'printf failed-command; exit 7'}),
+tools.cowsay({message: 'parallel-cow'})
+]);
+text(results.map(r => r.status));
+
+== 2 thinking ==
+The user wants me to execute a specific JavaScript snippet using `codemode`.
+The script uses `Promise.allSettled` to run several tools in parallel.
+I must not retry or fix errors, and just reply "done" after running it once.
+
+Plan:
+1. Run the provided JS code using `codemode`.
+2. Regardless of the output (since I'm told not to fix errors), I will just acknowledge with "done".
+
+== 3 tool-call (codemode) ==
+const results = await Promise.allSettled([
+tools.bash({command: 'printf first; sleep 0.2; printf second'}),
+tools.read({path: 'README.md'}),
+tools.read({path: 'codemode-missing.txt'}),
+tools.bash({command: 'printf failed-command; exit 7'}),
+tools.cowsay({message: 'parallel-cow'})
+]);
+text(results.map(r => r.status));
+
+== 4 tool-call (bash) ==
+printf first; sleep 0.2; printf second
+
+== 5 tool-result (bash) ==
+firstsecond
+
+== 6 tool-call (read) ==
+(:path "README.md")
+
+== 7 tool-result (read) ==
+# Sample Project
+
+This is a sample project used for integration testing.
+
+## Files
+
+- `utils.py` - Utility functions
+- `config.json` - Configuration file
+- `notes.txt` - Some notes
+
+
+== 8 tool-call (read) ==
+(:path "codemode-missing.txt")
+
+== 9 tool-result (read) ==
+ENOENT: no such file or directory, access 'PROJECT_DIR/codemode-missing.txt'
+
+== 10 tool-call (bash) ==
+printf failed-command; exit 7
+
+== 11 tool-result (bash) ==
+failed-command
+
+Command exited with code 7
+
+== 12 tool-call (cowsay) ==
+(:message "parallel-cow")
+
+== 13 tool-result (cowsay) ==
+ ______
+< parallel-cow >
+ ------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+
+== 14 tool-result (codemode) ==
+["fulfilled","fulfilled","rejected","fulfilled","fulfilled"]
+
+== 15 assistant ==
+done

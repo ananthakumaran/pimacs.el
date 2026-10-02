@@ -1,0 +1,47 @@
+user> Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+const results = await Promise.allSettled([
+tools.write({path: 'codemode-invalid.txt'}),
+tools.edit({path: 'README.md', oldText: 'codemode-not-found-marker', newText: 'never-written'}),
+tools.read({path: 'README.md', offset: 9999}),
+tools.bash({command: 'sleep 2', timeout: 0.05})
+]);
+text(results.map(r => r.status));
+
+assistant> The user wants me to run a specific script using codemode. The request is very explicit: "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward."
+
+I should just provide the code provided by the user in a codemode call.
+
+codemode const results = await Promise.allSettled([
+tools.write({path: 'codemode-invalid.txt'}),
+tools.edit({path: 'README.md', oldText: 'codemode-not-found-marker', newText: 'never-written'}),
+tools.read({path: 'README.md', offset: 9999}),
+tools.bash({command: 'sleep 2', timeout: 0.05})
+]);
+text(results.map(r => r.status));
+write 
+Validation failed for tool "write":
+  - content: must have required properties content
+
+Received arguments:
+{
+  "path": "codemode-invalid.txt"
+}
+
+edit README.md
+Could not find the exact text in README.md. The old text must match exactly including all whitespace and newlines.
+
+read README.md:9999
+Offset 9999 is beyond end of file (10 lines total)
+
+bash sleep 2
+Command timed out after 0.05 seconds
+
+["rejected","rejected","rejected","rejected"]
+
+assistant> The user wants me to say "done" after the script finishes, regardless of the results (since there are multiple intentional failures). The codemode output shows all four tasks were rejected. I should just respond with "done".
+
+assistant> done
+
+
+ user> 
+  

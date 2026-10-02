@@ -1,0 +1,22 @@
+user> Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+await tools.read({path: 'green-triangle.png'}); text('image-read');
+
+assistant> The user wants me to run a specific piece of JavaScript code using the codemode tool.
+The script is await tools.read({path: 'green-triangle.png'}); text('image-read');.
+I should not try to fix any errors and simply reply "done" after the execution.
+
+Plan:
+1. Run the provided script in codemode.
+2. Output "done".
+
+codemode await tools.read({path: 'green-triangle.png'}); text('image-read');
+read green-triangle.png
+Read image file [image/png]
+
+image-read
+
+assistant> done
+
+
+ user> 
+  

@@ -62,6 +62,8 @@
        ;; Restore settings file to original content
        (write-region original-settings nil settings-file nil 'silent))))
 
+(defvar pimacs-integration-tools "read,bash,edit,write,grep,find,ls,cowsay")
+
 (defmacro pimacs-with-integration-project (scenario &rest body)
   (declare (indent 1))
   `(pimacs-with-silenced-integration-messages
@@ -73,7 +75,7 @@
                    (concat "FIXTURE_MODE=" (pimacs-fixture-mode))))
             (process-environment
              (append fixture-process-environment process-environment))
-            (pimacs-flags (list "--tools" "read,bash,edit,write,grep,find,ls,cowsay" "--extension" (expand-file-name "fixture" pimacs-integration-directory))))
+            (pimacs-flags (list "--tools" pimacs-integration-tools "--extension" (expand-file-name "fixture" pimacs-integration-directory))))
        (let ((sessions-dir (expand-file-name "sessions" pimacs-project-agent-directory)))
          (when (file-exists-p sessions-dir)
            (delete-directory sessions-dir t)
@@ -176,6 +178,9 @@
          (replace-regexp-in-string "\\b[0-9a-f]\\{8\\}\\b" "UUID")
          (replace-regexp-in-string "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}T[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{3\\}Z" "TIMESTAMP")
          (replace-regexp-in-string "\\(?:just now\\|[0-9]+ [[:alpha:]]+ ago\\)" "RELATIVE_TIME")
+         (replace-regexp-in-string "^Wall time [0-9.]+ seconds$" "Wall time DURATION seconds")
+         (replace-regexp-in-string "/[^[:space:]\"']*/pi-codemode-[0-9a-f]\\{16\\}\\.txt" "CODEMODE_OUTPUT")
+         (replace-regexp-in-string "/[^[:space:]\"']*/pi-bash-[0-9a-f]\\{16\\}\\.log" "BASH_OUTPUT")
          (replace-regexp-in-string "[0-9]\\{2\\} [[:alpha:]]\\{3\\} [0-9]\\{4\\}, [0-9]\\{2\\}:[0-9]\\{2\\}" "DISPLAY_TIMESTAMP"))))
 
 (defun pimacs--force-update-header-line ()
@@ -405,6 +410,125 @@
                     :context nil
                     :filters (tool-result))
      "custom-tool-tool-result")))
+
+(ert-deftest pimacs-codemode ()
+  (let ((pimacs-integration-tools "codemode,bash"))
+    (pimacs-with-integration-project "pimacs-codemode"
+      (pimacs-send-prompt-and-wait
+       "Use codemode to run exactly this script once, then reply done: const result = await tools.bash({command: 'printf nested-ok'}); text(result.output);"))))
+
+(ert-deftest pimacs-codemode-tools ()
+  (let ((pimacs-integration-tools (concat pimacs-integration-tools ",codemode"))
+        (file (expand-file-name "codemode-test.py" pimacs-project-directory)))
+    (unwind-protect
+        (pimacs-with-integration-project "pimacs-codemode-tools"
+          (pimacs-send-prompt-and-wait
+           (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
+                   "await tools.write({path: 'codemode-test.py', content: 'alpha\\nbeta\\ngamma\\n'});\n"
+                   "await tools.read({path: 'codemode-test.py', offset: 2, limit: 2});\n"
+                   "await tools.edit({path: 'codemode-test.py', oldText: 'gamma', newText: 'delta'});\n"
+                   "await tools.read({path: 'codemode-test.py'});\n"
+                   "await tools.grep({pattern: 'delta', path: 'codemode-test.py'});\n"
+                   "await tools.find({pattern: 'codemode-test.py', path: '.'});\n"
+                   "await tools.ls({path: '.'});\n"
+                   "await tools.cowsay({message: 'nested-cow'});\n"
+                   "text('tools-done');"))
+          (pimacs--with-chat-buffer
+            (pimacs-check-tape "pimacs-codemode-tools" "-live.txt" (buffer-string))
+            (pimacs-check-tape "pimacs-codemode-tools" "-live-copy.txt" (pimacs-copy-section-transcript)))
+          ;; A fresh recording proxy would otherwise clear the original tape.
+          (setenv "FIXTURE_SCENARIO" "pimacs-codemode-tools-restored")
+          (pimacs-reload)
+          (sleep-for 3))
+      (when (file-exists-p file)
+        (delete-file file)))))
+
+(ert-deftest pimacs-codemode-parallel ()
+  (let ((pimacs-integration-tools "codemode,bash,read,cowsay"))
+    (pimacs-with-integration-project "pimacs-codemode-parallel"
+      (pimacs-send-prompt-and-wait
+       (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
+               "const results = await Promise.allSettled([\n"
+               "tools.bash({command: 'printf first; sleep 0.2; printf second'}),\n"
+               "tools.read({path: 'README.md'}),\n"
+               "tools.read({path: 'codemode-missing.txt'}),\n"
+               "tools.bash({command: 'printf failed-command; exit 7'}),\n"
+               "tools.cowsay({message: 'parallel-cow'})\n"
+               "]);\ntext(results.map(r => r.status));")))))
+
+(ert-deftest pimacs-codemode-script-error ()
+  (let ((pimacs-integration-tools "codemode,read,cowsay"))
+    (pimacs-with-integration-project "pimacs-codemode-script-error"
+      (pimacs-send-prompt-and-wait
+       (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
+               "text('before-failure');\n"
+               "await tools.cowsay({message: 'before-failure'});\n"
+               "await tools.read({path: 'codemode-missing.txt'});\n"
+               "text('unreachable');"))
+      (pimacs-send-prompt-and-wait
+       "Use codemode to run exactly this script once, then reply done: text('recovered');"))))
+
+(ert-deftest pimacs-codemode-omitted-arguments ()
+  (let ((pimacs-integration-tools "codemode,write")
+        (file (expand-file-name "codemode-large.txt" pimacs-project-directory)))
+    (unwind-protect
+        (pimacs-with-integration-project "pimacs-codemode-omitted-arguments"
+          (pimacs-send-prompt-and-wait
+           (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
+                   "await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000)}); text('large-written');"))
+          (setenv "FIXTURE_SCENARIO" "pimacs-codemode-omitted-arguments-restored")
+          (pimacs-reload)
+          (sleep-for 3))
+      (when (file-exists-p file)
+        (delete-file file)))))
+
+(ert-deftest pimacs-codemode-invalid-calls ()
+  (let ((pimacs-integration-tools "codemode,write,edit,read,bash"))
+    (pimacs-with-integration-project "pimacs-codemode-invalid-calls"
+      (pimacs-send-prompt-and-wait
+       (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
+               "const results = await Promise.allSettled([\n"
+               "tools.write({path: 'codemode-invalid.txt'}),\n"
+               "tools.edit({path: 'README.md', oldText: 'codemode-not-found-marker', newText: 'never-written'}),\n"
+               "tools.read({path: 'README.md', offset: 9999}),\n"
+               "tools.bash({command: 'sleep 2', timeout: 0.05})\n"
+               "]);\ntext(results.map(r => r.status));")))))
+
+(ert-deftest pimacs-codemode-cancel-pending ()
+  (let ((pimacs-integration-tools "codemode,bash,cowsay"))
+    (pimacs-with-integration-project "pimacs-codemode-cancel-pending"
+      (pimacs-send-prompt-and-wait
+       (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
+               "const pending = tools.bash({command: 'printf started; sleep 10; printf unreachable'});\n"
+               "await tools.cowsay({message: 'while-bash-runs'});\n"
+               "throw new Error('stop-script');")))))
+
+(ert-deftest pimacs-codemode-image-read ()
+  (let ((pimacs-integration-tools "codemode,read"))
+    (pimacs-with-integration-project "pimacs-codemode-image-read"
+      (pimacs-send-prompt-and-wait
+       (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
+               "await tools.read({path: 'green-triangle.png'}); text('image-read');")))))
+
+(ert-deftest pimacs-codemode-output ()
+  (let ((pimacs-integration-tools "codemode"))
+    (pimacs-with-integration-project "pimacs-codemode-output"
+      (pimacs-send-prompt-and-wait
+       "Use codemode to run exactly this script once, then reply done: console.log('console-output'); text('text-output'); return {answer: 42};")
+      (pimacs-send-prompt-and-wait
+       "Use codemode to run exactly this script once, then reply done: const value = 42;")
+      (pimacs-send-prompt-and-wait
+       "Use codemode to run exactly this invalid script once. Do not fix or retry it; reply done afterward: const = ;")
+      (pimacs-send-prompt-and-wait
+       (concat "Use codemode to run exactly this script once, then reply done:\n"
+               "// @options: {\"max_output_tokens\": 16}\n"
+               "text('word '.repeat(200));")))))
+
+(ert-deftest pimacs-bash-truncation ()
+  (let ((pimacs-integration-tools "bash"))
+    (pimacs-with-integration-project "pimacs-bash-truncation"
+      (pimacs-send-prompt-and-wait
+       "Use bash to run exactly this command once, then reply done: for i in {1..2001}; do echo x; done"))))
 
 (ert-deftest pimacs-image-prompt ()
   (pimacs-with-integration-project "image-prompt"

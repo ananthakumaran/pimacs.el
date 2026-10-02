@@ -1,0 +1,46 @@
+user> Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+const pending = tools.bash({command: 'printf started; sleep 10; printf unreachable'});
+await tools.cowsay({message: 'while-bash-runs'});
+throw new Error('stop-script');
+
+assistant> The user wants me to run a specific piece of JavaScript code using the codemode tool.
+The script is:
+const pending = tools.bash({command: 'printf started; sleep 10; printf unreachable'});
+await tools.cowsay({message: 'while-bash-runs'});
+throw new Error('stop-script');
+I must run it exactly as provided, without retrying or fixing errors, and then reply "done".
+
+Wait, the prompt says: "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward."
+
+The script contains a throw new Error('stop-script'). I should just execute it via codemode.
+
+codemode const pending = tools.bash({command: 'printf started; sleep 10; printf unreachable'});
+await tools.cowsay({message: 'while-bash-runs'});
+throw new Error('stop-script');
+bash printf started; sleep 10; printf unreachable
+Command aborted
+
+cowsay (:message "while-bash-runs")
+ ______
+< while-bash-runs >
+ ------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+
+Script failed
+Wall time DURATION seconds
+Output:
+Script error:
+Error: stop-script
+    at <anonymous> (codemode.js:3:11)
+
+Tool calls made before the failure (they are not undone): bash (cancelled), cowsay (ok)
+
+assistant> done
+
+
+ user> 
+  

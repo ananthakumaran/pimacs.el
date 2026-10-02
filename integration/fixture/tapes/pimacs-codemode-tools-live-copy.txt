@@ -1,0 +1,107 @@
+== 1 user ==
+Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+await tools.write({path: 'codemode-test.py', content: 'alpha\nbeta\ngamma\n'});
+await tools.read({path: 'codemode-test.py', offset: 2, limit: 2});
+await tools.edit({path: 'codemode-test.py', oldText: 'gamma', newText: 'delta'});
+await tools.read({path: 'codemode-test.py'});
+await tools.grep({pattern: 'delta', path: 'codemode-test.py'});
+await tools.find({pattern: 'codemode-test.py', path: '.'});
+await tools.ls({path: '.'});
+await tools.cowsay({message: 'nested-cow'});
+text('tools-done');
+
+== 2 tool-call (codemode) ==
+await tools.write({path: 'codemode-test.py', content: 'alpha\nbeta\ngamma\n'});
+await tools.read({path: 'codemode-test.py', offset: 2, limit: 2});
+await tools.edit({path: 'codemode-test.py', oldText: 'gamma', newText: 'delta'});
+await tools.read({path: 'codemode-test.py'});
+await tools.grep({pattern: 'delta', path: 'codemode-test.py'});
+await tools.find({pattern: 'codemode-test.py', path: '.'});
+await tools.ls({path: '.'});
+await tools.cowsay({message: 'nested-cow'});
+text('tools-done');
+
+== 3 tool-call (write) ==
+alpha
+beta
+gamma
+
+
+== 4 tool-result (write) ==
+Successfully wrote to codemode-test.py
+
+== 5 tool-call (read) ==
+(:path "codemode-test.py" :offset 2 :limit 2)
+
+== 6 tool-result (read) ==
+beta
+gamma
+[1 more lines in file. Use offset=4 to continue.]
+
+== 7 tool-call (edit) ==
+(:path "codemode-test.py" :oldText "gamma" :newText "delta")
+
+== 8 tool-result (edit) ==
+--- codemode-test.py
++++ codemode-test.py
+@@ -1,3 +1,3 @@
+ alpha
+ beta
+-gamma
++delta
+
+
+== 9 tool-call (read) ==
+(:path "codemode-test.py")
+
+== 10 tool-result (read) ==
+alpha
+beta
+delta
+
+
+== 11 tool-call (grep) ==
+(:pattern "delta" :path "codemode-test.py")
+
+== 12 tool-result (grep) ==
+codemode-test.py:3: delta
+
+== 13 tool-call (find) ==
+(:pattern "codemode-test.py" :path ".")
+
+== 14 tool-result (find) ==
+codemode-test.py
+
+== 15 tool-call (ls) ==
+(:path ".")
+
+== 16 tool-result (ls) ==
+.dir-locals.el
+.gitignore
+.project
+agent/
+codemode-test.py
+config.json
+green-triangle.png
+notes.txt
+README.md
+utils.py
+
+== 17 tool-call (cowsay) ==
+(:message "nested-cow")
+
+== 18 tool-result (cowsay) ==
+ ______
+< nested-cow >
+ ------
+        \   ^__^
+         \  (oo)\_______
+            (__)\       )\/\
+                ||----w |
+                ||     ||
+
+== 19 tool-result (codemode) ==
+tools-done
+
+== 20 assistant ==
+done

@@ -1,0 +1,1 @@
+UUID  DISPLAY_TIMESTAMP  Use codemode to run exactly this script once, then reply done: console.log('console-output'); text('text-output'); return {answer: 42};

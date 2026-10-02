@@ -760,6 +760,7 @@ description string.
   ("write" . pimacs--insert-write-args)
   ("edit" . pimacs--insert-edit-args)
   ("bash" . pimacs--insert-bash-args)
+  ("codemode" . pimacs--insert-codemode-args)
   ("grep" . pimacs--insert-grep-args)
   ("find" . pimacs--insert-find-args)
   ("ls" . pimacs--insert-ls-args))
@@ -775,6 +776,7 @@ with ARGS plist to insert formatted tool call arguments.
 
 @lisp
 '(("bash" . pimacs--insert-bash-result)
+  ("codemode" . pimacs--insert-codemode-result)
   ("read" . pimacs--insert-read-result)
   ("write" . pimacs--insert-write-result)
   ("edit" . pimacs--insert-edit-result)
@@ -834,6 +836,7 @@ ARGS) and returns text to copy, or nil to use the section body.
 
 @lisp
 '(("bash" . pimacs--copy-bash-call)
+  ("codemode" . pimacs--copy-codemode-call)
   ("write" . pimacs--copy-write-call))
 @end lisp
 

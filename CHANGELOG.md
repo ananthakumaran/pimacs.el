@@ -5,6 +5,7 @@
 ### Added
 
 - `pimacs-copy-section` (`w`) copies the content of the section at point to the kill ring, including tool calls and results.
+- Support Pi's `codemode` tool with JavaScript rendering, script copying, and nested tool calls.
 
 ### Changed
 

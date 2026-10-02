@@ -1,0 +1,29 @@
+== 1 user ==
+Use codemode to run exactly this script once, then reply done: const result = await tools.bash({command: 'printf nested-ok'}); text(result.output);
+
+== 2 thinking ==
+The user wants me to execute a specific JavaScript snippet using `codemode`.
+
+Script:
+```javascript
+const result = await tools.bash({command: 'printf nested-ok'});
+text(result.output);
+```
+
+I need to run this exactly once and then reply "done".
+
+== 3 tool-call (codemode) ==
+const result = await tools.bash({command: 'printf nested-ok'});
+text(result.output);
+
+== 4 tool-call (bash) ==
+printf nested-ok
+
+== 5 tool-result (bash) ==
+nested-ok
+
+== 6 tool-result (codemode) ==
+nested-ok
+
+== 7 assistant ==
+done

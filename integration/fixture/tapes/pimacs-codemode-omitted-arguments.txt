@@ -1,0 +1,26 @@
+Switched to model: (fixture) gemma4:12b
+
+Thinking level set to: low
+
+user> Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000)}); text('large-written');
+
+assistant> The user wants me to run a specific script in codemode exactly once and then reply "done" regardless of the outcome (or if I'm just following instructions literally).
+
+Script: await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000)}); text('large-written');
+
+I should use the codemode tool to execute this script.
+
+codemode await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000)}); text('large-written');
+write  [arguments not retained]
+Some nested calls or arguments were not retained.
+
+large-written
+
+assistant> done
+
+Reloaded extensions, skills and prompts.
+
+
+ user> 
+  

@@ -674,6 +674,7 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
             ("write" . pimacs--insert-write-args)
             ("edit" . pimacs--insert-edit-args)
             ("bash" . pimacs--insert-bash-args)
+            ("codemode" . pimacs--insert-codemode-args)
             ("grep" . pimacs--insert-grep-args)
             ("find" . pimacs--insert-find-args)
             ("ls" . pimacs--insert-ls-args))
@@ -686,6 +687,7 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
  -- User Option: pimacs-insert-tool-result-functions
 
           '(("bash" . pimacs--insert-bash-result)
+            ("codemode" . pimacs--insert-codemode-result)
             ("read" . pimacs--insert-read-result)
             ("write" . pimacs--insert-write-result)
             ("edit" . pimacs--insert-edit-result)
@@ -739,6 +741,7 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
  -- User Option: pimacs-copy-tool-call-functions
 
           '(("bash" . pimacs--copy-bash-call)
+            ("codemode" . pimacs--copy-codemode-call)
             ("write" . pimacs--copy-write-call))
 
      Alist mapping tool names to tool-call copy functions.
@@ -1307,7 +1310,7 @@ Node: Sandbox17312
 Node: How It Works17705
 Node: Keybindings18857
 Node: Custom Variables23217
-Node: Custom Faces41130
+Node: Custom Faces41298
 
 End Tag Table
 

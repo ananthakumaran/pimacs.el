@@ -1,0 +1,45 @@
+Switched to model: (fixture) gemma4:12b
+
+Thinking level set to: low
+
+user> Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+await tools.write({path: 'codemode-test.py', content: 'alpha\nbeta\ngamma\n'});
+await tools.read({path: 'codemode-test.py', offset: 2, limit: 2});
+await tools.edit({path: 'codemode-test.py', oldText: 'gamma', newText: 'delta'});
+await tools.read({path: 'codemode-test.py'});
+await tools.grep({pattern: 'delta', path: 'codemode-test.py'});
+await tools.find({pattern: 'codemode-test.py', path: '.'});
+await tools.ls({path: '.'});
+await tools.cowsay({message: 'nested-cow'});
+text('tools-done');
+
+codemode await tools.write({path: 'codemode-test.py', content: 'alpha\nbeta\ngamma\n'});
+await tools.read({path: 'codemode-test.py', offset: 2, limit: 2});
+await tools.edit({path: 'codemode-test.py', oldText: 'gamma', newText: 'delta'});
+await tools.read({path: 'codemode-test.py'});
+await tools.grep({pattern: 'delta', path: 'codemode-test.py'});
+await tools.find({pattern: 'codemode-test.py', path: '.'});
+await tools.ls({path: '.'});
+await tools.cowsay({message: 'nested-cow'});
+text('tools-done');
+write codemode-test.py
+alpha
+beta
+gamma
+
+read codemode-test.py:2-3
+edit codemode-test.py
+read codemode-test.py
+grep /delta/ in codemode-test.py
+find /codemode-test.py/ in .
+ls .
+cowsay (:message "nested-cow")
+tools-done
+
+assistant> done
+
+Reloaded extensions, skills and prompts.
+
+
+ user> 
+  

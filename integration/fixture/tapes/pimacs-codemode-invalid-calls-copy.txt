@@ -1,0 +1,62 @@
+== 1 user ==
+Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+const results = await Promise.allSettled([
+tools.write({path: 'codemode-invalid.txt'}),
+tools.edit({path: 'README.md', oldText: 'codemode-not-found-marker', newText: 'never-written'}),
+tools.read({path: 'README.md', offset: 9999}),
+tools.bash({command: 'sleep 2', timeout: 0.05})
+]);
+text(results.map(r => r.status));
+
+== 2 thinking ==
+The user wants me to run a specific script using `codemode`. The request is very explicit: "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward."
+
+I should just provide the code provided by the user in a `codemode` call.
+
+== 3 tool-call (codemode) ==
+const results = await Promise.allSettled([
+tools.write({path: 'codemode-invalid.txt'}),
+tools.edit({path: 'README.md', oldText: 'codemode-not-found-marker', newText: 'never-written'}),
+tools.read({path: 'README.md', offset: 9999}),
+tools.bash({command: 'sleep 2', timeout: 0.05})
+]);
+text(results.map(r => r.status));
+
+== 4 tool-call (write) ==
+write 
+
+== 5 tool-result (write) ==
+Validation failed for tool "write":
+  - content: must have required properties content
+
+Received arguments:
+{
+  "path": "codemode-invalid.txt"
+}
+
+== 6 tool-call (edit) ==
+(:path "README.md" :oldText "codemode-not-found-marker" :newText "never-written")
+
+== 7 tool-result (edit) ==
+Could not find the exact text in README.md. The old text must match exactly including all whitespace and newlines.
+
+== 8 tool-call (read) ==
+(:path "README.md" :offset 9999)
+
+== 9 tool-result (read) ==
+Offset 9999 is beyond end of file (10 lines total)
+
+== 10 tool-call (bash) ==
+sleep 2
+
+== 11 tool-result (bash) ==
+Command timed out after 0.05 seconds
+
+== 12 tool-result (codemode) ==
+["rejected","rejected","rejected","rejected"]
+
+== 13 thinking ==
+The user wants me to say "done" after the script finishes, regardless of the results (since there are multiple intentional failures). The codemode output shows all four tasks were rejected. I should just respond with "done".
+
+== 14 assistant ==
+done

@@ -1,0 +1,1 @@
+UUID  DISPLAY_TIMESTAMP  Use codemode to run exactly this script once, then reply done: const result = await tools.bash({command: 'printf nested-ok'}); text(result.output);

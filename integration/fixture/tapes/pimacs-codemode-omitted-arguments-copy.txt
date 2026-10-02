@@ -1,0 +1,34 @@
+== 1 model ==
+Switched to model: (fixture) gemma4:12b
+
+== 2 thinking-level ==
+Thinking level set to: low
+
+== 3 user ==
+Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.
+await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000)}); text('large-written');
+
+== 4 thinking ==
+The user wants me to run a specific script in `codemode` exactly once and then reply "done" regardless of the outcome (or if I'm just following instructions literally).
+
+Script: `await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000)}); text('large-written');`
+
+I should use the `codemode` tool to execute this script.
+
+== 5 tool-call (codemode) ==
+await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000)}); text('large-written');
+
+== 6 tool-call (write) ==
+write  [arguments not retained]
+
+== 7 info ==
+Some nested calls or arguments were not retained.
+
+== 8 tool-result (codemode) ==
+large-written
+
+== 9 assistant ==
+done
+
+== 10 notify ==
+Reloaded extensions, skills and prompts.
