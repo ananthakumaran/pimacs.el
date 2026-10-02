@@ -179,8 +179,8 @@
          (replace-regexp-in-string "[0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}T[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{2\\}-[0-9]\\{3\\}Z" "TIMESTAMP")
          (replace-regexp-in-string "\\(?:just now\\|[0-9]+ [[:alpha:]]+ ago\\)" "RELATIVE_TIME")
          (replace-regexp-in-string "^Wall time [0-9.]+ seconds$" "Wall time DURATION seconds")
-         (replace-regexp-in-string "/[^[:space:]\"']*/pi-codemode-[0-9a-f]\\{16\\}\\.txt" "CODEMODE_OUTPUT")
-         (replace-regexp-in-string "/[^[:space:]\"']*/pi-bash-[0-9a-f]\\{16\\}\\.log" "BASH_OUTPUT")
+         (replace-regexp-in-string "~?/[^[:space:]\"']*/pi-codemode-[0-9a-f]\\{16\\}\\.txt" "CODEMODE_OUTPUT")
+         (replace-regexp-in-string "~?/[^[:space:]\"']*/pi-bash-[0-9a-f]\\{16\\}\\.log" "BASH_OUTPUT")
          (replace-regexp-in-string "[0-9]\\{2\\} [[:alpha:]]\\{3\\} [0-9]\\{4\\}, [0-9]\\{2\\}:[0-9]\\{2\\}" "DISPLAY_TIMESTAMP"))))
 
 (defun pimacs--force-update-header-line ()
@@ -499,7 +499,7 @@
     (pimacs-with-integration-project "pimacs-codemode-cancel-pending"
       (pimacs-send-prompt-and-wait
        (concat "Use codemode to run exactly this script once. Do not retry or fix errors; reply done afterward.\n"
-               "const pending = tools.bash({command: 'printf started; sleep 10; printf unreachable'});\n"
+               "const pending = tools.bash({command: 'sleep 10; printf unreachable'});\n"
                "await tools.cowsay({message: 'while-bash-runs'});\n"
                "throw new Error('stop-script');")))))
 
