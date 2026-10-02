@@ -2,13 +2,13 @@
 hello
 
 == 2 queue ==
-queue
- Steering: hello 1
+queued 1 steering
+Steering   hello 1
 
 == 3 queue ==
-queue
- Steering: hello 1
- Steering: hello 2
+queued 2 steering
+Steering   hello 1
+Steering   hello 2
 
 == 4 thinking ==
 The user is greeting me with "hello". This is a simple greeting message and doesn't require any specific tool usage - I should respond naturally as an AI assistant.
@@ -17,8 +17,8 @@ The user is greeting me with "hello". This is a simple greeting message and does
 Hello! How can I assist you today?
 
 == 6 queue ==
-queue
- Steering: hello 2
+queued 1 steering
+Steering   hello 2
 
 == 7 user ==
 hello 1

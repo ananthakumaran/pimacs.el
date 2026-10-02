@@ -1071,7 +1071,18 @@ Status components:
 Use at most one @code{:spacer}.
 @end defopt
 
-@defopt pimacs-mode-line-format @code{'(" Pimacs " :agent_state :spinner)}
+@defopt pimacs-mode-line-format
+
+@lisp
+'(" Pimacs "
+  (lambda (state)
+    (let ((count (plist-get state :pendingMessageCount)))
+      (if (and (numberp count) (> count 0))
+          (propertize (format "▣ %d " count)
+                      'face 'pimacs-queue-heading-face)
+        "")))
+  (:agent_state face font-lock-constant-face) :spinner)
+@end lisp
 
 Format of the Pimacs mode-line entry.
 
@@ -1204,6 +1215,21 @@ Face used for warning notification messages.
 @deffn Face pimacs-notify-error-face @code{'((t :inherit error))}
 
 Face used for error notification messages.
+@end deffn
+
+@deffn Face pimacs-queue-heading-face @code{'((t :inherit font-lock-string-face :weight bold))}
+
+Face used for the queued heading.
+@end deffn
+
+@deffn Face pimacs-queue-steering-face @code{'((t :inherit font-lock-string-face))}
+
+Face used for Steering labels in queue sections.
+@end deffn
+
+@deffn Face pimacs-queue-follow-up-face @code{'((t :inherit font-lock-string-face))}
+
+Face used for Follow-up labels in queue sections.
 @end deffn
 
 @deffn Face pimacs-widget-face @code{'((t :inherit shadow))}

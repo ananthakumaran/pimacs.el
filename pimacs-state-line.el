@@ -114,7 +114,15 @@ Use at most one `:spacer'."
   :type pimacs--state-line-format-type
   :group 'pimacs)
 
-(defcustom pimacs-mode-line-format '(" Pimacs " :agent_state :spinner)
+(defcustom pimacs-mode-line-format
+  '(" Pimacs "
+    (lambda (state)
+      (let ((count (plist-get state :pendingMessageCount)))
+        (if (and (numberp count) (> count 0))
+            (propertize (format "▣ %d " count)
+                        'face 'pimacs-queue-heading-face)
+          "")))
+    (:agent_state face font-lock-constant-face) :spinner)
   "Format of the Pimacs mode-line entry.
 
 See `pimacs-header-line-format' for available components."

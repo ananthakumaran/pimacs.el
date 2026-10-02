@@ -948,8 +948,16 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
 
      Use at most one ‘:spacer’.
 
- -- User Option: pimacs-mode-line-format '(" Pimacs " :agent_state
-          :spinner)
+ -- User Option: pimacs-mode-line-format
+
+          '(" Pimacs "
+            (lambda (state)
+              (let ((count (plist-get state :pendingMessageCount)))
+                (if (and (numberp count) (> count 0))
+                    (propertize (format "▣ %d " count)
+                                'face 'pimacs-queue-heading-face)
+                  "")))
+            (:agent_state face font-lock-constant-face) :spinner)
 
      Format of the Pimacs mode-line entry.
 
@@ -1067,6 +1075,21 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
  -- Face: pimacs-notify-error-face '((t :inherit error))
 
      Face used for error notification messages.
+
+ -- Face: pimacs-queue-heading-face '((t :inherit font-lock-string-face
+          :weight bold))
+
+     Face used for the queued heading.
+
+ -- Face: pimacs-queue-steering-face '((t :inherit
+          font-lock-string-face))
+
+     Face used for Steering labels in queue sections.
+
+ -- Face: pimacs-queue-follow-up-face '((t :inherit
+          font-lock-string-face))
+
+     Face used for Follow-up labels in queue sections.
 
  -- Face: pimacs-widget-face '((t :inherit shadow))
 
@@ -1284,7 +1307,7 @@ Node: Sandbox17312
 Node: How It Works17705
 Node: Keybindings18857
 Node: Custom Variables23217
-Node: Custom Faces40789
+Node: Custom Faces41130
 
 End Tag Table
 

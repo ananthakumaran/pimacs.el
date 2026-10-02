@@ -9,6 +9,7 @@
 ### Changed
 
 - Session resume candidates now show parent/child relationships as a tree.
+- Improve queue styling and show pending message counts in the mode line.
 
 ### Fixed
 

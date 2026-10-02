@@ -2,13 +2,13 @@
 hello
 
 == 2 queue ==
-queue
- Follow-up: follow up 1
+queued 1 follow-up
+Follow-up  follow up 1
 
 == 3 queue ==
-queue
- Follow-up: follow up 1
- Follow-up: follow up 2
+queued 2 follow-up
+Follow-up  follow up 1
+Follow-up  follow up 2
 
 == 4 thinking ==
 The user is saying "hello". This is a simple greeting, so I should respond in a friendly manner without needing to use any tools. I'll just respond with a greeting and ask how I can help them.
@@ -17,8 +17,8 @@ The user is saying "hello". This is a simple greeting, so I should respond in a 
 Hello! How can I help you today?
 
 == 6 queue ==
-queue
- Follow-up: follow up 2
+queued 1 follow-up
+Follow-up  follow up 2
 
 == 7 user ==
 follow up 1

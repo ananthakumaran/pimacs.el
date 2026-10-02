@@ -1,18 +1,18 @@
 user> hello
 
-queue
- Follow-up: follow up 1
+queued 1 follow-up
+Follow-up  follow up 1
 
-queue
- Follow-up: follow up 1
- Follow-up: follow up 2
+queued 2 follow-up
+Follow-up  follow up 1
+Follow-up  follow up 2
 
 assistant> The user is saying "hello". This is a simple greeting, so I should respond in a friendly manner without needing to use any tools. I'll just respond with a greeting and ask how I can help them.
 
 assistant> Hello! How can I help you today?
 
-queue
- Follow-up: follow up 2
+queued 1 follow-up
+Follow-up  follow up 2
 
 user> follow up 1
 

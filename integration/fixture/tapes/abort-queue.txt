@@ -1,11 +1,11 @@
 user> start request
 
-queue
- Steering: steering message
+queued 1 steering
+Steering   steering message
 
-queue
- Steering: steering message
- Follow-up: follow-up message
+queued 1 steering, 1 follow-up
+Steering   steering message
+Follow-up  follow-up message
 
 Request aborted
 

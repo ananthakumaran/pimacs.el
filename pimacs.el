@@ -92,6 +92,21 @@
   "Face used for error notification messages."
   :group 'pimacs)
 
+(defface pimacs-queue-heading-face
+  '((t :inherit font-lock-string-face :weight bold))
+  "Face used for the queued heading."
+  :group 'pimacs)
+
+(defface pimacs-queue-steering-face
+  '((t :inherit font-lock-string-face))
+  "Face used for Steering labels in queue sections."
+  :group 'pimacs)
+
+(defface pimacs-queue-follow-up-face
+  '((t :inherit font-lock-string-face))
+  "Face used for Follow-up labels in queue sections."
+  :group 'pimacs)
+
 (defface pimacs-widget-face
   '((t :inherit shadow))
   "Face used for extension widgets."
@@ -1513,11 +1528,22 @@ is non-nil, insert an ellipsis instead of ARGS."
     (when has-content
       (pimacs--widget-save-excursion
         (pimacs-section--create-section 'queue pimacs-section--root-section
-          (insert (propertize "queue" 'face 'bold))
+          (pimacs-section--insert-chrome "queued" 'pimacs-queue-heading-face)
+          (insert " "
+                  (string-join
+                   (delq nil (list (when (consp steering)
+                                     (format "%d steering" (length steering)))
+                                   (when (consp follow-up)
+                                     (format "%d follow-up" (length follow-up)))))
+                   ", "))
           (dolist (item steering)
-            (insert (format "\n Steering: %s" item)))
+            (insert "\n")
+            (pimacs-section--insert-chrome "Steering" 'pimacs-queue-steering-face)
+            (insert "   " item))
           (dolist (item follow-up)
-            (insert (format "\n Follow-up: %s" item))))))))
+            (insert "\n")
+            (pimacs-section--insert-chrome "Follow-up" 'pimacs-queue-follow-up-face)
+            (insert "  " item)))))))
 
 (defun pimacs--handle-compaction-end (event)
   (let* ((result (pimacs--json-get event :result))

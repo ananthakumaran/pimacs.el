@@ -2,13 +2,13 @@
 hello
 
 == 2 queue ==
-queue
- Steering: steering message
+queued 1 steering
+Steering   steering message
 
 == 3 queue ==
-queue
- Steering: steering message
- Follow-up: follow-up message
+queued 1 steering, 1 follow-up
+Steering   steering message
+Follow-up  follow-up message
 
 == 4 notify ==
 Restored 2 queued messages to editor.

@@ -1,18 +1,18 @@
 user> hello
 
-queue
- Steering: hello 1
+queued 1 steering
+Steering   hello 1
 
-queue
- Steering: hello 1
- Steering: hello 2
+queued 2 steering
+Steering   hello 1
+Steering   hello 2
 
 assistant> The user is greeting me with "hello". This is a simple greeting message and doesn't require any specific tool usage - I should respond naturally as an AI assistant.
 
 assistant> Hello! How can I assist you today?
 
-queue
- Steering: hello 2
+queued 1 steering
+Steering   hello 2
 
 user> hello 1
 
