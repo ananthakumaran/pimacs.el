@@ -107,20 +107,21 @@ in descending order."
             (sort
              (mapcar
               (lambda (label)
-                (if (> (cl-count (car label) labels :key #'car :test #'equal) 1)
-                    (cons (pimacs--chat-label (cdr (cdr label)) t) (cdr label))
-                  label))
+                (let* ((candidate (cdr label))
+                       (name (if (> (cl-count (car label) labels :key #'car :test #'equal) 1)
+                                 (pimacs--chat-label (cdr candidate) t)
+                               (car label)))
+                       (agent (gethash (car candidate) pimacs--agents))
+                       (root (and agent (process-get agent 'project-root))))
+                  (cons (if root
+                            (concat name "  "
+                                    (propertize (abbreviate-file-name (expand-file-name root))
+                                                'face 'pimacs-session-directory-face))
+                          name)
+                        candidate)))
               labels)
              (lambda (a b) (string< (car a) (car b)))))
-           (annotation-function
-            (lambda (label)
-              (when-let* ((candidate (cdr (assoc label choices)))
-                          (agent (gethash (car candidate) pimacs--agents))
-                          (root (process-get agent 'project-root)))
-                (concat "  " (propertize (abbreviate-file-name (expand-file-name root)) 'face 'pimacs-session-directory-face)))))
-           (completion-extra-properties
-            `(:annotation-function ,annotation-function))
-           (selected (completing-read prompt choices nil t)))
+           (selected (pimacs--completing-read prompt choices)))
       (cdr (assoc selected choices))))))
 
 (defun pimacs--select-relevant-chat ()

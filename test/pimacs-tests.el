@@ -60,7 +60,7 @@
           (with-current-buffer unique
             (setq pimacs--header-line-state
                   '(:sessionName "unique" :sessionStats (:sessionId "00000000-44444444"))))
-          (cl-letf (((symbol-function 'completing-read)
+          (cl-letf (((symbol-function 'pimacs--completing-read)
                      (lambda (_prompt choices &rest _)
                        (setq labels (mapcar #'car choices))
                        "shared 22222222")))
