@@ -133,6 +133,8 @@ See `pimacs-header-line-format' for available components."
 (pimacs--def-permanent-buffer-local pimacs--agent-state nil)
 (pimacs--def-permanent-buffer-local pimacs--spinner nil)
 
+(defvar pimacs--header-line-state-change-hook nil)
+
 (defun pimacs--format-tool-state (tools)
   (pcase tools
     (`(,first ,second ,_ . ,rest)
@@ -174,11 +176,7 @@ See `pimacs-header-line-format' for available components."
   (pimacs--format-state-line-value (plist-get state :thinkingLevel)))
 
 (defun pimacs--format-state-line-session-name (state)
-  (let ((name (plist-get state :sessionName)))
-    (pimacs--format-state-line-value
-     (if (and (stringp name) (not (string-empty-p name)))
-         name
-       (pimacs--short-uuid (pimacs--plist-get state :sessionStats :sessionId))))))
+  (pimacs--format-state-line-value (pimacs--session-name-or-id state)))
 
 (defun pimacs--format-state-line-project-root (state)
   (let ((project-root (plist-get state :projectRoot)))
@@ -371,6 +369,7 @@ Unlike `replace-regexp-in-string', this preserves TEXT's properties."
 (defun pimacs--set-header-line-state (state stats)
   (setq pimacs--header-line-state
         (plist-put state :sessionStats stats))
+  (run-hooks 'pimacs--header-line-state-change-hook)
   (force-mode-line-update))
 
 (defun pimacs--update-header-line ()

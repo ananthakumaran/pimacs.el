@@ -4,6 +4,7 @@
 
 ### Added
 
+- `pimacs-resume-new-buffer` resumes a persisted session in a separate chat and agent without replacing existing chats.
 - `pimacs-copy-section` (`w`) copies the content of the section at point to the kill ring, including tool calls and results.
 - Support Pi's `codemode` tool with JavaScript rendering, script copying, and nested tool calls.
 - `pimacs-section-initial-hide-filter` controls initial folding, with tool-specific selectors shared by `pimacs-section-autohide-filter`. Codemode's own output starts collapsed.
@@ -15,6 +16,7 @@
 
 ### Fixed
 
+- Use the short session ID for unnamed chat buffers and update buffer names when sessions change.
 - Keep point near the same text when streamed content is re-rendered.
 - Handle JSON `null` values consistently in agent responses and session data.
 - Prevent prefix arguments from leaking into nested chat commands.

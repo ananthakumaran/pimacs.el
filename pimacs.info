@@ -300,6 +300,13 @@ the selected session's recorded working directory.  Invoke ‘C-u M-x
 pimacs-resume’ to search all projects under ‘pimacs-session-directory’
 instead.
 
+   Use ‘M-x pimacs-resume-new-buffer’ to resume a session in a separate
+chat buffer with its own agent, leaving existing chats unchanged.  It
+searches the current project by default; ‘C-u M-x
+pimacs-resume-new-buffer’ searches all projects.  This always creates a
+new chat, even when another chat for the selected session's project is
+already open.
+
    Candidates show the session name or identifier, modification date,
 preview, and project directory where available.  The session directory
 root is controlled by ‘pimacs-session-directory’; its default is Pi's
@@ -1322,13 +1329,13 @@ Node: Images7359
 Node: State Lines8224
 Node: Managing Chats9574
 Node: Searching and Resuming Sessions10167
-Node: Section Visibility11926
-Node: UI Customization14070
-Node: Sandbox17341
-Node: How It Works17734
-Node: Keybindings18886
-Node: Custom Variables23246
-Node: Custom Faces41902
+Node: Section Visibility12284
+Node: UI Customization14428
+Node: Sandbox17699
+Node: How It Works18092
+Node: Keybindings19244
+Node: Custom Variables23604
+Node: Custom Faces42260
 
 End Tag Table
 

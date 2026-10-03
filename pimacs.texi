@@ -350,6 +350,12 @@ selected session's recorded working directory.  Invoke
 @kbd{C-u M-x pimacs-resume} to search all projects under
 @code{pimacs-session-directory} instead.
 
+Use @kbd{M-x pimacs-resume-new-buffer} to resume a session in a separate
+chat buffer with its own agent, leaving existing chats unchanged.  It searches
+the current project by default; @kbd{C-u M-x pimacs-resume-new-buffer}
+searches all projects.  This always creates a new chat, even when another chat
+for the selected session's project is already open.
+
 
 Candidates show the session name or identifier, modification date, preview,
 and project directory where available.  The session directory root is

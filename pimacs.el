@@ -634,9 +634,20 @@ their changed tail.  Other batches align against their final result."
         (pimacs-focus-prompt)))))
 
 (defun pimacs--chat-buffer-name (&optional title)
-  (if title
-      (format "*pimacs-chat:%s:%s*" (pimacs--project-name) title)
-    (format "*pimacs-chat:%s*" (pimacs--project-name))))
+  (let ((title (if (and (stringp title) (not (string-empty-p title)))
+                   title
+                 (pimacs--session-name-or-id pimacs--header-line-state))))
+    (if title
+        (format "*pimacs-chat:%s:%s*" (pimacs--project-name) title)
+      (format "*pimacs-chat:%s*" (pimacs--project-name)))))
+
+(pimacs--def-permanent-buffer-local pimacs--chat-buffer-title nil)
+
+(defun pimacs--update-chat-buffer-name ()
+  (let ((title (pimacs--session-name-or-id pimacs--header-line-state)))
+    (when (and title (not (equal title pimacs--chat-buffer-title)))
+      (setq pimacs--chat-buffer-title title)
+      (rename-buffer (pimacs--chat-buffer-name title) t))))
 
 (defun pimacs--recenter-chat ()
   (when-let ((window (and pimacs-chat-keep-input-at-bottom
@@ -2525,7 +2536,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (_ (error "Unknown resume scope: %S" scope))))
 
 
-(defun pimacs--resume-standalone (scope)
+(defun pimacs--resume-standalone (scope &optional new-buffer)
   (let ((directory (pimacs--resume-standalone-directory scope)))
     (unless (file-directory-p directory)
       (user-error "Session directory does not exist: %s"
@@ -2536,7 +2547,8 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                         directory (eq scope 'all) pimacs-resume-max-sessions))))
       (if-let ((record (pimacs-session-read-resume-record records t)))
           (pimacs-resume-session-file (pimacs-session-record-path record)
-                                      (pimacs-session-record-cwd record))
+                                      (pimacs-session-record-cwd record)
+                                      new-buffer)
         (message "No resumable session files found in %s"
                  (abbreviate-file-name directory))))))
 
@@ -2552,6 +2564,15 @@ SCOPE, when non-nil, searches resumable sessions across all projects."
         (with-current-buffer chat
           (pimacs--resume-chat))
       (pimacs--resume-standalone pimacs-resume-default-scope))))
+
+;;;###autoload
+(defun pimacs-resume-new-buffer (&optional scope)
+  "Resume a previous session in a new chat buffer, leaving existing chats intact.
+
+Search `pimacs-resume-default-scope' by default.
+With a prefix argument, or non-nil SCOPE, search across all projects."
+  (interactive (list (when current-prefix-arg 'all)))
+  (pimacs--resume-standalone (or scope pimacs-resume-default-scope) t))
 
 (defun pimacs--clear-sections ()
   (pimacs--history-render-reset)
@@ -3167,6 +3188,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (setq-local mode-line-misc-info
               (append (list '(:eval (pimacs--format-state-line pimacs-mode-line-format)))
                       mode-line-misc-info))
+  (add-hook 'pimacs--header-line-state-change-hook #'pimacs--update-chat-buffer-name nil t)
   (pimacs--update-header-line)
   (hack-dir-local-variables-non-file-buffer)
   (pimacs--fetch-commands))
@@ -3199,12 +3221,14 @@ With a prefix argument OTHER-WINDOW, visit in other window."
       (hack-dir-local-variables-non-file-buffer)
       (funcall fn))))
 
-(defun pimacs-chat--create (name root)
+(defun pimacs-chat--create (name root &optional new-buffer)
   (let* ((explicit-root root)
          (root (if explicit-root
                    (file-name-as-directory (expand-file-name explicit-root))
                  (pimacs--project-root)))
-         (key (md5 (concat root (or name "")))))
+         (key (if new-buffer
+                  (symbol-name (cl-gensym "pimacs-chat-"))
+                (md5 (concat root (or name ""))))))
     (let ((pimacs--project-root root)
           (pimacs--project-key key))
       (unless (pimacs--current-agent)
@@ -3263,34 +3287,26 @@ With a prefix argument, show a transient for setting NAME and ROOT."
 SESSION-FILE is the path to the session file to switch to.
 MESSAGE is shown as a notification when complete.
 If non-nil, call CB after the session refresh finishes."
-  (let ((buffer (current-buffer)))
-    (pimacs--widget-save-excursion
-      (pimacs--clear-session-widgets))
-    (pimacs--send-command
-     "switch_session" (list :sessionPath session-file)
-     (pimacs--on-response-success-callback resp
-       (pimacs--update-header-line)
-       (pimacs--unless-cancelled resp "Session switch"
-         (pimacs--send-command
-          "get_state" '()
-          (pimacs--on-response-success-callback state-resp
-            (let ((session-name
-                   (pimacs--json-get (plist-get state-resp :data) :sessionName)))
-              (pimacs-refresh-session (lambda ()
-                                        (with-current-buffer buffer
-                                          (rename-buffer
-                                           (pimacs--chat-buffer-name session-name) t))
-                                        (pimacs--notify message)
-                                        (when cb
-                                          (funcall cb))))))))))))
+  (pimacs--widget-save-excursion
+    (pimacs--clear-session-widgets))
+  (pimacs--send-command
+   "switch_session" (list :sessionPath session-file)
+   (pimacs--on-response-success-callback resp
+     (pimacs--update-header-line)
+     (pimacs--unless-cancelled resp "Session switch"
+       (pimacs-refresh-session (lambda ()
+                                 (pimacs--notify message)
+                                 (when cb
+                                   (funcall cb))))))))
 
-(defun pimacs-resume-session-file (session-file cwd)
-  "Resume SESSION-FILE in a chat rooted at CWD."
+(defun pimacs-resume-session-file (session-file cwd &optional new-buffer)
+  "Resume SESSION-FILE in a chat rooted at CWD.
+If NEW-BUFFER is non-nil, create a separate chat and agent."
   (unless (file-exists-p session-file)
     (user-error "Session file no longer exists: %s" session-file))
   (unless (file-directory-p cwd)
     (user-error "Session directory no longer exists: %s" cwd))
-  (with-current-buffer (pimacs-chat--create nil cwd)
+  (with-current-buffer (pimacs-chat--create nil cwd new-buffer)
     (pimacs--switch-session session-file "Resumed session")))
 
 (setq pimacs-search-resume-function #'pimacs-resume-session-file)

@@ -70,6 +70,12 @@
 (defun pimacs--project-name ()
   (file-name-nondirectory (directory-file-name (pimacs--project-root))))
 
+(defun pimacs--session-name-or-id (state)
+  (let ((name (plist-get state :sessionName)))
+    (if (and (stringp name) (not (string-empty-p name)))
+        name
+      (pimacs--short-uuid (pimacs--plist-get state :sessionStats :sessionId)))))
+
 (defun pimacs--agent-buffer-name ()
   (format "*pimacs-agent:%s*" pimacs--project-key))
 
