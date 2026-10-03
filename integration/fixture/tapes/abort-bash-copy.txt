@@ -1,7 +1,7 @@
 == 1 tool-call (bash) ==
 printf 'started\n'; sleep 120
 
-== 2 tool-result ==
+== 2 tool-result (bash) ==
 started
 Cancelled
 

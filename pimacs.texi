@@ -772,6 +772,11 @@ Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
 with ARGS plist to insert formatted tool call arguments.
 @end defopt
 
+@defopt pimacs-codemode-output-header-face @code{'shadow}
+
+Face used for the codemode output header.
+@end defopt
+
 @defopt pimacs-insert-tool-result-functions
 
 @lisp
@@ -824,7 +829,12 @@ Each entry is (SECTION-TYPE . FUNCTION) where FUNCTION is called with the
 section at point and returns text to copy, or nil to use the section body.
 @end defopt
 
-@defopt pimacs-copy-tool-result-functions @code{'(("edit" . pimacs--copy-edit-result))}
+@defopt pimacs-copy-tool-result-functions
+
+@lisp
+'(("edit" . pimacs--copy-edit-result)
+  ("codemode" . pimacs--copy-codemode-result))
+@end lisp
 
 Alist mapping tool names to tool-result copy functions.
 
@@ -1125,21 +1135,32 @@ Whether to render Markdown tables with Unicode borders.
 
 Automatically hide older chat sections beyond this count.
 This helps reduce clutter by collapsing earlier responses when the
-conversation grows long.  When nil, auto hiding is disabled and no
-sections are hidden automatically.
+conversation grows long.  When nil, auto hiding is disabled;
+@code{pimacs-section-initial-hide-filter} still applies.
 @end defopt
 
 @defopt pimacs-section-autohide-filter @code{'all}
 
-Filter controlling which sections are eligible for automatic hiding.
+Filter controlling which top-level sections are eligible for autohide.
 
-When set to @code{all}, every top-level section is eligible.
+Use @code{all}, nil, @code{(:include SELECTOR...)}, @code{(:exclude SELECTOR...)},
+or a predicate called with the section.  A selector is a section type
+symbol or @code{(tool-call TOOL...)} / @code{(tool-result TOOL...)}, where TOOL
+is an exact tool name string.  Selectors are matched with OR.
 
-A value of @code{(:include TYPE...)} makes only the listed section types eligible.
-A value of @code{(:exclude TYPE...)} makes every section type except the listed
-types eligible.  A function value is called with each top-level section and
-should return non-nil when that section is eligible.  Non-eligible sections
-do not count toward @code{pimacs-section-autohide-count}.
+Non-eligible sections do not count toward
+@code{pimacs-section-autohide-count}.
+@end defopt
+
+@defopt pimacs-section-initial-hide-filter @code{'(:include (tool-result "codemode"))}
+
+Filter selecting sections to start collapsed at any nesting depth.
+
+Use the same selectors as @code{pimacs-section-autohide-filter}.
+The default is @code{(:include (tool-result "codemode"))}.
+
+The filter is evaluated once per section.  Tool metadata is available,
+but streamed arguments and content may still be incomplete.
 @end defopt
 
 @defopt pimacs-section-padding @code{"\n\n"}

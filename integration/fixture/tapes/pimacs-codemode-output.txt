@@ -9,6 +9,7 @@ Plan:
 2. Confirm completion by replying "done".
 
 codemode console.log('console-output'); text('text-output'); return {answer: 42};
+codemode output
 console-output
 text-output
 {"answer":42}
@@ -22,6 +23,7 @@ assistant> The user wants to execute a specific piece of JavaScript using the co
 Script: const value = 42;
 
 codemode const value = 42;
+codemode output
 
 
 assistant> done
@@ -34,6 +36,7 @@ Script: const = ;
 Action: call codemode, then respond with "done".
 
 codemode const = ;
+codemode output
 Script failed
 Wall time DURATION seconds
 Output:
@@ -51,6 +54,7 @@ text('word '.repeat(200));
 
 codemode // @options: {"max_output_tokens": 16}
 text('word '.repeat(200));
+codemode output
 Warning: truncated output (original token count: 250)
 Total output lines: 1
 

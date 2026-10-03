@@ -13,6 +13,7 @@ codemode await tools.read({path: 'green-triangle.png'}); text('image-read');
 read green-triangle.png
 Read image file [image/png]
 
+codemode output
 image-read
 
 assistant> done

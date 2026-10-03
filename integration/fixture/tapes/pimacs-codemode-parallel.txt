@@ -57,6 +57,7 @@ cowsay (:message "parallel-cow")
                 ||----w |
                 ||     ||
 
+codemode output
 ["fulfilled","fulfilled","rejected","fulfilled","fulfilled"]
 
 assistant> done

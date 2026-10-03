@@ -74,6 +74,7 @@ cowsay (:message "nested-cow")
                 ||----w |
                 ||     ||
 
+codemode output
 tools-done
 
 assistant> done

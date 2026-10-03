@@ -32,6 +32,7 @@ cowsay (:message "before-failure")
 read codemode-missing.txt
 ENOENT: no such file or directory, access 'PROJECT_DIR/codemode-missing.txt'
 
+codemode output
 Script failed
 Wall time DURATION seconds
 Output:
@@ -51,6 +52,7 @@ Plan:
 2. If successful or not (since I'm told not to fix it, but here it's just a simple command), reply "done".
 
 codemode text('recovered');
+codemode output
 recovered
 
 assistant> The script was executed successfully and the output was 'recovered'. The user wants me to say "done" now.

@@ -13,6 +13,7 @@ text(result.output);
 bash printf nested-ok
 nested-ok
 
+codemode output
 nested-ok
 
 assistant> done

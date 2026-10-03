@@ -15,6 +15,7 @@ codemode await tools.write({path: 'codemode-large.txt', content: 'x'.repeat(9000
 write  [arguments not retained]
 Some nested calls or arguments were not retained.
 
+codemode output
 large-written
 
 assistant> done

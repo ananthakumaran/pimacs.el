@@ -898,6 +898,66 @@
         (should (eq (pimacs-section-visibility edit) :autoshow))
         (should (eq (pimacs-section-visibility bash) :autohide))))))
 
+(ert-deftest pimacs-section-filter-tool-selectors ()
+  (let ((call (make-pimacs-section
+               :type 'tool-call
+               :info (make-pimacs-section-tool-call-info :tool-name "edit")))
+        (result (make-pimacs-section
+                 :type 'tool-result
+                 :info (make-pimacs-section-tool-result-info :tool-name "codemode"))))
+    (should (pimacs-section--filter-matches-p
+             call '(:include (tool-call "edit" "replace" "insert"))))
+    (should-not (pimacs-section--filter-matches-p
+                 call '(:exclude assistant (tool-call "edit" "replace" "insert"))))
+    (should-not (pimacs-section--filter-matches-p call '(:include (tool-call "ed"))))
+    (should-not (pimacs-section--filter-matches-p call '(:include (tool-result "edit"))))
+    (should (pimacs-section--filter-matches-p result '(:include (tool-result "codemode"))))
+    (should (widget-apply (widget-convert 'pimacs-section-filter) :match
+                          '(:exclude assistant (tool-call "edit" "replace" "insert"))))))
+
+(ert-deftest pimacs-section-initial-hide-at-all-depths-and-autohide ()
+  (let ((pimacs-section-initial-hide-filter '(:include compile logs)))
+    (pimacs-section-tests-with-demo-buffer
+      (let ((compile (pimacs-section--find-section '(build compile) pimacs-section--root-section))
+            (logs (pimacs-section--find-section '(logs) pimacs-section--root-section)))
+        (should (pimacs-section--visible-p pimacs-section--root-section))
+        (should (eq (pimacs-section-visibility compile) :autohide))
+        (dolist (count '(2 nil 0))
+          (let ((pimacs-section-autohide-count count))
+            (goto-char (point-max))
+            (pimacs-section-autohide)
+            (should (eq (pimacs-section-visibility logs) :autohide))))
+        (pimacs-section--set-visibility logs :show)
+        (let ((pimacs-section-autohide-count 0))
+          (pimacs-section-autohide)
+          (should (eq (pimacs-section-visibility logs) :show)))))))
+
+(ert-deftest pimacs-section-initial-hide-metadata-and-updates ()
+  (let* ((calls 0)
+         (pimacs-section-initial-hide-filter
+          (lambda (section)
+            (cl-incf calls)
+            (equal (pimacs-section-tool-result-info-tool-name
+                    (pimacs-section-info section))
+                   "codemode"))))
+    (pimacs-with-root-section
+      (let ((section (pimacs-section--create-section 'tool-result pimacs-section--root-section
+                       :info (make-pimacs-section-tool-result-info :tool-name "codemode")
+                       (should (= calls 1))
+                       (insert "payload\nbody\n"))))
+        (pimacs-section--append-section section (insert "partial\n"))
+        (should (eq (pimacs-section-visibility section) :autohide))
+        (goto-char (pimacs-section-beginning section))
+        (pimacs-toggle-section)
+        (pimacs-section--create-or-replace-section section 'tool-result pimacs-section--root-section
+          :info (make-pimacs-section-tool-result-info :tool-name "bash")
+          (insert "completed\nbody\n"))
+        (should (equal (pimacs-section-tool-result-info-tool-name
+                        (pimacs-section-info section))
+                       "bash"))
+        (should (= calls 1))
+        (should (eq (pimacs-section-visibility section) :show))))))
+
 (ert-deftest pimacs-section-autohide-skips-unchanged-visibility ()
   (pimacs-with-root-section
     (let ((a (pimacs-section--new-section 'a pimacs-section--root-section))

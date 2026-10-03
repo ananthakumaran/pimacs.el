@@ -1,14 +1,14 @@
 == 1 tool-call (bash) ==
 printf '\033[31mred\033[0m\n'
 
-== 2 tool-result ==
+== 2 tool-result (bash) ==
 red
 
 
 == 3 tool-call (bash) ==
 printf '\033[31mred\033[0m\n'
 
-== 4 tool-result ==
+== 4 tool-result (bash) ==
 red
 
 

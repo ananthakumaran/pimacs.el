@@ -237,6 +237,11 @@ with ARGS plist to insert formatted tool call arguments."
   :type '(alist :key-type string :value-type function)
   :group 'pimacs)
 
+(defcustom pimacs-codemode-output-header-face 'shadow
+  "Face used for the codemode output header."
+  :type 'face
+  :group 'pimacs)
+
 (defcustom pimacs-insert-tool-result-functions
   '(("bash" . pimacs--insert-bash-result)
     ("codemode" . pimacs--insert-codemode-result)
@@ -281,7 +286,8 @@ section at point and returns text to copy, or nil to use the section body."
   :group 'pimacs)
 
 (defcustom pimacs-copy-tool-result-functions
-  '(("edit" . pimacs--copy-edit-result))
+  '(("edit" . pimacs--copy-edit-result)
+    ("codemode" . pimacs--copy-codemode-result))
   "Alist mapping tool names to tool-result copy functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called with (DETAILS
@@ -854,12 +860,11 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--insert-user-message (content)
   (pimacs--widget-save-excursion
-    (let ((section (pimacs-section--create-section 'user pimacs-section--root-section
-                     (pimacs-ui--insert-role-prefix "user")
-                     (pimacs--insert-content content))))
-      (pimacs-section--set-info section (make-pimacs-section-user-info
-                                         :header (pimacs--content-header content)
-                                         :content content)))))
+    (pimacs-section--create-section 'user pimacs-section--root-section
+      :info (make-pimacs-section-user-info
+             :header (pimacs--content-header content) :content content)
+      (pimacs-ui--insert-role-prefix "user")
+      (pimacs--insert-content content))))
 
 (defvar pimacs--image-type-alist
   '(("image/png" . png)
@@ -929,32 +934,34 @@ the tail again, move point back to the prompt and resume following."
          ("thinking"
           (let ((content (list item)))
             (pimacs--widget-save-excursion
-              (let ((section (pimacs-section--create-section 'thinking pimacs-section--root-section
-                               (pimacs-ui--insert-role-prefix "assistant")
-                               (pimacs--insert-content content))))
-                (pimacs-section--set-info section (make-pimacs-section-assistant-info
-                                                   :header (pimacs--content-header content)
-                                                   :content content
-                                                   :type 'thinking))))))
+              (pimacs-section--create-section 'thinking pimacs-section--root-section
+                :info (make-pimacs-section-assistant-info
+                       :header (pimacs--content-header content)
+                       :content content :type 'thinking)
+                (pimacs-ui--insert-role-prefix "assistant")
+                (pimacs--insert-content content)))))
          ("text"
           (let ((content (list item)))
             (pimacs--widget-save-excursion
-              (let ((section (pimacs-section--create-section 'assistant pimacs-section--root-section
-                               (pimacs-ui--insert-role-prefix "assistant")
-                               (pimacs--insert-content content t))))
-                (pimacs-section--set-info section (make-pimacs-section-assistant-info
-                                                   :header (pimacs--content-header content)
-                                                   :content content
-                                                   :type 'text))))))
+              (pimacs-section--create-section 'assistant pimacs-section--root-section
+                :info (make-pimacs-section-assistant-info
+                       :header (pimacs--content-header content)
+                       :content content :type 'text)
+                (pimacs-ui--insert-role-prefix "assistant")
+                (pimacs--insert-content content t)))))
          ("toolCall"
           (let ((tool-call-id (plist-get item :id))
                 (tool-name (plist-get item :name))
                 (args (plist-get item :arguments)))
             (pimacs--widget-save-excursion
-              (let ((call-section (pimacs-section--new-section 'tool-call pimacs-section--root-section :padding "\n")))
+              (let ((call-section (pimacs-section--new-section
+                                   'tool-call pimacs-section--root-section :padding "\n"
+                                   :info (make-pimacs-section-tool-call-info
+                                          :tool-name tool-name :args args))))
                 (pimacs--insert-tool-call call-section tool-name args)
-                (let ((result-section (pimacs-section--new-section 'tool-result call-section)))
-                  (pimacs-section--insert-section result-section)
+                (let ((result-section (pimacs-section--create-section 'tool-result call-section
+                                        :info (make-pimacs-section-tool-result-info
+                                               :tool-name tool-name :args args))))
                   (puthash tool-call-id
                            (make-pimacs-tool-call
                             :call-section call-section
@@ -984,12 +991,13 @@ the tail again, move point back to the prompt and resume following."
      (let* ((args (list :command (pimacs--json-get message :command)))
             (content (pimacs--content-normalize (pimacs--json-get message :output))))
        (pimacs--widget-save-excursion
-         (let* ((call-section (pimacs-section--new-section 'tool-call pimacs-section--root-section :padding "\n"))
-                (result-section (pimacs-section--new-section 'tool-result call-section)))
+         (let ((call-section (pimacs-section--new-section
+                              'tool-call pimacs-section--root-section :padding "\n"
+                              :info (make-pimacs-section-tool-call-info :tool-name "bash" :args args))))
            (pimacs--insert-tool-call call-section "bash" args)
-           (pimacs-section--insert-section result-section
-             (pimacs--insert-tool-result "bash" content nil message))
-           (pimacs-section--set-info result-section (make-pimacs-section-tool-result-info :tool-name "bash" :details nil :args args))))))
+           (pimacs-section--create-section 'tool-result call-section
+             :info (make-pimacs-section-tool-result-info :tool-name "bash" :args args)
+             (pimacs--insert-tool-result "bash" content nil message))))))
 
     ("custom"
      (pimacs--insert-custom-message message))))
@@ -1043,7 +1051,9 @@ the tail again, move point back to the prompt and resume following."
              (tool-name (plist-get assistant-message-event :toolName)))
          (when (and tool-call-id tool-name)
            (pimacs--widget-save-excursion
-             (let ((call-section (pimacs-section--new-section 'tool-call pimacs-section--root-section :padding "\n")))
+             (let ((call-section (pimacs-section--new-section
+                                  'tool-call pimacs-section--root-section :padding "\n"
+                                  :info (make-pimacs-section-tool-call-info :tool-name tool-name))))
                (pimacs--insert-tool-call call-section tool-name nil nil t)
                (puthash tool-call-id
                         (make-pimacs-tool-call
@@ -1063,11 +1073,11 @@ the tail again, move point back to the prompt and resume following."
              (pimacs--insert-tool-call (pimacs-tool-call-call-section entry) tool-name args t)
              (setf (pimacs-tool-call-tool-name entry) tool-name
                    (pimacs-tool-call-args entry) args)
-             (let ((result-section (pimacs-section--new-section
-                                    'tool-result
-                                    (pimacs-tool-call-call-section entry))))
-               (pimacs-section--insert-section result-section)
-               (setf (pimacs-tool-call-result-section entry) result-section)))))))))
+             (setf (pimacs-tool-call-result-section entry)
+                   (pimacs-section--create-section
+                       'tool-result (pimacs-tool-call-call-section entry)
+                     :info (make-pimacs-section-tool-result-info
+                            :tool-name tool-name :args args))))))))))
 
 (defun pimacs--message-update-mergeable-p (first second)
   (let ((first-event (plist-get first :assistantMessageEvent))
@@ -1119,19 +1129,17 @@ the tail again, move point back to the prompt and resume following."
                 (when rendered-content
                   (pimacs--render-clear-content rendered-content))
                 (pimacs--widget-save-excursion
-                  (let ((section
-                         (pimacs-section--create-or-replace-section
-                             (and content-section
-                                  (pimacs-content-section-section content-section))
-                             'thinking pimacs-section--root-section
-                           (pimacs-ui--insert-role-prefix role)
-                           (if rendered-content
-                               (pimacs--insert-rendered-content operations)
-                             (pimacs--insert-content content)))))
-                    (pimacs-section--set-info section (make-pimacs-section-assistant-info
-                                                       :header (pimacs--content-header content)
-                                                       :content content
-                                                       :type 'thinking))))))
+                  (pimacs-section--create-or-replace-section
+                      (and content-section
+                           (pimacs-content-section-section content-section))
+                      'thinking pimacs-section--root-section
+                    :info (make-pimacs-section-assistant-info
+                           :header (pimacs--content-header content)
+                           :content content :type 'thinking)
+                    (pimacs-ui--insert-role-prefix role)
+                    (if rendered-content
+                        (pimacs--insert-rendered-content operations)
+                      (pimacs--insert-content content))))))
              ("text"
               (let* ((content (list item))
                      (content-section (gethash index pimacs--content-sections))
@@ -1143,19 +1151,17 @@ the tail again, move point back to the prompt and resume following."
                 (when rendered-content
                   (pimacs--render-clear-content rendered-content))
                 (pimacs--widget-save-excursion
-                  (let ((section
-                         (pimacs-section--create-or-replace-section
-                             (and content-section
-                                  (pimacs-content-section-section content-section))
-                             'assistant pimacs-section--root-section
-                           (pimacs-ui--insert-role-prefix role)
-                           (if rendered-content
-                               (pimacs--insert-rendered-content operations)
-                             (pimacs--insert-content content t)))))
-                    (pimacs-section--set-info section (make-pimacs-section-assistant-info
-                                                       :header (pimacs--content-header content)
-                                                       :content content
-                                                       :type 'text)))))))
+                  (pimacs-section--create-or-replace-section
+                      (and content-section
+                           (pimacs-content-section-section content-section))
+                      'assistant pimacs-section--root-section
+                    :info (make-pimacs-section-assistant-info
+                           :header (pimacs--content-header content)
+                           :content content :type 'text)
+                    (pimacs-ui--insert-role-prefix role)
+                    (if rendered-content
+                        (pimacs--insert-rendered-content operations)
+                      (pimacs--insert-content content t)))))))
            (setq index (1+ index))))
        ;; Cleanup tracking state
        (clrhash pimacs--content-sections))
@@ -1266,7 +1272,7 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--insert-tool-output (text full-output-path)
   (if-let ((path-start (and full-output-path
-                           (string-match (regexp-quote full-output-path) text))))
+                            (string-match (regexp-quote full-output-path) text))))
       (progn
         (insert (substring text 0 path-start))
         (pimacs--insert-file-link full-output-path (pimacs--project-root))
@@ -1476,12 +1482,15 @@ is non-nil, insert an ellipsis instead of ARGS."
       ;; Keep children before, and outside, the parent's replaceable output.
       (pimacs-section--with-insertion-before parent-section boundary
         (let ((call-section (pimacs-section--new-section
-                             'tool-call parent-section :padding "\n"))
+                             'tool-call parent-section :padding "\n"
+                             :info (make-pimacs-section-tool-call-info
+                                    :tool-name tool-name :args args)))
               result-section)
           (pimacs--insert-tool-call call-section tool-name args)
           (unless call-only
-            (setq result-section (pimacs-section--new-section 'tool-result call-section))
-            (pimacs-section--insert-section result-section))
+            (setq result-section
+                  (pimacs-section--create-section 'tool-result call-section
+                    :info (make-pimacs-section-tool-result-info :tool-name tool-name :args args))))
           (setq entry (make-pimacs-tool-call :call-section call-section
                                              :result-section result-section
                                              :prev-text ""
@@ -1522,6 +1531,8 @@ Pi persists child metadata, not results."
              pimacs--tool-calls)))
 
 (defun pimacs--insert-tool-result (tool-name content is-error &optional details args)
+  (when (equal tool-name "codemode")
+    (pimacs-section--insert-chrome "codemode output\n" pimacs-codemode-output-header-face))
   (if (eq is-error t)
       (let ((text (pimacs--content-text content)))
         (when (not (string-empty-p text))
@@ -1561,6 +1572,8 @@ Pi persists child metadata, not results."
                 (insert delta))
             (setf (pimacs-tool-call-result-section entry)
                   (pimacs-section--create-section 'tool-result call-section
+                    :info (make-pimacs-section-tool-result-info
+                           :tool-name "bash" :args (pimacs-tool-call-args entry))
                     (insert delta)))))))))
 
 (defun pimacs--handle-tool-execution-end (event)
@@ -2869,8 +2882,10 @@ summarization."
   (unless (string-empty-p (string-trim command))
     (pimacs--with-chat-buffer
       (pimacs--update-agent-state 'bash)
-      (let ((args (list :command command))
-            (call-section (pimacs-section--new-section 'tool-call pimacs-section--root-section :padding "\n")))
+      (let* ((args (list :command command))
+             (call-section (pimacs-section--new-section
+                            'tool-call pimacs-section--root-section :padding "\n"
+                            :info (make-pimacs-section-tool-call-info :tool-name "bash" :args args))))
         (when exclude-from-context
           (setq args (nconc args (list :excludeFromContext t))))
         (pimacs--insert-tool-call call-section "bash" args)
@@ -2890,6 +2905,8 @@ summarization."
                             (setf (pimacs-tool-call-result-section entry)
                                   (pimacs-section--create-or-replace-section
                                       result-section 'tool-result call-section
+                                    :info (make-pimacs-section-tool-result-info
+                                           :tool-name "bash" :args (pimacs-tool-call-args entry))
                                     (pimacs--insert-tool-result "bash" output nil data))))))
                       (remhash request-id pimacs--bash-executions))
                     (pimacs--update-agent-state
@@ -2945,6 +2962,10 @@ summarization."
 
 (defun pimacs--copy-codemode-call (args)
   (pimacs--json-get args :code))
+
+(defun pimacs--copy-codemode-result (_details _args)
+  (string-remove-prefix "codemode output\n"
+                        (pimacs--copy-section-body (pimacs-section--current-section))))
 
 (defun pimacs--copy-write-call (args)
   (pimacs--json-get args :content))

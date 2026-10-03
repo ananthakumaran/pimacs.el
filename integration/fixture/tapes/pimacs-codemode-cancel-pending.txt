@@ -35,6 +35,7 @@ cowsay (:message "while-bash-runs")
                 ||----w |
                 ||     ||
 
+codemode output
 Script failed
 Wall time DURATION seconds
 Output:

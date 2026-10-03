@@ -34,6 +34,7 @@ grep /delta/ in codemode-test.py
 find /codemode-test.py/ in .
 ls .
 cowsay (:message "nested-cow")
+codemode output
 tools-done
 
 assistant> done

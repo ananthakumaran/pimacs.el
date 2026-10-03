@@ -412,13 +412,22 @@
      "custom-tool-tool-result")))
 
 (ert-deftest pimacs-codemode ()
-  (let ((pimacs-integration-tools "codemode,bash"))
+  (let ((pimacs-integration-tools "codemode,bash")
+        (pimacs-section-initial-hide-filter '(:include (tool-result "codemode"))))
     (pimacs-with-integration-project "pimacs-codemode"
       (pimacs-send-prompt-and-wait
-       "Use codemode to run exactly this script once, then reply done: const result = await tools.bash({command: 'printf nested-ok'}); text(result.output);"))))
+       "Use codemode to run exactly this script once, then reply done: const result = await tools.bash({command: 'printf nested-ok'}); text(result.output);")
+      (pimacs--with-chat-buffer
+        (let ((result (pimacs-section--find-section
+                       '(tool-call tool-result) pimacs-section--root-section))
+              (child-result (pimacs-section--find-section
+                             '(tool-call tool-call tool-result) pimacs-section--root-section)))
+          (should (eq (pimacs-section-visibility result) :autohide))
+          (should-not (invisible-p (pimacs-section-beginning child-result))))))))
 
 (ert-deftest pimacs-codemode-tools ()
   (let ((pimacs-integration-tools (concat pimacs-integration-tools ",codemode"))
+        (pimacs-section-initial-hide-filter '(:include (tool-result "codemode")))
         (file (expand-file-name "codemode-test.py" pimacs-project-directory)))
     (unwind-protect
         (pimacs-with-integration-project "pimacs-codemode-tools"
@@ -439,7 +448,15 @@
           ;; A fresh recording proxy would otherwise clear the original tape.
           (setenv "FIXTURE_SCENARIO" "pimacs-codemode-tools-restored")
           (pimacs-reload)
-          (sleep-for 3))
+          (sleep-for 3)
+          (pimacs-render-pending-history)
+          (pimacs--with-chat-buffer
+            (let ((result (pimacs-section--find-section
+                           '(tool-call tool-result) pimacs-section--root-section))
+                  (child (pimacs-section--find-section
+                          '(tool-call tool-call) pimacs-section--root-section)))
+              (should (eq (pimacs-section-visibility result) :autohide))
+              (should (eq (pimacs-section-visibility child) :autoshow)))))
       (when (file-exists-p file)
         (delete-file file)))))
 
@@ -511,7 +528,8 @@
                "await tools.read({path: 'green-triangle.png'}); text('image-read');")))))
 
 (ert-deftest pimacs-codemode-output ()
-  (let ((pimacs-integration-tools "codemode"))
+  (let ((pimacs-integration-tools "codemode")
+        (pimacs-section-initial-hide-filter '(:include (tool-result "codemode"))))
     (pimacs-with-integration-project "pimacs-codemode-output"
       (pimacs-send-prompt-and-wait
        "Use codemode to run exactly this script once, then reply done: console.log('console-output'); text('text-output'); return {answer: 42};")

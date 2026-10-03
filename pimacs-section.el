@@ -27,36 +27,59 @@
 (require 'compat)
 (require 'button)
 (require 'pp)
+(require 'wid-edit)
 (require 'pimacs-utils)
 
 (defcustom pimacs-section-autohide-count 2
   "Automatically hide older chat sections beyond this count.
 This helps reduce clutter by collapsing earlier responses when the
-conversation grows long.  When nil, auto hiding is disabled and no
-sections are hidden automatically."
+conversation grows long.  When nil, auto hiding is disabled;
+`pimacs-section-initial-hide-filter' still applies."
   :type '(choice (const :tag "Disable" nil)
                  integer)
   :group 'pimacs)
 
-(defcustom pimacs-section-autohide-filter 'all
-  "Filter controlling which sections are eligible for automatic hiding.
+(define-widget 'pimacs-section-selector 'choice
+  "A section type or a tool-specific section selector."
+  :args '((symbol :tag "Section type")
+          (cons :tag "Specific tool calls or results"
+                (choice (const tool-call) (const tool-result))
+                (repeat (string :tag "Tool name")))))
 
-When set to `all', every top-level section is eligible.
-
-A value of `(:include TYPE...)' makes only the listed section types eligible.
-A value of `(:exclude TYPE...)' makes every section type except the listed
-types eligible.  A function value is called with each top-level section and
-should return non-nil when that section is eligible.  Non-eligible sections
-do not count toward `pimacs-section-autohide-count'."
-  :type '(choice
-          (const :tag "All section types" all)
-          (cons :tag "Only these section types"
+(define-widget 'pimacs-section-filter 'choice
+  "A section filter."
+  :args '((const :tag "No sections" nil)
+          (const :tag "All sections" all)
+          (cons :tag "Only matching sections"
                 (const :include)
-                (repeat symbol))
-          (cons :tag "All except these section types"
+                (repeat pimacs-section-selector))
+          (cons :tag "All except matching sections"
                 (const :exclude)
-                (repeat symbol))
-          (function :tag "Predicate function"))
+                (repeat pimacs-section-selector))
+          (function :tag "Predicate function")))
+
+(defcustom pimacs-section-autohide-filter 'all
+  "Filter controlling which top-level sections are eligible for autohide.
+
+Use `all', nil, `(:include SELECTOR...)', `(:exclude SELECTOR...)',
+or a predicate called with the section.  A selector is a section type
+symbol or `(tool-call TOOL...)' / `(tool-result TOOL...)', where TOOL
+is an exact tool name string.  Selectors are matched with OR.
+
+Non-eligible sections do not count toward
+`pimacs-section-autohide-count'."
+  :type 'pimacs-section-filter
+  :group 'pimacs)
+
+(defcustom pimacs-section-initial-hide-filter '(:include (tool-result "codemode"))
+  "Filter selecting sections to start collapsed at any nesting depth.
+
+Use the same selectors as `pimacs-section-autohide-filter'.
+The default is `(:include (tool-result \"codemode\"))'.
+
+The filter is evaluated once per section.  Tool metadata is available,
+but streamed arguments and content may still be incomplete."
+  :type 'pimacs-section-filter
   :group 'pimacs)
 
 (defcustom pimacs-section-padding "\n\n"
@@ -255,7 +278,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
              (pimacs-section--prefix-p (cdr prefix) (cdr list))))))
 
 (cl-defstruct pimacs-section
-  parent children beginning end type visibility info padding face)
+  parent children beginning end type visibility initial-visibility info padding face)
 
 (cl-defstruct pimacs-section-tool-call-info
   tool-name args header)
@@ -333,8 +356,14 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
                                  :type type
                                  :face face
                                  :visibility pimacs-section--visibility-default
+                                 :info (plist-get args :info)
                                  :padding padding)))
     (when parent
+      (let ((visibility (if (pimacs-section--filter-matches-p
+                             s pimacs-section-initial-hide-filter)
+                            :autohide pimacs-section--visibility-default)))
+        (setf (pimacs-section-visibility s) visibility
+              (pimacs-section-initial-visibility s) visibility))
       (pimacs-section--add-child parent s))
     s))
 
@@ -483,10 +512,15 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
        ,s)))
 
 (defmacro pimacs-section--create-section (type parent &rest body)
+  "Create a section of TYPE under PARENT, inserting BODY.
+BODY may start with :info followed by the initial section metadata."
   (declare (indent 2)
-           (debug (form symbolp body)))
-  (let ((s (make-symbol "*section*")))
-    `(let* ((,s (pimacs-section--new-section ,type ,parent)))
+           (debug (form form &rest form)))
+  (let ((s (make-symbol "*section*"))
+        (info (when (eq (car body) :info)
+                (pop body)
+                (pop body))))
+    `(let ((,s (pimacs-section--new-section ,type ,parent :info ,info)))
        (pimacs-section--insert-section ,s
          ,@body)
        ,s)))
@@ -592,12 +626,21 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
          ,s))))
 
 (defmacro pimacs-section--create-or-replace-section (section type parent &rest body)
-  "Create or replace SECTION of TYPE under PARENT, inserting BODY."
+  "Create or replace SECTION of TYPE under PARENT, inserting BODY.
+BODY may start with :info followed by metadata for the new or existing section."
   (declare (indent 3)
-           (debug (symbolp symbolp symbolp body)))
-  `(if ,section
-       (pimacs-section--replace-section ,section ,@body)
-     (pimacs-section--create-section ,type ,parent ,@body)))
+           (debug (form form form &rest form)))
+  (let* ((s (make-symbol "*section*"))
+         (info-p (eq (car body) :info))
+         (info (when info-p
+                 (pop body)
+                 (pop body))))
+    `(let ((,s ,section))
+       (if ,s
+           (progn
+             ,@(when info-p `((pimacs-section--set-info ,s ,info)))
+             (pimacs-section--replace-section ,s ,@body))
+         (pimacs-section--create-section ,type ,parent :info ,info ,@body)))))
 
 (defun pimacs-section--delete-section (section)
   (let ((beg (pimacs-section-beginning section))
@@ -851,8 +894,9 @@ Return the first matching section, or nil if there is none."
 
 (defun pimacs-section--update-descendant-visibility-indicators (section)
   (dolist (child (pimacs-section-children section))
-    (pimacs-section--update-visibility-indicator child)
-    (pimacs-section--update-descendant-visibility-indicators child)))
+    (when (pimacs-section-beginning child)
+      (pimacs-section--update-visibility-indicator child)
+      (pimacs-section--update-descendant-visibility-indicators child))))
 
 (defun pimacs-section--set-visibility (section visibility)
   "Set the visibility state of SECTION.
@@ -912,14 +956,31 @@ EVENT is the mouse event that triggered the toggle."
       (goto-char (pimacs-section-beginning section))
       (pimacs-toggle-section))))
 
+(defun pimacs-section--tool-name (section)
+  (when-let ((info (pimacs-section-info section)))
+    (pcase (pimacs-section-type section)
+      ('tool-call (pimacs-section-tool-call-info-tool-name info))
+      ('tool-result (pimacs-section-tool-result-info-tool-name info)))))
+
+(defun pimacs-section--selector-matches-p (section selector)
+  (if (symbolp selector)
+      (eq (pimacs-section-type section) selector)
+    (and (eq (pimacs-section-type section) (car selector))
+         (member (pimacs-section--tool-name section) (cdr selector)))))
+
+(defun pimacs-section--filter-matches-p (section filter)
+  (cond
+   ((eq filter 'all) t)
+   ((functionp filter) (funcall filter section))
+   ((memq (car-safe filter) '(:include :exclude))
+    (let ((matches (seq-some
+                    (lambda (selector)
+                      (pimacs-section--selector-matches-p section selector))
+                    (cdr filter))))
+      (if (eq (car filter) :include) matches (not matches))))))
+
 (defun pimacs-section--autohide-eligible-p (section)
-  (let ((filter pimacs-section-autohide-filter)
-        (type (pimacs-section-type section)))
-    (cond
-     ((eq filter 'all) t)
-     ((functionp filter) (funcall filter section))
-     ((eq (car-safe filter) :include) (memq type (cdr filter)))
-     ((eq (car-safe filter) :exclude) (not (memq type (cdr filter)))))))
+  (pimacs-section--filter-matches-p section pimacs-section-autohide-filter))
 
 (defun pimacs-section-autohide ()
   "Reconcile automatically managed section visibility."
@@ -936,7 +997,8 @@ EVENT is the mouse event that triggered the toggle."
       (unless (and (>= (point) (pimacs-section-beginning child))
                    (< (point) (pimacs-section-end child)))
         (let ((visibility (pimacs-section-visibility child))
-              (hide-p (gethash child hidden)))
+              (hide-p (or (eq (pimacs-section-initial-visibility child) :autohide)
+                          (gethash child hidden))))
           (cond
            ((and hide-p (eq visibility :autoshow))
             (pimacs-section--set-visibility child :autohide))

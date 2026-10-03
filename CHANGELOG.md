@@ -6,6 +6,7 @@
 
 - `pimacs-copy-section` (`w`) copies the content of the section at point to the kill ring, including tool calls and results.
 - Support Pi's `codemode` tool with JavaScript rendering, script copying, and nested tool calls.
+- `pimacs-section-initial-hide-filter` controls initial folding, with tool-specific selectors shared by `pimacs-section-autohide-filter`. Codemode's own output starts collapsed.
 
 ### Changed
 

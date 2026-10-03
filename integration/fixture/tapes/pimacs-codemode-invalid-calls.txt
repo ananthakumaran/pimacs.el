@@ -36,6 +36,7 @@ Offset 9999 is beyond end of file (10 lines total)
 bash sleep 2
 Command timed out after 0.05 seconds
 
+codemode output
 ["rejected","rejected","rejected","rejected"]
 
 assistant> The user wants me to say "done" after the script finishes, regardless of the results (since there are multiple intentional failures). The codemode output shows all four tasks were rejected. I should just respond with "done".
