@@ -3221,6 +3221,14 @@ With a prefix argument OTHER-WINDOW, visit in other window."
       (hack-dir-local-variables-non-file-buffer)
       (funcall fn))))
 
+(defun pimacs--start-project-agent (key root)
+  (pimacs--with-directory-local-variables
+   root
+   (lambda ()
+     (setq-local pimacs--project-root root)
+     (setq-local pimacs--project-key key)
+     (pimacs--start-agent key))))
+
 (defun pimacs-chat--create (name root &optional new-buffer)
   (let* ((explicit-root root)
          (root (if explicit-root
@@ -3232,13 +3240,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
     (let ((pimacs--project-root root)
           (pimacs--project-key key))
       (unless (pimacs--current-agent)
-        (pimacs--with-directory-local-variables
-         root
-         (lambda ()
-           ;; Buffer-local variables do not survive `with-temp-buffer'.
-           (setq-local pimacs--project-root root)
-           (setq-local pimacs--project-key key)
-           (pimacs--start-agent key))))
+        (pimacs--start-project-agent key root))
       (let ((chat-buffer (or (pimacs--current-chat)
                              (let ((buffer (generate-new-buffer (pimacs--chat-buffer-name name))))
                                (with-current-buffer buffer
@@ -3338,7 +3340,7 @@ If NEW-BUFFER is non-nil, create a separate chat and agent."
                 (pimacs--widget-save-excursion
                   (pimacs--clear-sections)
                   (pimacs--clear-session-widgets))
-                (pimacs--start-agent project-key)
+                (pimacs--start-project-agent project-key pimacs--project-root)
                 (pimacs--register-agent-cleanup)
                 (pimacs--switch-session
                  session-file
