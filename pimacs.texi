@@ -291,7 +291,8 @@ thumbnail with the mouse, or place point on it and press
 @section State Lines
 
 The header line displays session context and model information.  The
-mode line displays the current agent state.  Customize them with the
+mode line displays the current agent state and queued-message count.
+Customize them with the
 @code{pimacs-header-line-format} and @code{pimacs-mode-line-format}
 defcustoms.  Both accept strings and state components; use
 @code{:spacer} to right-align following components.
@@ -396,15 +397,13 @@ Press @kbd{w} to copy the section at point to the kill ring with
 
 As a conversation grows, Pimacs automatically hides older top-level sections.
 @code{pimacs-section-autohide-count} sets how many eligible recent sections
-remain visible; its default is 2, and @code{nil} disables automatic hiding.
-Use @code{pimacs-section-autohide-filter} to select the eligible section
-types.  For example, the following keeps four eligible sections visible while
-never automatically hiding user sections:
+remain visible; its default is 2, and @code{nil} disables auto hiding of
+older sections.  Use @code{pimacs-section-autohide-filter} to select the
+eligible sections.
 
-@lisp
-(setq pimacs-section-autohide-count 4
-      pimacs-section-autohide-filter '(:exclude user))
-@end lisp
+Use @code{pimacs-section-initial-hide-filter} to control which sections
+start collapsed.  Both hiding filters can select section types or specific
+tools; see @ref{Custom Variables} for configuration details.
 
 Automatic hiding does not override a section whose visibility you explicitly
 toggled with @kbd{TAB} or @kbd{C-i}.

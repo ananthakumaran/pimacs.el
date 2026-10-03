@@ -242,10 +242,10 @@ File: pimacs.info,  Node: State Lines,  Next: Managing Chats,  Prev: Images,  Up
 ===============
 
 The header line displays session context and model information.  The
-mode line displays the current agent state.  Customize them with the
-‘pimacs-header-line-format’ and ‘pimacs-mode-line-format’ defcustoms.
-Both accept strings and state components; use ‘:spacer’ to right-align
-following components.
+mode line displays the current agent state and queued-message count.
+Customize them with the ‘pimacs-header-line-format’ and
+‘pimacs-mode-line-format’ defcustoms.  Both accept strings and state
+components; use ‘:spacer’ to right-align following components.
 
      (setq pimacs-header-line-format
            '(:context_usage :spacer
@@ -349,13 +349,13 @@ navigation commands.
 
    As a conversation grows, Pimacs automatically hides older top-level
 sections.  ‘pimacs-section-autohide-count’ sets how many eligible recent
-sections remain visible; its default is 2, and ‘nil’ disables automatic
-hiding.  Use ‘pimacs-section-autohide-filter’ to select the eligible
-section types.  For example, the following keeps four eligible sections
-visible while never automatically hiding user sections:
+sections remain visible; its default is 2, and ‘nil’ disables auto
+hiding of older sections.  Use ‘pimacs-section-autohide-filter’ to
+select the eligible sections.
 
-     (setq pimacs-section-autohide-count 4
-           pimacs-section-autohide-filter '(:exclude user))
+   Use ‘pimacs-section-initial-hide-filter’ to control which sections
+start collapsed.  Both hiding filters can select section types or
+specific tools; see *note Custom Variables:: for configuration details.
 
    Automatic hiding does not override a section whose visibility you
 explicitly toggled with ‘TAB’ or ‘C-i’.  Set
@@ -1320,15 +1320,15 @@ Node: Bash6284
 Node: Sending Context6551
 Node: Images7359
 Node: State Lines8224
-Node: Managing Chats9549
-Node: Searching and Resuming Sessions10142
-Node: Section Visibility11901
-Node: UI Customization14041
-Node: Sandbox17312
-Node: How It Works17705
-Node: Keybindings18857
-Node: Custom Variables23217
-Node: Custom Faces41873
+Node: Managing Chats9574
+Node: Searching and Resuming Sessions10167
+Node: Section Visibility11926
+Node: UI Customization14070
+Node: Sandbox17341
+Node: How It Works17734
+Node: Keybindings18886
+Node: Custom Variables23246
+Node: Custom Faces41902
 
 End Tag Table
 
