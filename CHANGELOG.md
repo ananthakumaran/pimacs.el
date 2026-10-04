@@ -4,6 +4,8 @@
 
 ### Added
 
+- `C-M-a` and `C-M-e` move to the start and end of the prompt text without changing line or buffer navigation.
+- `C-M-h` selects the complete prompt, and `C-c C-u` kills prompt text from its beginning to point.
 - `pimacs-resume-new-buffer` resumes a persisted session in a separate chat and agent without replacing existing chats.
 - `pimacs-copy-section` (`w`) copies the content of the section at point to the kill ring, including tool calls and results.
 - Support Pi's `codemode` tool with JavaScript rendering, script copying, and nested tool calls.

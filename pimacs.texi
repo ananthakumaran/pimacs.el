@@ -1,7 +1,7 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename pimacs.info
-@set VERSION 0.8.0
+@set VERSION 0.9.0-pre
 @settitle Pimacs User Manual v@value{VERSION}
 @c %**end of header
 
@@ -131,7 +131,6 @@ The chat buffer is read-only except for the prompt input area.  Use
 @kbd{RET} to submit a prompt and @kbd{C-j} to insert a newline.  Press
 @kbd{i} from anywhere in the chat buffer to move point to the prompt
 input area.
-
 
 @menu
 * Slash Commands::
@@ -626,6 +625,18 @@ in another window
 @item @kbd{C-c C-k}
 @tab @code{pimacs-clear-queue}
 @tab Discard all queued steering and follow-up messages
+@item @kbd{C-M-a}
+@tab @code{pimacs-beginning-of-prompt}
+@tab Move to the beginning of the prompt text
+@item @kbd{C-M-e}
+@tab @code{pimacs-end-of-prompt}
+@tab Move to the end of the prompt text
+@item @kbd{C-M-h}
+@tab @code{pimacs-mark-prompt}
+@tab Select the complete prompt text
+@item @kbd{C-c C-u}
+@tab @code{pimacs-kill-prompt}
+@tab Kill prompt text from its beginning to point
 @item @kbd{M-p}
 @tab @code{pimacs-previous-prompt}
 @tab Recall the previous prompt from history

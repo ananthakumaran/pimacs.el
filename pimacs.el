@@ -4,7 +4,7 @@
 
 ;; Author: Anantha kumaran <ananthakumaran@gmail.com>
 ;; URL: https://github.com/ananthakumaran/pimacs.el
-;; Version: 0.8.0
+;; Version: 0.9.0-pre
 ;; Keywords: convenience processes
 ;; Package-Requires: ((emacs "29.1") (compat "31.0") (timeout "2.1.7") (pcre2el "1.12") (spinner "1.7") (transient "0.3.7"))
 
@@ -1892,6 +1892,36 @@ Pi persists child metadata, not results."
   (interactive)
   (goto-char (widget-field-text-end pimacs--prompt-widget)))
 
+(defun pimacs-beginning-of-prompt ()
+  "Move point to the beginning of the prompt text.
+With shift-selection enabled, extend the region when invoked with Shift."
+  (interactive "^")
+  (goto-char (widget-field-start pimacs--prompt-widget)))
+
+(defun pimacs-end-of-prompt ()
+  "Move point to the end of the prompt text.
+With shift-selection enabled, extend the region when invoked with Shift."
+  (interactive "^")
+  (goto-char (widget-field-text-end pimacs--prompt-widget)))
+
+(defun pimacs-mark-prompt ()
+  "Select the complete prompt text, excluding its label and status widgets."
+  (interactive)
+  (push-mark (widget-field-text-end pimacs--prompt-widget) nil t)
+  (goto-char (widget-field-start pimacs--prompt-widget)))
+
+(defun pimacs-kill-prompt ()
+  "Kill the prompt text from its beginning to point.
+At the end of the prompt, kill the complete prompt.  At its beginning,
+do nothing.  The killed text can be restored with `yank'."
+  (interactive)
+  (let ((start (widget-field-start pimacs--prompt-widget))
+        (end (widget-field-text-end pimacs--prompt-widget)))
+    (unless (<= start (point) end)
+      (user-error "Point is not in the prompt"))
+    (when (> (point) start)
+      (kill-region start (point)))))
+
 (defun pimacs--update-agent-state (state)
   (setq pimacs--agent-state state)
   (setq imenu--index-alist nil)
@@ -3102,6 +3132,10 @@ With a prefix argument OTHER-WINDOW, visit in other window."
     (keymap-set map "<remap> <keyboard-quit>" #'pimacs-abort)
     (keymap-set map "<remap> <revert-buffer>" #'pimacs-reload)
     (keymap-set map "<remap> <revert-buffer-quick>" #'pimacs-reload)
+    (keymap-set map "<remap> <beginning-of-defun>" #'pimacs-beginning-of-prompt)
+    (keymap-set map "<remap> <end-of-defun>" #'pimacs-end-of-prompt)
+    (keymap-set map "<remap> <mark-defun>" #'pimacs-mark-prompt)
+    (keymap-set map "C-c C-u" #'pimacs-kill-prompt)
     (keymap-set map "M-p" #'pimacs-previous-prompt)
     (keymap-set map "M-n" #'pimacs-next-prompt)
     (keymap-set map "C-r" #'pimacs-search-prompt)

@@ -1438,6 +1438,50 @@
                    (marker-position (widget-get pimacs--prompt-widget :from))
                    (marker-position (widget-get pimacs--prompt-after-widget :from))))))))
 
+(ert-deftest pimacs-prompt-navigation-smoke ()
+  (with-temp-buffer
+    (insert "Transcript\n")
+    (setq pimacs--prompt-widget
+          (widget-create 'editable-field
+                         :keymap pimacs-chat-widget-field-keymap
+                         :format "%[user>%] %v" :value "first\nsecond"))
+    (widget-create 'pimacs-item "Status\n")
+    (widget-setup)
+    (pimacs-focus-prompt)
+    (should (eq (key-binding (kbd "C-M-a")) #'pimacs-beginning-of-prompt))
+    (call-interactively (key-binding (kbd "C-M-a")))
+    (should (= (point) (widget-field-start pimacs--prompt-widget)))
+    (push-mark (point) nil t)
+    (should (eq (key-binding (kbd "C-M-e")) #'pimacs-end-of-prompt))
+    (call-interactively (key-binding (kbd "C-M-e")))
+    (should (= (point) (widget-field-text-end pimacs--prompt-widget)))
+    (should (equal "first\nsecond" (buffer-substring-no-properties
+                                    (region-beginning) (region-end))))
+    (should (eq (key-binding (kbd "C-M-h")) #'pimacs-mark-prompt))
+    (call-interactively (key-binding (kbd "C-M-h")))
+    (should mark-active)
+    (should (equal "first\nsecond" (buffer-substring-no-properties
+                                    (region-beginning) (region-end))))
+    (deactivate-mark)
+    (should (eq (key-binding (kbd "C-c C-u")) #'pimacs-kill-prompt))
+    (call-interactively (key-binding (kbd "C-c C-u")))
+    (should (equal (widget-value pimacs--prompt-widget) "first\nsecond"))
+    (let ((kill-ring nil)
+          (kill-ring-yank-pointer nil))
+      (forward-char 6)
+      (call-interactively (key-binding (kbd "C-c C-u")))
+      (should (equal (current-kill 0) "first\n"))
+      (should (equal (widget-value pimacs--prompt-widget) "second"))
+      (call-interactively #'yank)
+      (should (equal (widget-value pimacs--prompt-widget) "first\nsecond"))
+      (pimacs-end-of-prompt)
+      (call-interactively (key-binding (kbd "C-c C-u")))
+      (should (equal (widget-value pimacs--prompt-widget) "")))
+    (goto-char (point-min))
+    (should (eq (key-binding (kbd "C-M-a")) #'beginning-of-defun))
+    (should (eq (key-binding (kbd "C-M-e")) #'end-of-defun))
+    (should (eq (key-binding (kbd "C-M-h")) #'mark-defun))))
+
 (defun pimacs-tests--setup-chat-widgets ()
   (setq pimacs--prompt-widget
         (widget-create 'editable-field :format "%[user>%] %v" :value ""))
