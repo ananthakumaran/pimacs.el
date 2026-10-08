@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## v0.9.0 - 2026-10-08
+
 ### Added
 
 - `C-M-a` and `C-M-e` move to the start and end of the prompt text without changing line or buffer navigation.
@@ -14,6 +16,7 @@
 ### Changed
 
 - Session resume candidates now show parent/child relationships as a tree.
+- Chat-switch completion includes project-root paths, so chats can be filtered by their project directory.
 - Improve queue styling and show pending message counts in the mode line.
 
 ### Fixed
@@ -21,6 +24,7 @@
 - Reload agents with the same freshly loaded project environment and directory-local settings used by new chats.
 - Use the short session ID for unnamed chat buffers and update buffer names when sessions change.
 - Keep point near the same text when streamed content is re-rendered.
+- Keep the view from scrolling while reading history during streaming.
 - Handle JSON `null` values consistently in agent responses and session data.
 - Prevent prefix arguments from leaking into nested chat commands.
 
