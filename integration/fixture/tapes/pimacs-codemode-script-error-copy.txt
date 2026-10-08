@@ -48,7 +48,8 @@ ENOENT: no such file or directory, access 'PROJECT_DIR/codemode-missing.txt'
 Script failed
 Wall time DURATION seconds
 Output:
-before-failureScript error:
+before-failure
+Script error:
 Error: ENOENT: no such file or directory, access 'PROJECT_DIR/codemode-missing.txt'
 
 Tool calls made before the failure (they are not undone): cowsay (ok), read (error)

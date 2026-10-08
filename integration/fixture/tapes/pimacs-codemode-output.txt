@@ -10,9 +10,13 @@ Plan:
 
 codemode console.log('console-output'); text('text-output'); return {answer: 42};
 codemode output
-console-output
+==> text 1/2 <==
 text-output
+==> text 2/2 <==
 {"answer":42}
+<console_output>
+console-output
+</console_output>
 
 assistant> done
 
