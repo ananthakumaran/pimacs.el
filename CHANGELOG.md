@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Autohide exclusions now keep matching nested sections and their ancestors visible while collapsing unprotected nested siblings and preserving manual visibility choices.
+
 ## v0.9.0 - 2026-10-08
 
 ### Added

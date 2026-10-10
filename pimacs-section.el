@@ -66,6 +66,15 @@ or a predicate called with the section.  A selector is a section type
 symbol or `(tool-call TOOL...)' / `(tool-result TOOL...)', where TOOL
 is an exact tool name string.  Selectors are matched with OR.
 
+With `:exclude', matching sections at any depth and their ancestors stay
+visible, even if initially collapsed.  When automatic hiding is enabled,
+unprotected siblings along these ancestor paths are collapsed, regardless
+of the count.  Children of directly excluded sections keep their own
+folding state.  Explicit user visibility choices are preserved.
+Protected top-level sections do not count toward
+`pimacs-section-autohide-count'.  Other filter forms are evaluated only
+for top-level eligibility.
+
 Non-eligible sections do not count toward
 `pimacs-section-autohide-count'."
   :type 'pimacs-section-filter
@@ -979,16 +988,66 @@ EVENT is the mouse event that triggered the toggle."
                     (cdr filter))))
       (if (eq (car filter) :include) matches (not matches))))))
 
-(defun pimacs-section--autohide-eligible-p (section)
-  (pimacs-section--filter-matches-p section pimacs-section-autohide-filter))
+(defun pimacs-section--autohide-protect-subtree (section protected)
+  "Record excluded sections and ancestors under SECTION in PROTECTED.
+Return non-nil when SECTION or any descendant is excluded."
+  (let ((excluded (not (pimacs-section--filter-matches-p
+                        section pimacs-section-autohide-filter))))
+    (dolist (child (pimacs-section-children section))
+      (when (pimacs-section--autohide-protect-subtree child protected)
+        (setq excluded t)))
+    (when excluded
+      (puthash section t protected))
+    excluded))
+
+(defun pimacs-section--autohide-protected-sections (section)
+  "Return a table of excluded sections and their ancestors under SECTION.
+Only explicit `:exclude' selectors protect nested sections.  Other filter
+forms retain their top-level eligibility semantics."
+  (let ((protected (make-hash-table :test 'eq)))
+    (when (eq (car-safe pimacs-section-autohide-filter) :exclude)
+      (pimacs-section--autohide-protect-subtree section protected))
+    protected))
+
+(defun pimacs-section--autohide-reveal-protected (section protected)
+  "Reveal protected paths under SECTION using the PROTECTED table.
+Collapse unprotected siblings along forced-open ancestor paths, preserving
+manual visibility choices.  Stop at manually hidden ancestors to preserve
+their hide overlays."
+  (when (gethash section protected)
+    (when (eq (pimacs-section-visibility section) :autohide)
+      (pimacs-section--set-visibility section :autoshow))
+    (when (pimacs-section--visible-p section)
+      (let ((hide-siblings (and pimacs-section-autohide-count
+                                (pimacs-section--filter-matches-p
+                                 section pimacs-section-autohide-filter))))
+        (dolist (child (pimacs-section-children section))
+          (cond
+           ((gethash child protected)
+            (pimacs-section--autohide-reveal-protected child protected))
+           ((and hide-siblings
+                 (eq (pimacs-section-visibility child) :autoshow)
+                 (not (and (>= (point) (pimacs-section-beginning child))
+                           (< (point) (pimacs-section-end child)))))
+            (pimacs-section--set-visibility child :autohide))))))))
+
+(defun pimacs-section--autohide-eligible-p (section &optional protected)
+  "Return whether SECTION is eligible for automatic hiding.
+PROTECTED, when supplied, is the table of excluded sections and ancestors."
+  (and (pimacs-section--filter-matches-p section pimacs-section-autohide-filter)
+       (not (gethash section (or protected
+                                 (pimacs-section--autohide-protected-sections section))))))
 
 (defun pimacs-section-autohide ()
   "Reconcile automatically managed section visibility."
   (interactive)
   (let* ((count pimacs-section-autohide-count)
          (children (pimacs-section-children pimacs-section--root-section))
+         (protected (pimacs-section--autohide-protected-sections pimacs-section--root-section))
          (eligible (and count
-                        (seq-filter #'pimacs-section--autohide-eligible-p children)))
+                        (seq-filter (lambda (section)
+                                      (pimacs-section--autohide-eligible-p section protected))
+                                    children)))
          (hide-count (if count (max 0 (- (length eligible) count)) 0))
          (hidden (make-hash-table :test 'eq)))
     (dolist (child (seq-take eligible hide-count))
@@ -997,13 +1056,16 @@ EVENT is the mouse event that triggered the toggle."
       (unless (and (>= (point) (pimacs-section-beginning child))
                    (< (point) (pimacs-section-end child)))
         (let ((visibility (pimacs-section-visibility child))
-              (hide-p (or (eq (pimacs-section-initial-visibility child) :autohide)
-                          (gethash child hidden))))
+              (hide-p (and (not (gethash child protected))
+                           (or (eq (pimacs-section-initial-visibility child) :autohide)
+                               (gethash child hidden)))))
           (cond
            ((and hide-p (eq visibility :autoshow))
             (pimacs-section--set-visibility child :autohide))
            ((and (not hide-p) (eq visibility :autohide))
-            (pimacs-section--set-visibility child :autoshow))))))))
+            (pimacs-section--set-visibility child :autoshow))))))
+    (dolist (child children)
+      (pimacs-section--autohide-reveal-protected child protected))))
 
 (defun pimacs-section--all-sections (section)
   (cons section

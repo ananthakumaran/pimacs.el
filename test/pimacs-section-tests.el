@@ -915,6 +915,141 @@
     (should (widget-apply (widget-convert 'pimacs-section-filter) :match
                           '(:exclude assistant (tool-call "edit" "replace" "insert"))))))
 
+(ert-deftest pimacs-section-autohide-protects-nested-excluded-tools ()
+  "Excluded tools reveal ancestors, but not sibling calls or results."
+  (dolist (tool '("edit" "replace" "insert"))
+    (pimacs-with-root-section
+      (let* ((pimacs-section-autohide-count 0)
+             (pimacs-section-autohide-filter
+              '(:exclude assistant (tool-call "edit" "replace" "insert")))
+             (pimacs-section-initial-hide-filter
+              '(:include tool-result))
+             (outer (pimacs-section--create-section 'tool-call pimacs-section--root-section
+                      :info (make-pimacs-section-tool-call-info :tool-name "codemode")
+                      (insert "Codemode\nscript\n")))
+             (output (pimacs-section--create-section 'tool-result outer
+                       :info (make-pimacs-section-tool-result-info :tool-name "codemode")
+                       (insert "Output\nbody\n")))
+             (inner (pimacs-section--create-section 'tool-call outer
+                      :info (make-pimacs-section-tool-call-info :tool-name "codemode")
+                      (insert "Nested codemode\nscript\n")))
+             (edit (pimacs-section--create-section 'tool-call inner
+                     :info (make-pimacs-section-tool-call-info :tool-name tool)
+                     (insert "Edit\narguments\n")))
+             (edit-result (pimacs-section--create-section 'tool-result edit
+                            :info (make-pimacs-section-tool-result-info :tool-name tool)
+                            (insert "Edit result\nbody\n")))
+             (read (pimacs-section--create-section 'tool-call inner
+                     :info (make-pimacs-section-tool-call-info :tool-name "read")
+                     (insert "Read\narguments\n")))
+             (other (pimacs-section--create-section 'tool-call pimacs-section--root-section
+                      :info (make-pimacs-section-tool-call-info :tool-name "bash")
+                      (insert "Bash\narguments\n"))))
+        (should (eq (pimacs-section-visibility read) :autoshow))
+        (pimacs-section--set-visibility inner :autohide)
+        (pimacs-section--set-visibility outer :autohide)
+        (goto-char (point-max))
+        (should-not (pimacs-section--autohide-eligible-p outer))
+        (should (pimacs-section--autohide-eligible-p other))
+        (pimacs-section-autohide)
+        (dolist (section (list outer inner edit))
+          (should (eq (pimacs-section-visibility section) :autoshow))
+          (should-not (invisible-p (pimacs-section-beginning section)))
+          (should-not (invisible-p (1+ (save-excursion
+                                         (goto-char (pimacs-section-beginning section))
+                                         (line-end-position))))))
+        (dolist (section (list output edit-result read other))
+          (should (eq (pimacs-section-visibility section) :autohide))
+          (should (invisible-p (1+ (save-excursion
+                                     (goto-char (pimacs-section-beginning section))
+                                     (line-end-position))))))))))
+
+(ert-deftest pimacs-section-autohide-forced-open-siblings-ignore-count ()
+  "Nested siblings collapse independently of the top-level recent count."
+  (dolist (count '(0 100 nil))
+    (pimacs-section-tests-with-demo-buffer
+      (let* ((pimacs-section-autohide-count count)
+             (pimacs-section-autohide-filter '(:exclude unit-tests))
+             (build (pimacs-section--find-section '(build) pimacs-section--root-section))
+             (compile (pimacs-section--find-section '(build compile) pimacs-section--root-section))
+             (tests (pimacs-section--find-section '(build test) pimacs-section--root-section))
+             (unit (pimacs-section--find-section '(build test unit-tests) pimacs-section--root-section))
+             (integration (pimacs-section--find-section '(build test integration-tests) pimacs-section--root-section))
+             (result (pimacs-section--create-section 'result unit
+                       (insert "Result\nbody\n"))))
+        (pimacs-section--set-visibility integration :show)
+        (pimacs-section--set-visibility build :autohide)
+        (goto-char (point-max))
+        (pimacs-section-autohide)
+        (dolist (section (list build tests unit result))
+          (should (eq (pimacs-section-visibility section) :autoshow))
+          (should-not (invisible-p (pimacs-section-beginning section))))
+        (should (eq (pimacs-section-visibility compile)
+                    (if count :autohide :autoshow)))
+        (should (eq (pimacs-section-visibility integration) :show))
+        ;; A sibling manually opened after reconciliation stays open.
+        (pimacs-section--set-visibility compile :show)
+        (pimacs-section--set-visibility integration :hide)
+        (pimacs-section-autohide)
+        (should (eq (pimacs-section-visibility compile) :show))
+        (should (eq (pimacs-section-visibility integration) :hide))))))
+
+(ert-deftest pimacs-section-autohide-nested-exclusions-do-not-count ()
+  (pimacs-section-tests-with-demo-buffer
+    (let ((pimacs-section-autohide-count 2)
+          (pimacs-section-autohide-filter '(:exclude worker-log))
+          (build (pimacs-section--find-section '(build) pimacs-section--root-section))
+          (logs (pimacs-section--find-section '(logs) pimacs-section--root-section))
+          (deploy (pimacs-section--find-section '(deploy) pimacs-section--root-section)))
+      (goto-char (point-max))
+      (pimacs-section-autohide)
+      (should (eq (pimacs-section-visibility build) :autoshow))
+      (should (eq (pimacs-section-visibility logs) :autoshow))
+      (should (eq (pimacs-section-visibility deploy) :autoshow)))))
+
+(ert-deftest pimacs-section-autohide-nested-exclusions-respect-manual-hides ()
+  (dolist (count '(0 nil))
+    (pimacs-section-tests-with-demo-buffer
+      (let ((pimacs-section-autohide-count count)
+            (pimacs-section-autohide-filter '(:exclude unit-tests))
+            (build (pimacs-section--find-section '(build) pimacs-section--root-section))
+            (tests (pimacs-section--find-section '(build test) pimacs-section--root-section))
+            (unit (pimacs-section--find-section '(build test unit-tests) pimacs-section--root-section)))
+        (pimacs-section--set-visibility unit :hide)
+        (pimacs-section--set-visibility tests :autohide)
+        (pimacs-section--set-visibility build :hide)
+        (goto-char (point-max))
+        (pimacs-section-autohide)
+        (should (eq (pimacs-section-visibility build) :hide))
+        (should (eq (pimacs-section-visibility tests) :autohide))
+        (should (eq (pimacs-section-visibility unit) :hide))
+        (should (invisible-p (pimacs-section-beginning unit)))
+        ;; Automatically hidden ancestors open, but a manual child hide stays.
+        (pimacs-section--set-visibility build :autohide)
+        (pimacs-section-autohide)
+        (should (eq (pimacs-section-visibility build) :autoshow))
+        (should (eq (pimacs-section-visibility tests) :autoshow))
+        (should (eq (pimacs-section-visibility unit) :hide))
+        (should (invisible-p (1+ (save-excursion
+                                   (goto-char (pimacs-section-beginning unit))
+                                   (line-end-position)))))
+        (pimacs-section--set-visibility unit :autohide)
+        (pimacs-section-autohide)
+        (should (eq (pimacs-section-visibility build) :autoshow))
+        (should (eq (pimacs-section-visibility unit) :autoshow))
+        (should-not (invisible-p (pimacs-section-beginning unit)))))))
+
+(ert-deftest pimacs-section-autohide-include-keeps-top-level-semantics ()
+  (pimacs-section-tests-with-demo-buffer
+    (let ((pimacs-section-autohide-count 0)
+          (pimacs-section-autohide-filter '(:include build))
+          (build (pimacs-section--find-section '(build) pimacs-section--root-section))
+          (logs (pimacs-section--find-section '(logs) pimacs-section--root-section)))
+      (goto-char (point-max))
+      (pimacs-section-autohide)
+      (should (eq (pimacs-section-visibility build) :autohide))
+      (should (eq (pimacs-section-visibility logs) :autoshow)))))
+
 (ert-deftest pimacs-section-initial-hide-at-all-depths-and-autohide ()
   (let ((pimacs-section-initial-hide-filter '(:include compile logs)))
     (pimacs-section-tests-with-demo-buffer

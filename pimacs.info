@@ -1027,6 +1027,15 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      where TOOL is an exact tool name string.  Selectors are matched
      with OR.
 
+     With ‘:exclude’, matching sections at any depth and their ancestors
+     stay visible, even if initially collapsed.  When automatic hiding
+     is enabled, unprotected siblings along these ancestor paths are
+     collapsed, regardless of the count.  Children of directly excluded
+     sections keep their own folding state.  Explicit user visibility
+     choices are preserved.  Protected top-level sections do not count
+     toward ‘pimacs-section-autohide-count’.  Other filter forms are
+     evaluated only for top-level eligibility.
+
      Non-eligible sections do not count toward
      ‘pimacs-section-autohide-count’.
 
@@ -1341,7 +1350,7 @@ Node: Sandbox17699
 Node: How It Works18092
 Node: Keybindings19244
 Node: Custom Variables24022
-Node: Custom Faces42678
+Node: Custom Faces43229
 
 End Tag Table
 
