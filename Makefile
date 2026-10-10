@@ -49,15 +49,15 @@ package-lint: cask
 	  pimacs-utils.el pimacs-markdown-table.el pimacs-markdown.el pimacs-state-line.el pimacs-core.el pimacs-section.el pimacs-ui.el pimacs-edit.el pimacs-agent.el pimacs-doctor.el pimacs-session.el pimacs-chat.el pimacs-search.el pimacs.el
 
 .PHONY: test
-test: compile
+test: cask
 	@$(CASK_EMACS) -L . -L test -l pimacs-session-tests.el -l pimacs-search-tests.el -l pimacs-tests.el -l pimacs-agent-tests.el -l pimacs-doctor-tests.el -l pimacs-section-tests.el -l pimacs-state-line-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
 
 .PHONY: markdown-test
-markdown-test: compile
+markdown-test: cask
 	@$(CASK_EMACS) -L . -L test -l pimacs-markdown-tests.el -l pimacs-markdown-table-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
 
 .PHONY: integration
-integration: compile
+integration: cask
 	@$(CASK_EMACS) -L . -L test -l integration/pimacs-integration-tests.el --eval '(let ((ert-quiet (equal (getenv "PI_CODING_AGENT") "true"))) (ert-run-tests-batch-and-exit "$(MATCH)"))'
 
 .PHONY: markdown-profile
@@ -143,6 +143,7 @@ endef
 
 .PHONY: verify
 verify:
+	$(call run-verify-task,compile)
 	$(call run-verify-task,format)
 	$(call run-verify-task,test)
 	$(call run-verify-task,markdown-test)
@@ -152,6 +153,7 @@ verify:
 
 .PHONY: verify-full
 verify-full:
+	$(call run-verify-task,compile)
 	$(call run-verify-task,format)
 	$(call run-verify-task,test)
 	$(call run-verify-task,markdown-test)

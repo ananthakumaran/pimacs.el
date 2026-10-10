@@ -69,6 +69,9 @@ jobs:
             (unless (treesit-language-available-p 'markdown-inline)
               (error \"Markdown inline grammar unavailable\")))"
 
+    - name: Compile
+      run: make compile
+
     - name: Run tests
       run: UNDERCOVER_FORCE=true UNDERCOVER_CONFIG='("*.el" (:report-format codecov) (:send-report nil) (:exclude "*-tests.el"))' make test
 

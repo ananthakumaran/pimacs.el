@@ -1,0 +1,39 @@
+(setq pimacs-section-autohide-count 1
+      pimacs-section-autohide-filter '(:exclude a)
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-buffer 'leaf-demo)
+
+==========
+
+[-] A
+  [+] B
+  [+] C
+[-] D
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 2)
+
+==========
+
+[-] A
+  [+] B
+  [-] C
+      body
+[-] D
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 3)
+
+==========
+
+[-] A
+  [-] B
+      body
+  [-] C
+      body
+[-] D
+    body

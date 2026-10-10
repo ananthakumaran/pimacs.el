@@ -1,0 +1,22 @@
+(setq pimacs-section-autohide-count 0
+      pimacs-section-autohide-filter (lambda (section)
+        (not (and (eq (pimacs-section-type section) 'tool-call)
+                  (equal (pimacs-section--tool-name section) "edit"))))
+      pimacs-section-initial-hide-filter '(:include tool-result)
+      pimacs-section-fixture-buffer 'nested-tools
+      pimacs-section-fixture-tool "edit"
+      pimacs-section-fixture-visibility '((("Codemode" "Nested codemode") . :autohide)
+        (("Codemode") . :autohide)))
+
+==========
+
+[-] Codemode
+    script
+  [+] Output
+  [-] Nested codemode
+      script
+    [-] Edit
+        arguments
+      [+] Edit result
+    [+] Read
+[+] Bash

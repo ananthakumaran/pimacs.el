@@ -1,0 +1,14 @@
+(setq pimacs-section-autohide-count 1
+      pimacs-section-autohide-filter 'all
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-buffer 'letters
+      pimacs-section-fixture-visibility '((("A") . :show)))
+
+==========
+
+[-] A
+    body
+[+] B
+[+] C
+[-] D
+    body

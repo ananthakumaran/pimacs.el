@@ -1,0 +1,66 @@
+(setq pimacs-section-autohide-count 100
+      pimacs-section-autohide-filter '(:exclude unit-tests)
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-result t
+      pimacs-section-fixture-visibility '(((build test integration-tests) . :show)
+        ((build) . :autohide)))
+
+==========
+
+[-] Build
+  [-] Compile
+      Compiling foo.c
+      Compiling bar.c
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+          [-] Result
+              body
+      [-] Integration Tests
+          api-flow ... running
+[-] Logs
+  [-] Server
+      Listening on :8080
+      Connected client #42
+      Connected client #43
+      Connected client #44
+      Connected client #45
+  [-] Worker
+      Job started
+      Job completed
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-fixture-visibility '(((build compile) . :show)
+        ((build test integration-tests) . :hide)))
+
+==========
+
+[-] Build
+  [-] Compile
+      Compiling foo.c
+      Compiling bar.c
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+          [-] Result
+              body
+      [+] Integration Tests
+[-] Logs
+  [-] Server
+      Listening on :8080
+      Connected client #42
+      Connected client #43
+      Connected client #44
+      Connected client #45
+  [-] Worker
+      Job started
+      Job completed
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...

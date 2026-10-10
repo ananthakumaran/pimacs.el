@@ -1,0 +1,54 @@
+(setq pimacs-section-fixture-buffer 'letters
+      pimacs-section-autohide-count 2
+      pimacs-section-initial-hide-filter '(:include c d))
+
+==========
+
+[-] A
+    body
+[-] B
+    body
+[+] C
+[+] D
+
+==========
+
+(setq pimacs-section-fixture-visibility '((("D") . :show)))
+
+==========
+
+[-] A
+    body
+[-] B
+    body
+[+] C
+[-] D
+    body
+
+==========
+
+(setq pimacs-section-autohide-filter '(:exclude d))
+
+==========
+
+[-] A
+    body
+[-] B
+    body
+[+] C
+[-] D
+    body
+
+==========
+
+(setq pimacs-section-autohide-filter 'all
+      pimacs-section-fixture-visibility '((("D") . :hide)))
+
+==========
+
+[-] A
+    body
+[-] B
+    body
+[+] C
+[+] D

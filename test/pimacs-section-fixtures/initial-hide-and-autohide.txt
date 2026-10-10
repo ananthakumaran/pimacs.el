@@ -1,0 +1,53 @@
+(setq pimacs-section-autohide-count 2
+      pimacs-section-autohide-filter 'all
+      pimacs-section-initial-hide-filter '(:include compile logs))
+
+==========
+
+[+] Build
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-autohide-count nil)
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [-] Integration Tests
+          api-flow ... running
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-autohide-count 0)
+
+==========
+
+[+] Build
+[+] Logs
+[+] Deploy
+
+==========
+
+(setq pimacs-section-autohide-count 0
+      pimacs-section-fixture-visibility '(((logs) . :show)))
+
+==========
+
+[+] Build
+[-] Logs
+  [+] Server
+  [+] Worker
+[+] Deploy

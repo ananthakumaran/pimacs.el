@@ -400,15 +400,25 @@ commands.
 Press @kbd{w} to copy the section at point to the kill ring with
 @code{pimacs-copy-section}.
 
-As a conversation grows, Pimacs automatically hides older top-level sections.
-@code{pimacs-section-autohide-count} sets how many eligible recent sections
-remain visible; its default is 2, and @code{nil} disables auto hiding of
-older sections.  Use @code{pimacs-section-autohide-filter} to select the
-eligible sections.
+As a conversation grows, Pimacs automatically collapses older sections
+to reduce clutter.  @code{pimacs-section-autohide-count} controls how many
+recent eligible leaves to keep expanded across the buffer.  A leaf is a
+section with no children.  The default is 2; set it to @code{nil} to
+disable hiding older sections.
 
-Use @code{pimacs-section-initial-hide-filter} to control which sections
-start collapsed.  Both hiding filters can select section types or specific
-tools; see @ref{Custom Variables} for configuration details.
+Use @code{pimacs-section-autohide-filter} to choose which sections may
+collapse automatically.  Only leaves selected by the filter count
+toward the limit, in buffer order.  Their ancestors stay expanded to
+expose them, but do not consume slots.  Sections the filter keeps
+expanded also keep their ancestors expanded without consuming slots.
+Each child follows its own rule, even when its parent is kept expanded.
+
+Use @code{pimacs-section-initial-hide-filter} to choose which sections
+start collapsed.  Leaves selected by this filter never consume slots,
+even when manually expanded.  Sections kept expanded
+by the autohide filter stay expanded regardless of this setting.  Both
+filters can select section types or specific tools; see
+@ref{Custom Variables} for configuration details.
 
 Automatic hiding does not override a section whose visibility you explicitly
 toggled with @kbd{TAB} or @kbd{C-i}.
@@ -1149,23 +1159,48 @@ Whether to render Markdown tables with Unicode borders.
 
 @defopt pimacs-section-autohide-count @code{2}
 
-Automatically hide older chat sections beyond this count.
-This helps reduce clutter by collapsing earlier responses when the
-conversation grows long.  When nil, auto hiding is disabled;
+Number of recent eligible leaf sections to keep expanded.
+A leaf is a section with no children.  The count applies across the
+whole buffer, keeping the last eligible leaves in buffer order and
+their ancestors expanded.  Older sections collapse automatically.
+Leaves not selected by @code{pimacs-section-autohide-filter} stay expanded
+without counting toward this limit.  Parents do not consume slots.
+
+Leaves selected by @code{pimacs-section-initial-hide-filter} start collapsed
+and never count toward this limit, even when manually expanded.
+Manual folding choices are preserved.
+Set to nil to disable automatic hiding of older sections;
 @code{pimacs-section-initial-hide-filter} still applies.
 @end defopt
 
 @defopt pimacs-section-autohide-filter @code{'all}
 
-Filter controlling which top-level sections are eligible for autohide.
+Select sections that Pimacs may collapse automatically.
 
-Use @code{all}, nil, @code{(:include SELECTOR...)}, @code{(:exclude SELECTOR...)},
-or a predicate called with the section.  A selector is a section type
-symbol or @code{(tool-call TOOL...)} / @code{(tool-result TOOL...)}, where TOOL
-is an exact tool name string.  Selectors are matched with OR.
+The filter applies to both top-level and nested sections.  Use @code{all} to
+allow hiding any section, nil to keep all sections expanded,
+@code{(:include SELECTOR...)} to allow hiding only matching sections, or
+@code{(:exclude SELECTOR...)} to keep matching sections expanded.  A predicate
+receives a section and returns non-nil to allow hiding it.
 
-Non-eligible sections do not count toward
-@code{pimacs-section-autohide-count}.
+A selector is a section type symbol or @code{(tool-call TOOL...)} /
+@code{(tool-result TOOL...)}, where TOOL is an exact tool name string.
+A section matches if any selector matches.
+
+Sections kept expanded by the filter also keep their ancestors expanded
+so their contents remain visible, regardless of
+@code{pimacs-section-initial-hide-filter}.  Each child follows its own filter;
+keeping a parent expanded does not exempt its descendants from hiding.
+
+Only leaves selected by this filter and not selected by
+@code{pimacs-section-initial-hide-filter} count toward
+@code{pimacs-section-autohide-count}, regardless of manual folding.
+A leaf is a section with no children.
+Recent leaves keep their ancestor paths expanded; other sections can
+collapse automatically.
+
+Automatic hiding does not override sections you manually expand or
+collapse.
 @end defopt
 
 @defopt pimacs-section-initial-hide-filter @code{'(:include (tool-result "codemode"))}
@@ -1174,6 +1209,8 @@ Filter selecting sections to start collapsed at any nesting depth.
 
 Use the same selectors as @code{pimacs-section-autohide-filter}.
 The default is @code{(:include (tool-result "codemode"))}.
+Leaves selected by this filter never consume the recent-leaf budget,
+even when manually expanded.
 
 The filter is evaluated once per section.  Tool metadata is available,
 but streamed arguments and content may still be incomplete.

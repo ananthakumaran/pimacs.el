@@ -1,0 +1,29 @@
+(setq pimacs-section-autohide-count 0
+      pimacs-section-autohide-filter '(:include build compile)
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-visibility '(((build) . :autohide)
+        ((build test) . :autohide)))
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [-] Integration Tests
+          api-flow ... running
+[-] Logs
+  [-] Server
+      Listening on :8080
+      Connected client #42
+      Connected client #43
+      Connected client #44
+      Connected client #45
+  [-] Worker
+      Job started
+      Job completed
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...

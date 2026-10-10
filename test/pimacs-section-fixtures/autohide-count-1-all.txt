@@ -1,0 +1,11 @@
+(setq pimacs-section-autohide-count 1
+      pimacs-section-autohide-filter 'all
+      pimacs-section-initial-hide-filter nil)
+
+==========
+
+[+] Build
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...

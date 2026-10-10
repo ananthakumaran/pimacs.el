@@ -1,0 +1,17 @@
+(setq pimacs-section-autohide-count 1
+      pimacs-section-autohide-filter '(:exclude unit-tests)
+      pimacs-section-initial-hide-filter nil)
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [+] Integration Tests
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...

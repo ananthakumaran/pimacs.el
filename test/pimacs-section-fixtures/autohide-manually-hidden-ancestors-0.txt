@@ -1,0 +1,42 @@
+(setq pimacs-section-autohide-count 0
+      pimacs-section-autohide-filter '(:exclude unit-tests)
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-visibility '(((build test unit-tests) . :hide)
+        ((build test) . :autohide)
+        ((build) . :hide)))
+
+==========
+
+[+] Build
+[+] Logs
+[+] Deploy
+
+==========
+
+(setq pimacs-section-fixture-visibility '(((build) . :autohide)))
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [+] Unit Tests
+      [+] Integration Tests
+[+] Logs
+[+] Deploy
+
+==========
+
+(setq pimacs-section-fixture-visibility '(((build test unit-tests) . :autohide)))
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [+] Integration Tests
+[+] Logs
+[+] Deploy

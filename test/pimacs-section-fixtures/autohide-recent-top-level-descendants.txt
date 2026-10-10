@@ -1,0 +1,19 @@
+(setq pimacs-section-autohide-count 2
+      pimacs-section-autohide-filter 'all
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-buffer 'recent-tools)
+
+==========
+
+[-] Codemode
+    script
+  [+] Bash 1
+  [+] Bash 2
+  [-] Bash 3
+      arguments
+    [-] Result 3
+        output
+  [-] Bash 4
+      arguments
+    [-] Result 4
+        output

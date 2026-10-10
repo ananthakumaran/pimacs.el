@@ -1,0 +1,45 @@
+(setq pimacs-section-autohide-count 1
+      pimacs-section-autohide-filter (lambda (section)
+        (not (eq (pimacs-section-type section) 'unit-tests)))
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-result t
+      pimacs-section-fixture-visibility '(((build test integration-tests) . :show)
+        ((build) . :autohide)))
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+          [+] Result
+      [-] Integration Tests
+          api-flow ... running
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-fixture-visibility '(((build compile) . :show)
+        ((build test integration-tests) . :hide)))
+
+==========
+
+[-] Build
+  [-] Compile
+      Compiling foo.c
+      Compiling bar.c
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+          [+] Result
+      [+] Integration Tests
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...

@@ -1,0 +1,102 @@
+(setq pimacs-section-autohide-count 1
+      pimacs-section-autohide-filter 'all
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-visibility '(((build) . :show)))
+
+==========
+
+[-] Build
+  [+] Compile
+  [+] Tests
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-autohide-count 100)
+
+==========
+
+[-] Build
+  [-] Compile
+      Compiling foo.c
+      Compiling bar.c
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [-] Integration Tests
+          api-flow ... running
+[-] Logs
+  [-] Server
+      Listening on :8080
+      Connected client #42
+      Connected client #43
+      Connected client #44
+      Connected client #45
+  [-] Worker
+      Job started
+      Job completed
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-autohide-count 1)
+
+==========
+
+[-] Build
+  [+] Compile
+  [+] Tests
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-autohide-count nil)
+
+==========
+
+[-] Build
+  [-] Compile
+      Compiling foo.c
+      Compiling bar.c
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [-] Integration Tests
+          api-flow ... running
+[-] Logs
+  [-] Server
+      Listening on :8080
+      Connected client #42
+      Connected client #43
+      Connected client #44
+      Connected client #45
+  [-] Worker
+      Job started
+      Job completed
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...
+
+==========
+
+(setq pimacs-section-autohide-count 1)
+
+==========
+
+[-] Build
+  [+] Compile
+  [+] Tests
+[+] Logs
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...

@@ -413,6 +413,7 @@
 
 (ert-deftest pimacs-codemode ()
   (let ((pimacs-integration-tools "codemode,bash")
+        (pimacs-section-autohide-count 2)
         (pimacs-section-initial-hide-filter '(:include (tool-result "codemode"))))
     (pimacs-with-integration-project "pimacs-codemode"
       (pimacs-send-prompt-and-wait
@@ -422,11 +423,15 @@
                        '(tool-call tool-result) pimacs-section--root-section))
               (child-result (pimacs-section--find-section
                              '(tool-call tool-call tool-result) pimacs-section--root-section)))
+          (should (eq (pimacs-section-initial-visibility result) :autohide))
+          (should (eq (pimacs-section-initial-visibility child-result) :autoshow))
           (should (eq (pimacs-section-visibility result) :autohide))
+          (should (eq (pimacs-section-visibility child-result) :autoshow))
           (should-not (invisible-p (pimacs-section-beginning child-result))))))))
 
 (ert-deftest pimacs-codemode-tools ()
   (let ((pimacs-integration-tools (concat pimacs-integration-tools ",codemode"))
+        (pimacs-section-autohide-count 2)
         (pimacs-section-initial-hide-filter '(:include (tool-result "codemode")))
         (file (expand-file-name "codemode-test.py" pimacs-project-directory)))
     (unwind-protect
@@ -455,8 +460,10 @@
                            '(tool-call tool-result) pimacs-section--root-section))
                   (child (pimacs-section--find-section
                           '(tool-call tool-call) pimacs-section--root-section)))
+              (should (eq (pimacs-section-initial-visibility result) :autohide))
+              (should (eq (pimacs-section-initial-visibility child) :autoshow))
               (should (eq (pimacs-section-visibility result) :autohide))
-              (should (eq (pimacs-section-visibility child) :autoshow)))))
+              (should (eq (pimacs-section-visibility child) :autohide)))))
       (when (file-exists-p file)
         (delete-file file)))))
 

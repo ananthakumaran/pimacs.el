@@ -1,0 +1,16 @@
+(setq pimacs-section-autohide-count 0
+      pimacs-section-autohide-filter 'all
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-point '(build test unit-tests))
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [+] Integration Tests
+[+] Logs
+[+] Deploy

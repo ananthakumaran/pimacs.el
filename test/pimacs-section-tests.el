@@ -77,6 +77,34 @@
                   (goto-char (pimacs-section-beginning section))
                   (line-end-position)))))
 
+(ert-deftest pimacs-describe-section-reports-nested-autohide-eligibility ()
+  (let ((inhibit-message t))
+    (pimacs-section-tests-with-demo-buffer
+      (let ((buffer (generate-new-buffer " *pimacs-section-description-test*")))
+        (unwind-protect
+            (save-window-excursion
+              (cl-letf (((symbol-function 'help-buffer) (lambda () buffer)))
+                (dolist (filter (list '(:exclude unit-tests)
+                                      '(:include compile integration-tests logs server-log worker-log deploy)
+                                      (lambda (section)
+                                        (not (eq (pimacs-section-type section) 'unit-tests)))))
+                  (setq-local pimacs-section-autohide-filter filter)
+                  (dolist (case '(((build compile) t)
+                                  ((build test) nil)
+                                  ((build test unit-tests) nil)
+                                  (nil "not applicable")))
+                    (let ((section (if (car case)
+                                       (pimacs-section--find-section (car case) pimacs-section--root-section)
+                                     pimacs-section--root-section)))
+                      (dolist (caller (list (current-buffer) buffer))
+                        (with-current-buffer caller
+                          (pimacs-describe-section section))
+                        (with-current-buffer buffer
+                          (goto-char (point-min))
+                          (should (search-forward (format "autohide-eligible: %s\n" (cadr case))
+                                                  nil t)))))))))
+          (kill-buffer buffer))))))
+
 ;; ─── Basic section creation ────────────────────────────────────────────
 
 (ert-deftest pimacs-section-create-root ()
@@ -790,114 +818,6 @@
 
 ;; ─── pimacs-section-autohide ───────────────────────────────────────────────
 
-(ert-deftest pimacs-section-autohide-nil-count ()
-  (pimacs-with-root-section
-    (let ((a (pimacs-section--new-section 'a pimacs-section--root-section))
-          (b (pimacs-section--new-section 'b pimacs-section--root-section)))
-      (pimacs-section--insert-section a (insert "[-] A\n"))
-      (pimacs-section--insert-section b (insert "[-] B\n"))
-      (pimacs-section--set-visibility a :autohide)
-      (let ((pimacs-section-autohide-count nil))
-        (pimacs-section-autohide)
-        (should (eq (pimacs-section-visibility a) :autoshow))
-        (should (eq (pimacs-section-visibility b) :autoshow))))))
-
-(ert-deftest pimacs-section-autohide-skips-middle-section-at-point ()
-  (pimacs-with-root-section
-    (let ((a (pimacs-section--new-section 'a pimacs-section--root-section))
-          (b (pimacs-section--new-section 'b pimacs-section--root-section))
-          (c (pimacs-section--new-section 'c pimacs-section--root-section))
-          (d (pimacs-section--new-section 'd pimacs-section--root-section)))
-      (pimacs-section--insert-section a (insert "[-] A\n"))
-      (pimacs-section--insert-section b (insert "[-] B\n"))
-      (pimacs-section--insert-section c (insert "[-] C\n"))
-      (pimacs-section--insert-section d (insert "[-] D\n"))
-      (let ((pimacs-section-autohide-count 2))
-        (goto-char (pimacs-section-beginning b))
-        (pimacs-section-autohide)
-        (should (eq (pimacs-section-visibility a) :autohide))
-        (should (eq (pimacs-section-visibility b) :autoshow))
-        (should (eq (pimacs-section-visibility c) :autoshow))
-        (should (eq (pimacs-section-visibility d) :autoshow))))))
-
-(ert-deftest pimacs-section-autohide-skips-non-autoshow ()
-  (pimacs-with-root-section
-    (let ((a (pimacs-section--new-section 'a pimacs-section--root-section))
-          (b (pimacs-section--new-section 'b pimacs-section--root-section))
-          (c (pimacs-section--new-section 'c pimacs-section--root-section)))
-      (pimacs-section--insert-section a (insert "[-] A\n"))
-      (pimacs-section--insert-section b (insert "[-] B\n"))
-      (pimacs-section--insert-section c (insert "[-] C\n"))
-      (pimacs-section--set-visibility a :show)
-      (let ((pimacs-section-autohide-count 1))
-        (pimacs-section-autohide)
-        (should (eq (pimacs-section-visibility a) :show))
-        (should (eq (pimacs-section-visibility b) :autohide))
-        (should (eq (pimacs-section-visibility c) :autoshow))))))
-
-(ert-deftest pimacs-section-autohide-includes-only-configured-types ()
-  (pimacs-with-root-section
-    (let ((user (pimacs-section--new-section 'user pimacs-section--root-section))
-          (old-call (pimacs-section--new-section 'tool-call pimacs-section--root-section))
-          (assistant (pimacs-section--new-section 'assistant pimacs-section--root-section))
-          (new-call (pimacs-section--new-section 'tool-call pimacs-section--root-section)))
-      (pimacs-section--insert-section user (insert "[-] User\n"))
-      (pimacs-section--insert-section old-call (insert "[-] Old call\n"))
-      (pimacs-section--insert-section assistant (insert "[-] Assistant\n"))
-      (pimacs-section--insert-section new-call (insert "[-] New call\n"))
-      (pimacs-section--set-visibility user :autohide)
-      (pimacs-section--set-visibility assistant :autohide)
-      (let ((pimacs-section-autohide-count 1)
-            (pimacs-section-autohide-filter '(:include tool-call)))
-        (pimacs-section-autohide)
-        (should (eq (pimacs-section-visibility user) :autoshow))
-        (should (eq (pimacs-section-visibility old-call) :autohide))
-        (should (eq (pimacs-section-visibility assistant) :autoshow))
-        (should (eq (pimacs-section-visibility new-call) :autoshow))))))
-
-(ert-deftest pimacs-section-autohide-excludes-configured-types ()
-  (pimacs-with-root-section
-    (let ((user (pimacs-section--new-section 'user pimacs-section--root-section))
-          (old-call (pimacs-section--new-section 'tool-call pimacs-section--root-section))
-          (assistant (pimacs-section--new-section 'assistant pimacs-section--root-section))
-          (new-call (pimacs-section--new-section 'tool-call pimacs-section--root-section))
-          (info (pimacs-section--new-section 'info pimacs-section--root-section)))
-      (pimacs-section--insert-section user (insert "[-] User\n"))
-      (pimacs-section--insert-section old-call (insert "[-] Old call\n"))
-      (pimacs-section--insert-section assistant (insert "[-] Assistant\n"))
-      (pimacs-section--insert-section new-call (insert "[-] New call\n"))
-      (pimacs-section--insert-section info (insert "[-] Info\n"))
-      (let ((pimacs-section-autohide-count 1)
-            (pimacs-section-autohide-filter '(:exclude tool-call)))
-        (pimacs-section-autohide)
-        (should (eq (pimacs-section-visibility user) :autohide))
-        (should (eq (pimacs-section-visibility old-call) :autoshow))
-        (should (eq (pimacs-section-visibility assistant) :autohide))
-        (should (eq (pimacs-section-visibility new-call) :autoshow))
-        (should (eq (pimacs-section-visibility info) :autoshow))))))
-
-(ert-deftest pimacs-section-autohide-accepts-predicate-function ()
-  (pimacs-with-root-section
-    (let ((edit (pimacs-section--new-section 'tool-call pimacs-section--root-section))
-          (bash (pimacs-section--new-section 'tool-call pimacs-section--root-section)))
-      (pimacs-section--insert-section edit (insert "[-] Edit\n"))
-      (pimacs-section--insert-section bash (insert "[-] Bash\n"))
-      (pimacs-section--set-info
-       edit (make-pimacs-section-tool-call-info :tool-name "edit"))
-      (pimacs-section--set-info
-       bash (make-pimacs-section-tool-call-info :tool-name "bash"))
-      (pimacs-section--set-visibility edit :autohide)
-      (let ((pimacs-section-autohide-count 0)
-            (pimacs-section-autohide-filter
-             (lambda (section)
-               (not (equal
-                     (pimacs-section-tool-call-info-tool-name
-                      (pimacs-section-info section))
-                     "edit")))))
-        (pimacs-section-autohide)
-        (should (eq (pimacs-section-visibility edit) :autoshow))
-        (should (eq (pimacs-section-visibility bash) :autohide))))))
-
 (ert-deftest pimacs-section-filter-tool-selectors ()
   (let ((call (make-pimacs-section
                :type 'tool-call
@@ -915,65 +835,266 @@
     (should (widget-apply (widget-convert 'pimacs-section-filter) :match
                           '(:exclude assistant (tool-call "edit" "replace" "insert"))))))
 
-(ert-deftest pimacs-section-initial-hide-at-all-depths-and-autohide ()
-  (let ((pimacs-section-initial-hide-filter '(:include compile logs)))
-    (pimacs-section-tests-with-demo-buffer
-      (let ((compile (pimacs-section--find-section '(build compile) pimacs-section--root-section))
-            (logs (pimacs-section--find-section '(logs) pimacs-section--root-section)))
-        (should (pimacs-section--visible-p pimacs-section--root-section))
-        (should (eq (pimacs-section-visibility compile) :autohide))
-        (dolist (count '(2 nil 0))
-          (let ((pimacs-section-autohide-count count))
-            (goto-char (point-max))
-            (pimacs-section-autohide)
-            (should (eq (pimacs-section-visibility logs) :autohide))))
-        (pimacs-section--set-visibility logs :show)
-        (let ((pimacs-section-autohide-count 0))
-          (pimacs-section-autohide)
-          (should (eq (pimacs-section-visibility logs) :show)))))))
+(defconst pimacs-section-tests--fixture-directory
+  (expand-file-name "pimacs-section-fixtures"
+                    (file-name-directory (or load-file-name buffer-file-name))))
 
-(ert-deftest pimacs-section-initial-hide-metadata-and-updates ()
-  (let* ((calls 0)
-         (pimacs-section-initial-hide-filter
-          (lambda (section)
-            (cl-incf calls)
-            (equal (pimacs-section-tool-result-info-tool-name
-                    (pimacs-section-info section))
-                   "codemode"))))
-    (pimacs-with-root-section
-      (let ((section (pimacs-section--create-section 'tool-result pimacs-section--root-section
-                       :info (make-pimacs-section-tool-result-info :tool-name "codemode")
-                       (should (= calls 1))
-                       (insert "payload\nbody\n"))))
-        (pimacs-section--append-section section (insert "partial\n"))
-        (should (eq (pimacs-section-visibility section) :autohide))
-        (goto-char (pimacs-section-beginning section))
-        (pimacs-toggle-section)
-        (pimacs-section--create-or-replace-section section 'tool-result pimacs-section--root-section
-          :info (make-pimacs-section-tool-result-info :tool-name "bash")
-          (insert "completed\nbody\n"))
-        (should (equal (pimacs-section-tool-result-info-tool-name
-                        (pimacs-section-info section))
-                       "bash"))
-        (should (= calls 1))
-        (should (eq (pimacs-section-visibility section) :show))))))
+(defvar pimacs-section-fixture-buffer nil)
+(defvar pimacs-section-fixture-tool nil)
+(defvar pimacs-section-fixture-point nil)
+(defvar pimacs-section-fixture-visibility nil)
+(defvar pimacs-section-fixture-messages nil)
+(defvar pimacs-section-fixture-result nil)
+(defvar pimacs-section-fixture-append nil)
+(defvar pimacs-section-fixture-replace nil)
+(defvar pimacs-section-fixture-protect-compile nil)
 
-(ert-deftest pimacs-section-autohide-skips-unchanged-visibility ()
-  (pimacs-with-root-section
-    (let ((a (pimacs-section--new-section 'a pimacs-section--root-section))
-          (b (pimacs-section--new-section 'b pimacs-section--root-section))
-          (pimacs-section-autohide-count 1))
-      (pimacs-section--insert-section a (insert "[-] A\n"))
-      (pimacs-section--insert-section b (insert "[-] B\n"))
-      (pimacs-section-autohide)
-      (let ((setter (symbol-function 'pimacs-section--set-visibility))
-            calls)
-        (cl-letf (((symbol-function 'pimacs-section--set-visibility)
-                   (lambda (&rest args)
-                     (push args calls)
-                     (apply setter args))))
-          (pimacs-section-autohide))
-        (should-not calls)))))
+(defun pimacs-section-tests--fixture-config (config)
+  (with-temp-buffer
+    (emacs-lisp-mode)
+    (insert config)
+    (goto-char (point-min))
+    (while (progn (forward-comment (point-max)) (not (eobp)))
+      (eval (read (current-buffer)) t))))
+
+(defun pimacs-section-tests--fixture-tree ()
+  (pcase pimacs-section-fixture-buffer
+    ('letters
+     '((a "A" "body") (b "B" "body") (c "C" "body") (d "D" "body")))
+    ('leaf-demo
+     '((a "A" "" nil ((b "B" "body") (c "C" "body")))
+       (d "D" "body")))
+    ('messages
+     '((user "User" "body")
+       (tool-call "Old call" "arguments" "read")
+       (assistant "Assistant" "body")
+       (tool-call "New call" "arguments" "bash")
+       (info "Info" "body")))
+    ('predicate-tools
+     '((tool-call "Edit" "arguments" "edit")
+       (tool-call "Bash" "arguments" "bash")))
+    ('nested-tools
+     `((tool-call "Codemode" "script" "codemode"
+                  ((tool-result "Output" "body" "codemode")
+                   (tool-call "Nested codemode" "script" "codemode"
+                              ((tool-call ,(capitalize pimacs-section-fixture-tool)
+                                          "arguments" ,pimacs-section-fixture-tool
+                                          ((tool-result "Edit result" "body" ,pimacs-section-fixture-tool)))
+                               (tool-call "Read" "arguments" "read")))))
+       (tool-call "Bash" "arguments" "bash")))
+    ('recent-tools
+     `((tool-call "Codemode" "script" "codemode"
+                  ,(cl-loop for index from 1 to 4
+                            collect (list 'tool-call (format "Bash %d" index) "arguments" "bash"
+                                          (list (list 'tool-result (format "Result %d" index) "output" "bash")))))))
+    ('codemode
+     '((tool-call "Codemode" "script" "codemode"
+                  ((tool-call "Bash" "arguments" "bash"
+                              ((tool-result "Bash result" "nested-ok" "bash")))
+                   (tool-result "Codemode output" "nested-ok" "codemode")))))
+    ('conversation
+     '((tool-call "Codemode" "script" "codemode"
+                  ((tool-call "Replace 1" "arguments" "replace")
+                   (tool-call "Replace 2" "arguments" "replace")
+                   (tool-call "Bash" "arguments" "bash"
+                              ((tool-result "Result" "tests passed" "bash")))))))
+    ('initial-output
+     '((tool-result "Result" "payload\nbody" "codemode")))
+    (_ (error "Unknown section fixture buffer: %s" pimacs-section-fixture-buffer))))
+
+(defun pimacs-section-tests--fixture-insert-tree (nodes parent &optional depth)
+  (let* ((depth (or depth 0))
+         (indent (make-string (* 2 depth) ?\s)))
+    (dolist (node nodes)
+      (pcase-let* ((`(,type ,title ,body . ,options) node)
+                   (tool (car options))
+                   (children (cadr options))
+                   (info (pcase type
+                           ('tool-call (make-pimacs-section-tool-call-info :tool-name tool))
+                           ('tool-result (make-pimacs-section-tool-result-info :tool-name tool))))
+                   (section (pimacs-section--create-section type parent :info info
+                                                            (insert indent "[-] " title "\n")
+                                                            (dolist (line (split-string body "\n" t))
+                                                              (insert indent "    " line "\n")))))
+        (pimacs-section-tests--fixture-insert-tree children section (1+ depth))))))
+
+(defun pimacs-section-tests--fixture-title (section)
+  (save-excursion
+    (goto-char (pimacs-section-beginning section))
+    (replace-regexp-in-string
+     "\\`[ \t]*\\[[-+]\\] " ""
+     (buffer-substring-no-properties (point) (line-end-position)))))
+
+(defun pimacs-section-tests--fixture-section (path)
+  (let ((section pimacs-section--root-section))
+    (dolist (part path)
+      (setq section
+            (seq-find (lambda (child)
+                        (if (symbolp part)
+                            (eq part (pimacs-section-type child))
+                          (equal part (pimacs-section-tests--fixture-title child))))
+                      (pimacs-section-children section)))
+      (unless section
+        (error "Missing section fixture path: %S" path)))
+    section))
+
+(defun pimacs-section-tests--fixture-actions ()
+  (when pimacs-section-fixture-result
+    (pimacs-section--create-section 'result
+        (pimacs-section-tests--fixture-section '(build test unit-tests))
+      (insert "          [-] Result\n              body\n"))
+    (setq pimacs-section-fixture-result nil))
+  (dolist (type pimacs-section-fixture-messages)
+    (let ((index (1+ (seq-count (lambda (section) (eq type (pimacs-section-type section)))
+                                (pimacs-section-children pimacs-section--root-section)))))
+      (pimacs-section--create-section type pimacs-section--root-section
+        (insert (format "[-] %s %d\n    body\n" (capitalize (symbol-name type)) index)))))
+  (setq pimacs-section-fixture-messages nil)
+  (dolist (entry pimacs-section-fixture-visibility)
+    (pimacs-section--set-visibility
+     (pimacs-section-tests--fixture-section (car entry)) (cdr entry)))
+  (setq pimacs-section-fixture-visibility nil)
+  (dolist (entry pimacs-section-fixture-append)
+    (pimacs-section--append-section
+        (pimacs-section-tests--fixture-section (car entry))
+      (insert (cdr entry))))
+  (setq pimacs-section-fixture-append nil)
+  (dolist (entry pimacs-section-fixture-replace)
+    (pcase-let* ((`(,path ,tool ,body) entry)
+                 (section (pimacs-section-tests--fixture-section path))
+                 (parent (pimacs-section-parent section))
+                 (title (pimacs-section-tests--fixture-title section)))
+      (pimacs-section--create-or-replace-section section 'tool-result parent
+        :info (make-pimacs-section-tool-result-info :tool-name tool)
+        (insert "[-] " title "\n" body))))
+  (setq pimacs-section-fixture-replace nil)
+  (goto-char (if pimacs-section-fixture-point
+                 (pimacs-section-beginning
+                  (pimacs-section-tests--fixture-section pimacs-section-fixture-point))
+               (point-max))))
+
+(defun pimacs-section-tests--fixture-visible-buffer ()
+  (save-excursion
+    (goto-char (point-min))
+    (let (lines)
+      (while (not (eobp))
+        (unless (invisible-p (point))
+          (let* ((section (pimacs-section--section-at (point)))
+                 (line (buffer-substring-no-properties (point) (line-end-position))))
+            (when (and section (= (point) (pimacs-section-beginning section)))
+              (setq line (replace-regexp-in-string
+                          "\\[[-+]\\]" (if (pimacs-section--hidden-p section) "[+]" "[-]")
+                          line t t)))
+            (push line lines)))
+        (forward-line))
+      (concat (mapconcat #'identity (nreverse lines) "\n") "\n"))))
+
+(defun pimacs-section-tests--fixture-autohide ()
+  (let* ((filter pimacs-section-autohide-filter)
+         (calls (make-hash-table :test 'eq))
+         (pimacs-section-autohide-filter
+          (if (functionp filter)
+              (lambda (section)
+                (puthash section (1+ (gethash section calls 0)) calls)
+                (funcall filter section))
+            filter)))
+    (pimacs-section-autohide)
+    (when (functionp filter)
+      (let ((sections (cdr (pimacs-section--all-sections pimacs-section--root-section))))
+        (should (= (hash-table-count calls) (length sections)))
+        (dolist (section sections)
+          (should (= (gethash section calls 0) 1)))))))
+
+(defun pimacs-section-tests--fixture-diff (expected actual)
+  (let ((file (make-temp-file "pimacs-section-actual-" nil nil actual)))
+    (unwind-protect
+        (with-temp-buffer
+          (insert expected)
+          (let ((status (call-process-region
+                         (point-min) (point-max) "diff" t t nil
+                         "-u" "-L" "expected" "-L" "actual" "-" file)))
+            (unless (memq status '(0 1))
+              (error "Unable to diff section fixture: %s" (buffer-string))))
+          (buffer-string))
+      (delete-file file))))
+
+(defun pimacs-section-tests--fixture-check-snapshot (file index expected actual)
+  (unless (equal expected actual)
+    (message "\n%s snapshot %d\n%s"
+             (file-name-nondirectory file) index
+             (pimacs-section-tests--fixture-diff expected actual))
+    (ert-fail (format "Section fixture mismatch: %s snapshot %d"
+                      (file-name-nondirectory file) index))))
+
+(defun pimacs-section-tests--fixture-snapshots (file blocks initial-calls)
+  (let ((first t) (index 0))
+    (while blocks
+      (let ((config (pop blocks))
+            (expected (concat (string-trim (pop blocks)) "\n")))
+        (unless first
+          (pimacs-section-tests--fixture-config config))
+        (setq first nil)
+        (pimacs-section-tests--fixture-actions)
+        (let ((manual (seq-filter (lambda (section)
+                                    (pimacs-section--user-toggled-p (car section)))
+                                  (mapcar (lambda (section)
+                                            (cons section (pimacs-section-visibility section)))
+                                          (cdr (pimacs-section--all-sections pimacs-section--root-section))))))
+          (pimacs-section-tests--fixture-autohide)
+          (dolist (entry manual)
+            (should (eq (cdr entry) (pimacs-section-visibility (car entry))))))
+        (maphash (lambda (_section calls) (should (= calls 1))) initial-calls)
+        (ert-info ((format "Snapshot %d" (cl-incf index)))
+          (pimacs-section-tests--fixture-check-snapshot
+           file index expected (pimacs-section-tests--fixture-visible-buffer)))
+        (let ((setter (symbol-function 'pimacs-section--set-visibility))
+              calls)
+          (cl-letf (((symbol-function 'pimacs-section--set-visibility)
+                     (lambda (&rest args)
+                       (push args calls)
+                       (apply setter args))))
+            (pimacs-section-tests--fixture-autohide))
+          (should-not calls))))))
+
+(defun pimacs-section-tests--run-fixture (file)
+  (let* ((blocks (with-temp-buffer
+                   (insert-file-contents file)
+                   (split-string (buffer-string) "\n[ \t]*==========[ \t]*\n")))
+         (pimacs-section-padding "")
+         (pimacs-section-autohide-count 2)
+         (pimacs-section-autohide-filter 'all)
+         (pimacs-section-initial-hide-filter nil)
+         (pimacs-section-fixture-buffer 'demo)
+         (pimacs-section-fixture-tool "edit")
+         (pimacs-section-fixture-point nil)
+         (pimacs-section-fixture-visibility nil)
+         (pimacs-section-fixture-messages nil)
+         (pimacs-section-fixture-result nil)
+         (pimacs-section-fixture-append nil)
+         (pimacs-section-fixture-replace nil)
+         (pimacs-section-fixture-protect-compile nil)
+         (initial-calls (make-hash-table :test 'eq)))
+    (should (and blocks (cl-evenp (length blocks))))
+    (pimacs-section-tests--fixture-config (car blocks))
+    (let* ((initial-filter pimacs-section-initial-hide-filter)
+           (pimacs-section-initial-hide-filter
+            (lambda (section)
+              (puthash section (1+ (gethash section initial-calls 0)) initial-calls)
+              (pimacs-section--filter-matches-p section initial-filter))))
+      (if (eq pimacs-section-fixture-buffer 'demo)
+          (pimacs-section-tests-with-demo-buffer
+            (pimacs-section-tests--fixture-snapshots file blocks initial-calls))
+        (pimacs-with-root-section
+          (pimacs-section-tests--fixture-insert-tree
+           (pimacs-section-tests--fixture-tree) pimacs-section--root-section)
+          (pimacs-section-tests--fixture-snapshots file blocks initial-calls))))))
+
+(ert-deftest pimacs-section-autohide-fixtures ()
+  (let ((files (directory-files pimacs-section-tests--fixture-directory t "\\.txt\\'")))
+    (should files)
+    (dolist (file files)
+      (ert-info ((format "Section fixture: %s" (file-name-nondirectory file)))
+        (pimacs-section-tests--run-fixture file)))))
 
 (ert-deftest pimacs-section-cycle-global ()
   (pimacs-section-tests-with-demo-buffer

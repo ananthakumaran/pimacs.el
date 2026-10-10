@@ -1,0 +1,15 @@
+(setq pimacs-section-autohide-count 1
+      pimacs-section-autohide-filter '(:exclude tool-call)
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-buffer 'messages)
+
+==========
+
+[+] User
+[-] Old call
+    arguments
+[+] Assistant
+[-] New call
+    arguments
+[-] Info
+    body

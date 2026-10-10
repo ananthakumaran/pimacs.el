@@ -1,0 +1,12 @@
+(setq pimacs-section-autohide-count 0
+      pimacs-section-autohide-filter (lambda (section)
+        (not (equal (pimacs-section--tool-name section) "edit")))
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-buffer 'predicate-tools
+      pimacs-section-fixture-visibility '((("Edit") . :autohide)))
+
+==========
+
+[-] Edit
+    arguments
+[+] Bash

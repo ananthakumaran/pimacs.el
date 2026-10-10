@@ -1,0 +1,40 @@
+(setq pimacs-section-autohide-count nil
+      pimacs-section-autohide-filter 'all
+      pimacs-section-initial-hide-filter (lambda (section)
+        (equal (pimacs-section--tool-name section) "codemode"))
+      pimacs-section-fixture-buffer 'initial-output)
+
+==========
+
+[+] Result
+
+==========
+
+(setq pimacs-section-fixture-append '((("Result") . "    partial\n")))
+
+==========
+
+[+] Result
+
+==========
+
+(setq pimacs-section-fixture-visibility '((("Result") . :show))
+      pimacs-section-fixture-replace '((("Result") "bash" "    completed\n    body\n")))
+
+==========
+
+[-] Result
+    completed
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 0
+      pimacs-section-autohide-filter '(:exclude (tool-result "bash"))
+      pimacs-section-fixture-visibility '((("Result") . :autoshow)))
+
+==========
+
+[-] Result
+    completed
+    body

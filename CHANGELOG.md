@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+
+- Autohide counts eligible leaves across the whole buffer, keeping recent or excluded sections and their ancestors expanded without counting parents or initially hidden leaves toward the limit, regardless of manual folding. Filters apply at every nesting depth, and manual visibility choices are preserved.
+
 ## v0.9.0 - 2026-10-08
 
 ### Added

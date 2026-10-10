@@ -1,0 +1,109 @@
+(setq pimacs-section-fixture-buffer 'codemode
+      pimacs-section-autohide-count nil
+      pimacs-section-initial-hide-filter '(:include (tool-result "codemode"))
+      pimacs-section-fixture-messages '(assistant))
+
+==========
+
+[-] Codemode
+    script
+  [-] Bash
+      arguments
+    [-] Bash result
+        nested-ok
+  [+] Codemode output
+[-] Assistant 1
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 2)
+
+==========
+
+[-] Codemode
+    script
+  [-] Bash
+      arguments
+    [-] Bash result
+        nested-ok
+  [+] Codemode output
+[-] Assistant 1
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 1)
+
+==========
+
+[+] Codemode
+[-] Assistant 1
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 2
+      pimacs-section-autohide-filter '(:exclude (tool-result "codemode")))
+
+==========
+
+[-] Codemode
+    script
+  [-] Bash
+      arguments
+    [-] Bash result
+        nested-ok
+  [-] Codemode output
+      nested-ok
+[-] Assistant 1
+    body
+
+==========
+
+(setq pimacs-section-autohide-filter 'all)
+
+==========
+
+[-] Codemode
+    script
+  [-] Bash
+      arguments
+    [-] Bash result
+        nested-ok
+  [+] Codemode output
+[-] Assistant 1
+    body
+
+==========
+
+(setq pimacs-section-fixture-visibility '((("Codemode" "Codemode output") . :show)))
+
+==========
+
+[-] Codemode
+    script
+  [-] Bash
+      arguments
+    [-] Bash result
+        nested-ok
+  [-] Codemode output
+      nested-ok
+[-] Assistant 1
+    body
+
+==========
+
+(setq pimacs-section-fixture-visibility '((("Codemode" "Codemode output") . :hide)))
+
+==========
+
+[-] Codemode
+    script
+  [-] Bash
+      arguments
+    [-] Bash result
+        nested-ok
+  [+] Codemode output
+[-] Assistant 1
+    body

@@ -31,9 +31,17 @@
 (require 'pimacs-utils)
 
 (defcustom pimacs-section-autohide-count 2
-  "Automatically hide older chat sections beyond this count.
-This helps reduce clutter by collapsing earlier responses when the
-conversation grows long.  When nil, auto hiding is disabled;
+  "Number of recent eligible leaf sections to keep expanded.
+A leaf is a section with no children.  The count applies across the
+whole buffer, keeping the last eligible leaves in buffer order and
+their ancestors expanded.  Older sections collapse automatically.
+Leaves not selected by `pimacs-section-autohide-filter' stay expanded
+without counting toward this limit.  Parents do not consume slots.
+
+Leaves selected by `pimacs-section-initial-hide-filter' start collapsed
+and never count toward this limit, even when manually expanded.
+Manual folding choices are preserved.
+Set to nil to disable automatic hiding of older sections;
 `pimacs-section-initial-hide-filter' still applies."
   :type '(choice (const :tag "Disable" nil)
                  integer)
@@ -59,15 +67,32 @@ conversation grows long.  When nil, auto hiding is disabled;
           (function :tag "Predicate function")))
 
 (defcustom pimacs-section-autohide-filter 'all
-  "Filter controlling which top-level sections are eligible for autohide.
+  "Select sections that Pimacs may collapse automatically.
 
-Use `all', nil, `(:include SELECTOR...)', `(:exclude SELECTOR...)',
-or a predicate called with the section.  A selector is a section type
-symbol or `(tool-call TOOL...)' / `(tool-result TOOL...)', where TOOL
-is an exact tool name string.  Selectors are matched with OR.
+The filter applies to both top-level and nested sections.  Use `all' to
+allow hiding any section, nil to keep all sections expanded,
+`(:include SELECTOR...)' to allow hiding only matching sections, or
+`(:exclude SELECTOR...)' to keep matching sections expanded.  A predicate
+receives a section and returns non-nil to allow hiding it.
 
-Non-eligible sections do not count toward
-`pimacs-section-autohide-count'."
+A selector is a section type symbol or `(tool-call TOOL...)' /
+`(tool-result TOOL...)', where TOOL is an exact tool name string.
+A section matches if any selector matches.
+
+Sections kept expanded by the filter also keep their ancestors expanded
+so their contents remain visible, regardless of
+`pimacs-section-initial-hide-filter'.  Each child follows its own filter;
+keeping a parent expanded does not exempt its descendants from hiding.
+
+Only leaves selected by this filter and not selected by
+`pimacs-section-initial-hide-filter' count toward
+`pimacs-section-autohide-count', regardless of manual folding.
+A leaf is a section with no children.
+Recent leaves keep their ancestor paths expanded; other sections can
+collapse automatically.
+
+Automatic hiding does not override sections you manually expand or
+collapse."
   :type 'pimacs-section-filter
   :group 'pimacs)
 
@@ -76,6 +101,8 @@ Non-eligible sections do not count toward
 
 Use the same selectors as `pimacs-section-autohide-filter'.
 The default is `(:include (tool-result \"codemode\"))'.
+Leaves selected by this filter never consume the recent-leaf budget,
+even when manually expanded.
 
 The filter is evaluated once per section.  Tool metadata is available,
 but streamed arguments and content may still be incomplete."
@@ -979,31 +1006,68 @@ EVENT is the mouse event that triggered the toggle."
                     (cdr filter))))
       (if (eq (car filter) :include) matches (not matches))))))
 
-(defun pimacs-section--autohide-eligible-p (section)
-  (pimacs-section--filter-matches-p section pimacs-section-autohide-filter))
+(defun pimacs-section--autohide-protect-subtree (section protected allowed)
+  (let* ((matches (pimacs-section--filter-matches-p section pimacs-section-autohide-filter))
+         (protect (not matches)))
+    (puthash section matches allowed)
+    (dolist (child (pimacs-section-children section))
+      (when (pimacs-section--autohide-protect-subtree child protected allowed)
+        (setq protect t)))
+    (when protect
+      (puthash section t protected))
+    protect))
+
+(defun pimacs-section--autohide-protected-sections (section &optional allowed)
+  (let ((protected (make-hash-table :test 'eq))
+        (allowed (or allowed (make-hash-table :test 'eq))))
+    (if (pimacs-section-parent section)
+        (pimacs-section--autohide-protect-subtree section protected allowed)
+      (dolist (child (pimacs-section-children section))
+        (pimacs-section--autohide-protect-subtree child protected allowed)))
+    protected))
+
+(defun pimacs-section--autohide-eligible-p (section &optional protected)
+  (not (gethash section (or protected
+                            (pimacs-section--autohide-protected-sections section)))))
+
+(defun pimacs-section--autohide-section (section count recent protected)
+  (let* ((at-point (and (>= (point) (pimacs-section-beginning section))
+                        (< (point) (pimacs-section-end section))))
+         (hide-p (and (not (gethash section protected))
+                      (or (and count (not (gethash section recent)))
+                          (eq (pimacs-section-initial-visibility section) :autohide)))))
+    (when (and (not hide-p)
+               (eq (pimacs-section-visibility section) :autohide)
+               (or (gethash section protected) (not at-point)))
+      (pimacs-section--set-visibility section :autoshow))
+    (when (pimacs-section--visible-p section)
+      (dolist (child (pimacs-section-children section))
+        (pimacs-section--autohide-section child count recent protected))
+      (when (and hide-p (not at-point)
+                 (eq (pimacs-section-visibility section) :autoshow))
+        (pimacs-section--set-visibility section :autohide)))))
 
 (defun pimacs-section-autohide ()
-  "Reconcile automatically managed section visibility."
+  "Reconcile automatically managed section visibility at every nesting depth."
   (interactive)
   (let* ((count pimacs-section-autohide-count)
-         (children (pimacs-section-children pimacs-section--root-section))
+         (root pimacs-section--root-section)
+         (allowed (make-hash-table :test 'eq))
+         (protected (pimacs-section--autohide-protected-sections root allowed))
          (eligible (and count
-                        (seq-filter #'pimacs-section--autohide-eligible-p children)))
-         (hide-count (if count (max 0 (- (length eligible) count)) 0))
-         (hidden (make-hash-table :test 'eq)))
-    (dolist (child (seq-take eligible hide-count))
-      (puthash child t hidden))
-    (dolist (child children)
-      (unless (and (>= (point) (pimacs-section-beginning child))
-                   (< (point) (pimacs-section-end child)))
-        (let ((visibility (pimacs-section-visibility child))
-              (hide-p (or (eq (pimacs-section-initial-visibility child) :autohide)
-                          (gethash child hidden))))
-          (cond
-           ((and hide-p (eq visibility :autoshow))
-            (pimacs-section--set-visibility child :autohide))
-           ((and (not hide-p) (eq visibility :autohide))
-            (pimacs-section--set-visibility child :autoshow))))))))
+                        (seq-filter (lambda (section)
+                                      (and (null (pimacs-section-children section))
+                                           (gethash section allowed)
+                                           (not (eq (pimacs-section-initial-visibility section)
+                                                    :autohide))))
+                                    (cdr (pimacs-section--all-sections root)))))
+         (recent (make-hash-table :test 'eq)))
+    (dolist (section (and count (seq-drop eligible (max 0 (- (length eligible) count)))))
+      (while (pimacs-section-parent section)
+        (puthash section t recent)
+        (setq section (pimacs-section-parent section))))
+    (dolist (section (pimacs-section-children root))
+      (pimacs-section--autohide-section section count recent protected))))
 
 (defun pimacs-section--all-sections (section)
   (cons section
@@ -1236,43 +1300,44 @@ otherwise it return t."
      (unless section
        (user-error "No section at point"))
      (list section)))
-  (help-setup-xref (list #'pimacs-describe-section section)
-                   (called-interactively-p 'interactive))
-  (with-help-window (help-buffer)
-    (let ((parent (pimacs-section-parent section)))
-      (pimacs-section--insert-description-field "type:")
-      (insert (format " %s\n" (pimacs-section-type section)))
-      (when (and parent (pimacs-section-parent parent))
-        (pimacs-section--insert-description-field "parent:")
-        (insert " ")
-        (pimacs-section--insert-description-link parent)
-        (insert "\n"))
-      (pimacs-section--insert-description-field "beginning:")
-      (insert (format " %s\n" (pimacs-section-beginning section)))
-      (pimacs-section--insert-description-field "end:")
-      (insert (format " %s\n" (pimacs-section-end section)))
-      (pimacs-section--insert-description-field "visibility:")
-      (insert (format " %s\n" (pimacs-section-visibility section)))
-      (pimacs-section--insert-description-field "visibility-user-overridden:")
-      (insert (format " %s\n" (pimacs-section--user-toggled-p section)))
-      (pimacs-section--insert-description-field "autohide-eligible:")
-      (insert
-       (format " %s\n"
-               (if (and parent (not (pimacs-section-parent parent)))
-                   (pimacs-section--autohide-eligible-p section)
-                 "not applicable")))
-      (pimacs-section--insert-description-field "face:")
-      (insert (format " %s\n" (pimacs-section-face section)))
-      (when-let ((children (pimacs-section-children section)))
-        (pimacs-section--insert-description-field "Children:")
-        (dolist (child children)
+  (let ((autohide-eligible
+         (if (pimacs-section-parent section)
+             (with-current-buffer (marker-buffer (pimacs-section-beginning section))
+               (pimacs-section--autohide-eligible-p section))
+           "not applicable")))
+    (help-setup-xref (list #'pimacs-describe-section section)
+                     (called-interactively-p 'interactive))
+    (with-help-window (help-buffer)
+      (let ((parent (pimacs-section-parent section)))
+        (pimacs-section--insert-description-field "type:")
+        (insert (format " %s\n" (pimacs-section-type section)))
+        (when (and parent (pimacs-section-parent parent))
+          (pimacs-section--insert-description-field "parent:")
           (insert " ")
-          (pimacs-section--insert-description-link child))
-        (insert "\n"))
-      (when-let ((info (pimacs-section-info section)))
-        (pimacs-section--insert-description-field "info:")
-        (insert "\n")
-        (insert (pimacs-section--fontify-info info))))))
+          (pimacs-section--insert-description-link parent)
+          (insert "\n"))
+        (pimacs-section--insert-description-field "beginning:")
+        (insert (format " %s\n" (pimacs-section-beginning section)))
+        (pimacs-section--insert-description-field "end:")
+        (insert (format " %s\n" (pimacs-section-end section)))
+        (pimacs-section--insert-description-field "visibility:")
+        (insert (format " %s\n" (pimacs-section-visibility section)))
+        (pimacs-section--insert-description-field "visibility-user-overridden:")
+        (insert (format " %s\n" (pimacs-section--user-toggled-p section)))
+        (pimacs-section--insert-description-field "autohide-eligible:")
+        (insert (format " %s\n" autohide-eligible))
+        (pimacs-section--insert-description-field "face:")
+        (insert (format " %s\n" (pimacs-section-face section)))
+        (when-let ((children (pimacs-section-children section)))
+          (pimacs-section--insert-description-field "Children:")
+          (dolist (child children)
+            (insert " ")
+            (pimacs-section--insert-description-link child))
+          (insert "\n"))
+        (when-let ((info (pimacs-section-info section)))
+          (pimacs-section--insert-description-field "info:")
+          (insert "\n")
+          (insert (pimacs-section--fontify-info info)))))))
 
 (defun pimacs-section--section-line ()
   "Return the 0-based line number of point within the current section.

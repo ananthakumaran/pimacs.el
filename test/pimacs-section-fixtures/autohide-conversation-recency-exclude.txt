@@ -1,0 +1,101 @@
+(setq pimacs-section-autohide-count 2
+      pimacs-section-autohide-filter '(:exclude (tool-call "replace"))
+      pimacs-section-initial-hide-filter nil
+      pimacs-section-fixture-buffer 'conversation)
+
+==========
+
+[-] Codemode
+    script
+  [-] Replace 1
+      arguments
+  [-] Replace 2
+      arguments
+  [-] Bash
+      arguments
+    [-] Result
+        tests passed
+
+==========
+
+(setq pimacs-section-fixture-messages '(assistant assistant notify))
+
+==========
+
+[-] Codemode
+    script
+  [-] Replace 1
+      arguments
+  [-] Replace 2
+      arguments
+  [+] Bash
+[+] Assistant 1
+[-] Assistant 2
+    body
+[-] Notify 1
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 100)
+
+==========
+
+[-] Codemode
+    script
+  [-] Replace 1
+      arguments
+  [-] Replace 2
+      arguments
+  [-] Bash
+      arguments
+    [-] Result
+        tests passed
+[-] Assistant 1
+    body
+[-] Assistant 2
+    body
+[-] Notify 1
+    body
+
+==========
+
+(setq pimacs-section-autohide-count nil)
+
+==========
+
+[-] Codemode
+    script
+  [-] Replace 1
+      arguments
+  [-] Replace 2
+      arguments
+  [-] Bash
+      arguments
+    [-] Result
+        tests passed
+[-] Assistant 1
+    body
+[-] Assistant 2
+    body
+[-] Notify 1
+    body
+
+==========
+
+(setq pimacs-section-autohide-count 2)
+
+==========
+
+[-] Codemode
+    script
+  [-] Replace 1
+      arguments
+  [-] Replace 2
+      arguments
+  [+] Bash
+[+] Assistant 1
+[-] Assistant 2
+    body
+[-] Notify 1
+    body

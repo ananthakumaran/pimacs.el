@@ -1,0 +1,20 @@
+(setq pimacs-section-autohide-count 2
+      pimacs-section-autohide-filter '(:exclude worker-log)
+      pimacs-section-initial-hide-filter nil)
+
+==========
+
+[+] Build
+[-] Logs
+  [-] Server
+      Listening on :8080
+      Connected client #42
+      Connected client #43
+      Connected client #44
+      Connected client #45
+  [-] Worker
+      Job started
+      Job completed
+[-] Deploy
+    Uploading artifacts...
+    Restarting services...

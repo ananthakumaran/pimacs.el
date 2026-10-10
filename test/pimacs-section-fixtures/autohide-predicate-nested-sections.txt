@@ -1,0 +1,16 @@
+(setq pimacs-section-autohide-count 0
+      pimacs-section-autohide-filter (lambda (section)
+        (not (eq (pimacs-section-type section) 'unit-tests)))
+      pimacs-section-initial-hide-filter nil)
+
+==========
+
+[-] Build
+  [+] Compile
+  [-] Tests
+      [-] Unit Tests
+          test-auth ... ok
+          test-db ... ok
+      [+] Integration Tests
+[+] Logs
+[+] Deploy
