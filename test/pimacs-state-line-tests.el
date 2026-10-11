@@ -12,6 +12,7 @@
 (undercover)
 
 (require 'pimacs-state-line)
+(require 'pimacs)
 
 (ert-deftest pimacs--format-state-line-component-propertizes ()
   (let ((value (pimacs--format-state-line-component
@@ -67,6 +68,34 @@
                    " spinner"))
     (should (equal (pimacs--format-state-line-spinner '(:spinner spinner))
                    ""))))
+
+(ert-deftest pimacs--turn-timer-smoke ()
+  (with-temp-buffer
+    (cl-letf (((symbol-function 'pimacs--update-agent-state) #'ignore)
+              ((symbol-function 'pimacs--update-header-line) #'ignore)
+              ((symbol-function 'pimacs--seconds-elapsed-since) (lambda (_) 1.9)))
+      (unwind-protect
+          (progn
+            (should (equal (pimacs--format-state-line '(:timer)) ""))
+            (pimacs--handle-agent-state '(:type "turn_start"))
+            (should-not pimacs--turn-timer)
+            (pimacs--handle-agent-state '(:type "agent_start"))
+            (should (= (timer--repeat-delay pimacs--turn-timer) 1))
+            (should (equal (pimacs--format-state-line '(:timer)) "0s"))
+            (pimacs--tick-turn-timer (current-buffer))
+            (should (equal (pimacs--format-state-line '(:timer)) "1s"))
+            (setq pimacs--turn-duration 90)
+            (should (equal (pimacs--format-state-line '(:timer)) "1m 30s"))
+            (pimacs--handle-agent-state '(:type "turn_start"))
+            (should (equal (pimacs--format-state-line '(:timer)) "1m 30s"))
+            (pimacs--handle-agent-state '(:type "agent_start"))
+            (should (equal (pimacs--format-state-line '(:timer)) "1m 30s"))
+            (pimacs--handle-agent-state '(:type "agent_settled"))
+            (should-not pimacs--turn-timer)
+            (should (equal (pimacs--format-state-line '(:timer)) ""))
+            (pimacs--handle-agent-state '(:type "agent_start"))
+            (should (equal (pimacs--format-state-line '(:timer)) "0s")))
+        (pimacs--stop-turn-timer)))))
 
 (ert-deftest pimacs--format-state-line-cache-hit-percent-uses-literal-percent ()
   (should (equal (pimacs--format-state-line-cache-hit-percent

@@ -269,10 +269,10 @@ BODY must not modify the input field; retained undo entries must belong to it."
              " ago")))
       (error nil))))
 
-(defun pimacs--format-duration (seconds)
+(defun pimacs--format-duration (seconds &optional precision)
   (when (and (numberp seconds) (>= seconds 0))
     (if (< seconds 60)
-        (format "%.2fs" seconds)
+        (format (format "%%.%dfs" (or precision 2)) seconds)
       (format-seconds "%x%dd %hh %mm %z%ss" (floor seconds)))))
 
 (defun pimacs--hash-remove-if (pred table)

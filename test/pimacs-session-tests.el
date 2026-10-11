@@ -53,7 +53,9 @@
   (dolist (case '((nil . nil) (-1 . nil) (0 . "0.00s") (1.24 . "1.24s")
                   (59.99 . "59.99s") (60 . "1m") (90 . "1m 30s")
                   (3735 . "1h 2m 15s") (86400 . "1d")))
-    (should (equal (pimacs--format-duration (car case)) (cdr case)))))
+    (should (equal (pimacs--format-duration (car case)) (cdr case))))
+  (should (equal (pimacs--format-duration 1 0) "1s"))
+  (should (equal (pimacs--format-duration 1.234 3) "1.234s")))
 
 (ert-deftest pimacs-session-read-record-respects-max-bytes ()
   (let ((file (make-temp-file "pimacs-session-" nil ".jsonl")))

@@ -1110,6 +1110,8 @@ UI keywords:
 Current agent state.
 @item :spinner
 Active agent spinner.
+@item :timer
+Elapsed turn duration, updated every second.
 @item :spacer
 Space that right-aligns all following entries.
 @end table
@@ -1117,7 +1119,8 @@ Space that right-aligns all following entries.
 Status components:
 @code{(:status STATUS-KEY ...)}  Extension status text for STATUS-KEY.
 
-Use at most one @code{:spacer}.
+Use at most one @code{:spacer}.  The timer is blank when the agent settles
+and is not displayed by default.
 @end defopt
 
 @defopt pimacs-mode-line-format
@@ -1159,7 +1162,7 @@ Render these on a fresh line when the renderer starts mid-line.
 Whether to capture incremental Markdown rendering diagnostics.
 
 When non-nil, diagnostics are appended to the temporary buffer
-@code{*pimacs-markdown-incremental-debug*}.
+@code{*pimacs-markdown-incremental-debug*}, and every checkpoint is validated.
 @end defopt
 
 @defopt pimacs-markdown-use-unicode-tables @code{t}

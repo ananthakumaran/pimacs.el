@@ -20,8 +20,8 @@ END-INFO-DIR-ENTRY
 
 File: pimacs.info,  Node: Top,  Next: Introduction,  Up: (dir)
 
-Pimacs User Manual v0.9.0
-*************************
+Pimacs User Manual v0.10.0-pre
+******************************
 
 Pimacs is an Emacs client for Pi Coding Agent (https://pi.dev/).  For
 release history, see the changelog (changelog.html).
@@ -980,13 +980,16 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
           Current agent state.
      ‘:spinner’
           Active agent spinner.
+     ‘:timer’
+          Elapsed turn duration, updated every second.
      ‘:spacer’
           Space that right-aligns all following entries.
 
      Status components: ‘(:status STATUS-KEY ...)’ Extension status text
      for STATUS-KEY.
 
-     Use at most one ‘:spacer’.
+     Use at most one ‘:spacer’.  The timer is blank when the agent
+     settles and is not displayed by default.
 
  -- User Option: pimacs-mode-line-format
 
@@ -1021,7 +1024,8 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      Whether to capture incremental Markdown rendering diagnostics.
 
      When non-nil, diagnostics are appended to the temporary buffer
-     ‘*pimacs-markdown-incremental-debug*’.
+     ‘*pimacs-markdown-incremental-debug*’, and every checkpoint is
+     validated.
 
  -- User Option: pimacs-markdown-use-unicode-tables t
 
@@ -1367,25 +1371,25 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
 Tag Table:
 Node: Top746
-Node: Introduction1151
-Node: Setup1408
-Node: Doctor2205
-Node: Usage2577
-Node: Slash Commands3458
-Node: File Name Completion5956
-Node: Bash6284
-Node: Sending Context6551
-Node: Images7359
-Node: State Lines8224
-Node: Managing Chats9574
-Node: Searching and Resuming Sessions10167
-Node: Section Visibility12400
-Node: UI Customization15123
-Node: Sandbox18394
-Node: How It Works18787
-Node: Keybindings19939
-Node: Custom Variables24717
-Node: Custom Faces45136
+Node: Introduction1161
+Node: Setup1418
+Node: Doctor2215
+Node: Usage2587
+Node: Slash Commands3468
+Node: File Name Completion5966
+Node: Bash6294
+Node: Sending Context6561
+Node: Images7369
+Node: State Lines8234
+Node: Managing Chats9584
+Node: Searching and Resuming Sessions10177
+Node: Section Visibility12410
+Node: UI Customization15133
+Node: Sandbox18404
+Node: How It Works18797
+Node: Keybindings19949
+Node: Custom Variables24727
+Node: Custom Faces45340
 
 End Tag Table
 

@@ -1998,8 +1998,10 @@ do nothing.  The killed text can be restored with `yank'."
 
 (defun pimacs--handle-agent-state (event)
   (cl-case (intern (plist-get event :type))
-    (agent_start (pimacs--update-agent-state 'thinking))
-    (agent_settled (pimacs--update-agent-state nil)
+    (agent_start (pimacs--start-turn-timer)
+                 (pimacs--update-agent-state 'thinking))
+    (agent_settled (pimacs--stop-turn-timer)
+                   (pimacs--update-agent-state nil)
                    (pimacs-clear-project-file-cache))
     (turn_start (pimacs--update-agent-state 'thinking))
     (message_update
@@ -3445,6 +3447,7 @@ If NEW-BUFFER is non-nil, create a separate chat and agent."
                       pimacs--header-line-state nil
                       pimacs--commands nil)
                 (pimacs-clear-project-file-cache)
+                (pimacs--stop-turn-timer)
                 (pimacs--update-agent-state nil)
                 (force-mode-line-update)
                 (pimacs--widget-save-excursion

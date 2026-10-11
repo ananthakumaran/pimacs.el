@@ -58,6 +58,7 @@
                    (const :tag "Context window" :context_window)
                    (const :tag "Agent state" :agent_state)
                    (const :tag "Spinner" :spinner)
+                   (const :tag "Turn timer" :timer)
                    (const :tag "Right-align remaining entries" :spacer)))
   "Custom type for Pimacs state-line formats.")
 
@@ -105,12 +106,14 @@ Session statistics keywords:
 UI keywords:
 `:agent_state'              Current agent state.
 `:spinner'                  Active agent spinner.
+`:timer'                    Elapsed turn duration, updated every second.
 `:spacer'                   Space that right-aligns all following entries.
 
 Status components:
 `(:status STATUS-KEY ...)'  Extension status text for STATUS-KEY.
 
-Use at most one `:spacer'."
+Use at most one `:spacer'.  The timer is blank when the agent settles
+and is not displayed by default."
   :type pimacs--state-line-format-type
   :group 'pimacs)
 
@@ -132,8 +135,36 @@ See `pimacs-header-line-format' for available components."
 (pimacs--def-permanent-buffer-local pimacs--header-line-state nil)
 (pimacs--def-permanent-buffer-local pimacs--agent-state nil)
 (pimacs--def-permanent-buffer-local pimacs--spinner nil)
+(pimacs--def-permanent-buffer-local pimacs--turn-start-time nil)
+(pimacs--def-permanent-buffer-local pimacs--turn-duration nil)
+(pimacs--def-permanent-buffer-local pimacs--turn-timer nil)
 
 (defvar pimacs--header-line-state-change-hook nil)
+
+(defun pimacs--tick-turn-timer (buffer)
+  (when (buffer-live-p buffer)
+    (with-current-buffer buffer
+      (when pimacs--turn-start-time
+        (setq pimacs--turn-duration
+              (max 0 (pimacs--seconds-elapsed-since pimacs--turn-start-time)))
+        (force-mode-line-update)))))
+
+(defun pimacs--stop-turn-timer ()
+  (when (timerp pimacs--turn-timer)
+    (cancel-timer pimacs--turn-timer))
+  (setq pimacs--turn-timer nil
+        pimacs--turn-start-time nil
+        pimacs--turn-duration nil)
+  (force-mode-line-update))
+
+(defun pimacs--start-turn-timer ()
+  (unless pimacs--turn-start-time
+    (setq pimacs--turn-start-time (current-time)
+          pimacs--turn-duration 0
+          pimacs--turn-timer
+          (run-at-time 1 1 #'pimacs--tick-turn-timer (current-buffer)))
+    (add-hook 'kill-buffer-hook #'pimacs--stop-turn-timer nil t)
+    (force-mode-line-update)))
 
 (defun pimacs--format-tool-state (tools)
   (pcase tools
@@ -157,6 +188,7 @@ See `pimacs-header-line-format' for available components."
 (defun pimacs--state-line-state ()
   (append (list :spinner pimacs--spinner
                 :agentState pimacs--agent-state
+                :turnDuration pimacs--turn-duration
                 :projectRoot pimacs--project-root
                 :statusTexts pimacs--status-texts)
           pimacs--header-line-state))
@@ -268,6 +300,11 @@ See `pimacs-header-line-format' for available components."
       (concat " " spinner-str)
     ""))
 
+(defun pimacs--format-state-line-timer (state)
+  (if-let ((seconds (plist-get state :turnDuration)))
+      (pimacs--format-duration (floor seconds) 0)
+    ""))
+
 (defun pimacs--format-state-line-status (state status-key)
   (when-let* ((status-texts (plist-get state :statusTexts))
               ((hash-table-p status-texts))
@@ -301,7 +338,8 @@ See `pimacs-header-line-format' for available components."
     (:total_tokens . pimacs--format-state-line-total-tokens)
     (:cost . pimacs--format-state-line-cost)
     (:agent_state . pimacs--format-state-line-agent-state)
-    (:spinner . pimacs--format-state-line-spinner))
+    (:spinner . pimacs--format-state-line-spinner)
+    (:timer . pimacs--format-state-line-timer))
   "Alist mapping state line keywords to formatter functions.")
 
 (defun pimacs--format-state-line-component (state component)
