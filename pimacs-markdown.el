@@ -571,9 +571,9 @@ When non-nil, diagnostics are appended to the temporary buffer
               (not (null (member (treesit-node-type node)
                                  pimacs-markdown-leading-newline-block-types)))))))
 
+;; Only retain fragments used in the current and preceding suffix render.
+;; References are unresolved here, so source text is a sufficient cache key.
 (defun pimacs--markdown-advance-inline-cache (state)
-  ;; Only retain fragments used in the current and preceding suffix render.
-  ;; References are unresolved here, so source text is a sufficient cache key.
   (setf (pimacs--markdown-inline-parser-state-previous-cache state)
         (pimacs--markdown-inline-parser-state-cache state)
         (pimacs--markdown-inline-parser-state-cache state)

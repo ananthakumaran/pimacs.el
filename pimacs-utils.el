@@ -78,8 +78,8 @@
   (when (stringp uuid)
     (substring uuid -8)))
 
+;; Compare property runs in C without taking a snapshot of BUFFER.
 (defun pimacs--buffer-string-common-prefix-length (buffer start end string)
-  ;; Compare property runs in C without taking a snapshot of BUFFER.
   (with-temp-buffer
     (insert string)
     (let ((comparison-buffer (current-buffer)))

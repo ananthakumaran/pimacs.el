@@ -1024,7 +1024,8 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      Whether to capture incremental Markdown rendering diagnostics.
 
      When non-nil, diagnostics are appended to the temporary buffer
-     ‘*pimacs-markdown-incremental-debug*’.
+     ‘*pimacs-markdown-incremental-debug*’, and every checkpoint is
+     validated.
 
  -- User Option: pimacs-markdown-use-unicode-tables t
 
@@ -1388,7 +1389,7 @@ Node: Sandbox18404
 Node: How It Works18797
 Node: Keybindings19949
 Node: Custom Variables24727
-Node: Custom Faces45300
+Node: Custom Faces45340
 
 End Tag Table
 
