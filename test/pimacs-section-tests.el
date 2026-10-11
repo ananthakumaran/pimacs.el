@@ -991,15 +991,16 @@
 
 (defun pimacs-section-tests--fixture-autohide ()
   (let* ((filter pimacs-section-autohide-filter)
+         (predicate (and (not (eq filter 'all)) (functionp filter)))
          (calls (make-hash-table :test 'eq))
          (pimacs-section-autohide-filter
-          (if (functionp filter)
+          (if predicate
               (lambda (section)
                 (puthash section (1+ (gethash section calls 0)) calls)
                 (funcall filter section))
             filter)))
     (pimacs-section-autohide)
-    (when (functionp filter)
+    (when predicate
       (let ((sections (cdr (pimacs-section--all-sections pimacs-section--root-section))))
         (should (= (hash-table-count calls) (length sections)))
         (dolist (section sections)

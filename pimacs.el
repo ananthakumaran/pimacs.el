@@ -46,6 +46,7 @@
 (require 'seq)
 (require 'mailcap)
 (require 'transient)
+(require 'eldoc)
 
 (require 'pimacs-core)
 (require 'pimacs-doctor)
@@ -132,6 +133,14 @@ status in the default widget to see its key."
 `file' uses `file-name-all-completions' to list files under the project root."
   :type '(choice (const :tag "Project files" project)
                  (const :tag "Default file system" file))
+  :group 'pimacs)
+
+(defcustom pimacs-eldoc-enabled t
+  "Whether to show section timestamps and durations through ElDoc.
+When non-nil, new chat buffers enable ElDoc and register Pimacs's
+timing provider.  When nil, the provider also stops reporting
+timing information in existing chat buffers."
+  :type 'boolean
   :group 'pimacs)
 
 (defcustom pimacs-prompt-history-max-size 500
@@ -934,84 +943,92 @@ the tail again, move point back to the prompt and resume following."
             (pimacs-ui--insert-role-prefix (or custom-type "custom"))
             (pimacs--insert-content (plist-get message :content) t)))))))
 
+(defun pimacs--parse-section-timestamp (timestamp)
+  (cond
+   ((numberp timestamp) (seconds-to-time (/ timestamp 1000.0)))
+   ((stringp timestamp) (pimacs--timestamp-time timestamp))))
+
 (defun pimacs--insert-message (message)
-  (pcase (pimacs--message-role message)
-    ("user"
-     (pimacs--insert-user-message (plist-get message :content)))
+  (let ((pimacs-section--timestamp
+         (or (pimacs--parse-section-timestamp (pimacs--json-get message :timestamp))
+             pimacs-section--timestamp)))
+    (pcase (pimacs--message-role message)
+      ("user"
+       (pimacs--insert-user-message (plist-get message :content)))
 
-    ("assistant"
-     (pimacs--docontent (item (plist-get message :content))
-       (pcase (plist-get item :type)
-         ("thinking"
-          (let ((content (list item)))
-            (pimacs--widget-save-excursion
-              (pimacs-section--create-section 'thinking pimacs-section--root-section
-                :info (make-pimacs-section-assistant-info
-                       :header (pimacs--content-header content)
-                       :content content :type 'thinking)
-                (pimacs-ui--insert-role-prefix "assistant")
-                (pimacs--insert-content content)))))
-         ("text"
-          (let ((content (list item)))
-            (pimacs--widget-save-excursion
-              (pimacs-section--create-section 'assistant pimacs-section--root-section
-                :info (make-pimacs-section-assistant-info
-                       :header (pimacs--content-header content)
-                       :content content :type 'text)
-                (pimacs-ui--insert-role-prefix "assistant")
-                (pimacs--insert-content content t)))))
-         ("toolCall"
-          (let ((tool-call-id (plist-get item :id))
-                (tool-name (plist-get item :name))
-                (args (plist-get item :arguments)))
-            (pimacs--widget-save-excursion
-              (let ((call-section (pimacs-section--new-section
-                                   'tool-call pimacs-section--root-section :padding "\n"
-                                   :info (make-pimacs-section-tool-call-info
-                                          :tool-name tool-name :args args))))
-                (pimacs--insert-tool-call call-section tool-name args)
-                (let ((result-section (pimacs-section--create-section 'tool-result call-section
-                                        :info (make-pimacs-section-tool-result-info
-                                               :tool-name tool-name :args args))))
-                  (puthash tool-call-id
-                           (make-pimacs-tool-call
-                            :call-section call-section
-                            :result-section result-section
-                            :prev-text ""
-                            :tool-name tool-name
-                            :args args)
-                           pimacs--tool-calls)))))))))
-    ("toolResult"
-     (let ((tool-call-id (plist-get message :toolCallId))
-           (tool-name (plist-get message :toolName))
-           (content (pimacs--content-normalize (plist-get message :content)))
-           (is-error (plist-get message :isError))
-           (details (plist-get message :details)))
-       (when-let ((entry (gethash tool-call-id pimacs--tool-calls)))
-         (let ((result-section (pimacs-tool-call-result-section entry))
-               (args (pimacs-tool-call-args entry)))
-           (pimacs--widget-save-excursion
-             (pimacs--insert-nested-tool-calls
-              tool-call-id entry (pimacs--json-get message :nestedCalls))
-             (pimacs-section--replace-section result-section
-               (pimacs--insert-tool-result tool-name content is-error details args))
-             (pimacs-section--set-info result-section (make-pimacs-section-tool-result-info :tool-name tool-name :details details :args args))))
-         (remhash tool-call-id pimacs--tool-calls))))
+      ("assistant"
+       (pimacs--docontent (item (plist-get message :content))
+         (pcase (plist-get item :type)
+           ("thinking"
+            (let ((content (list item)))
+              (pimacs--widget-save-excursion
+                (pimacs-section--create-section 'thinking pimacs-section--root-section
+                  :info (make-pimacs-section-assistant-info
+                         :header (pimacs--content-header content)
+                         :content content :type 'thinking)
+                  (pimacs-ui--insert-role-prefix "assistant")
+                  (pimacs--insert-content content)))))
+           ("text"
+            (let ((content (list item)))
+              (pimacs--widget-save-excursion
+                (pimacs-section--create-section 'assistant pimacs-section--root-section
+                  :info (make-pimacs-section-assistant-info
+                         :header (pimacs--content-header content)
+                         :content content :type 'text)
+                  (pimacs-ui--insert-role-prefix "assistant")
+                  (pimacs--insert-content content t)))))
+           ("toolCall"
+            (let ((tool-call-id (plist-get item :id))
+                  (tool-name (plist-get item :name))
+                  (args (plist-get item :arguments)))
+              (pimacs--widget-save-excursion
+                (let ((call-section (pimacs-section--new-section
+                                     'tool-call pimacs-section--root-section :padding "\n"
+                                     :info (make-pimacs-section-tool-call-info
+                                            :tool-name tool-name :args args))))
+                  (pimacs--insert-tool-call call-section tool-name args)
+                  (let ((result-section (pimacs-section--create-section 'tool-result call-section
+                                          :info (make-pimacs-section-tool-result-info
+                                                 :tool-name tool-name :args args))))
+                    (puthash tool-call-id
+                             (make-pimacs-tool-call
+                              :call-section call-section
+                              :result-section result-section
+                              :prev-text ""
+                              :tool-name tool-name
+                              :args args)
+                             pimacs--tool-calls)))))))))
+      ("toolResult"
+       (let ((tool-call-id (plist-get message :toolCallId))
+             (tool-name (plist-get message :toolName))
+             (content (pimacs--content-normalize (plist-get message :content)))
+             (is-error (plist-get message :isError))
+             (details (plist-get message :details)))
+         (when-let ((entry (gethash tool-call-id pimacs--tool-calls)))
+           (let ((result-section (pimacs-tool-call-result-section entry))
+                 (args (pimacs-tool-call-args entry)))
+             (pimacs--widget-save-excursion
+               (pimacs--insert-nested-tool-calls
+                tool-call-id entry (pimacs--json-get message :nestedCalls))
+               (pimacs-section--replace-section result-section
+                 (pimacs--insert-tool-result tool-name content is-error details args))
+               (pimacs-section--set-info result-section (make-pimacs-section-tool-result-info :tool-name tool-name :details details :args args))))
+           (remhash tool-call-id pimacs--tool-calls))))
 
-    ("bashExecution"
-     (let* ((args (list :command (pimacs--json-get message :command)))
-            (content (pimacs--content-normalize (pimacs--json-get message :output))))
-       (pimacs--widget-save-excursion
-         (let ((call-section (pimacs-section--new-section
-                              'tool-call pimacs-section--root-section :padding "\n"
-                              :info (make-pimacs-section-tool-call-info :tool-name "bash" :args args))))
-           (pimacs--insert-tool-call call-section "bash" args)
-           (pimacs-section--create-section 'tool-result call-section
-             :info (make-pimacs-section-tool-result-info :tool-name "bash" :args args)
-             (pimacs--insert-tool-result "bash" content nil message))))))
+      ("bashExecution"
+       (let* ((args (list :command (pimacs--json-get message :command)))
+              (content (pimacs--content-normalize (pimacs--json-get message :output))))
+         (pimacs--widget-save-excursion
+           (let ((call-section (pimacs-section--new-section
+                                'tool-call pimacs-section--root-section :padding "\n"
+                                :info (make-pimacs-section-tool-call-info :tool-name "bash" :args args))))
+             (pimacs--insert-tool-call call-section "bash" args)
+             (pimacs-section--create-section 'tool-result call-section
+               :info (make-pimacs-section-tool-result-info :tool-name "bash" :args args)
+               (pimacs--insert-tool-result "bash" content nil message))))))
 
-    ("custom"
-     (pimacs--insert-custom-message message))))
+      ("custom"
+       (pimacs--insert-custom-message message)))))
 
 (defun pimacs--handle-message-update (event)
   (let* ((assistant-message-event (plist-get event :assistantMessageEvent))
@@ -1123,7 +1140,10 @@ the tail again, move point back to the prompt and resume following."
 (defun pimacs--handle-message-end (event)
   (let* ((message (plist-get event :message))
          (error-message (pimacs--json-get message :errorMessage))
-         (role (pimacs--message-role message)))
+         (role (pimacs--message-role message))
+         (pimacs-section--timestamp
+          (or (pimacs--parse-section-timestamp (pimacs--json-get message :timestamp))
+              (current-time))))
     (pcase role
       ("assistant"
        (let ((index 0))
@@ -1480,12 +1500,14 @@ is non-nil, insert an ellipsis instead of ARGS."
             (funcall insert-content)))))
     (pimacs-section--set-info section (make-pimacs-section-tool-call-info
                                        :tool-name tool-name
+                                       :id (when-let ((info (pimacs-section-info section)))
+                                             (pimacs-section-tool-call-info-id info))
                                        :args args
                                        :header (pimacs--section-header
                                                 (buffer-substring-no-properties
                                                  args-begin args-end))))))
 
-(defun pimacs--create-child-tool-call (parent tool-name args &optional call-only)
+(defun pimacs--create-child-tool-call (parent tool-name args &optional call-only id)
   (let ((parent-section (pimacs-tool-call-call-section parent))
         (boundary (pimacs-tool-call-result-section parent))
         entry)
@@ -1495,7 +1517,7 @@ is non-nil, insert an ellipsis instead of ARGS."
         (let ((call-section (pimacs-section--new-section
                              'tool-call parent-section :padding "\n"
                              :info (make-pimacs-section-tool-call-info
-                                    :tool-name tool-name :args args)))
+                                    :tool-name tool-name :args args :id id)))
               result-section)
           (pimacs--insert-tool-call call-section tool-name args)
           (unless call-only
@@ -1509,6 +1531,27 @@ is non-nil, insert an ellipsis instead of ARGS."
                                              :args args)))))
     entry))
 
+(defun pimacs--set-tool-call-duration (section duration-ms)
+  (when (and (numberp duration-ms) (>= duration-ms 0))
+    (dolist (target (cons section
+                          (seq-filter (lambda (child)
+                                        (eq (pimacs-section-type child) 'tool-result))
+                                      (pimacs-section-children section))))
+      (setf (pimacs-section-duration target) (/ duration-ms 1000.0)))))
+
+(defun pimacs--apply-tool-call-durations (parent calls)
+  (when calls
+    (let ((sections (pimacs-section--all-sections (pimacs-tool-call-call-section parent))))
+      (dolist (call calls)
+        (when-let* ((id (pimacs--json-get call :id))
+                    (section (seq-find
+                              (lambda (section)
+                                (and (eq (pimacs-section-type section) 'tool-call)
+                                     (when-let ((info (pimacs-section-info section)))
+                                       (equal id (pimacs-section-tool-call-info-id info)))))
+                              sections)))
+          (pimacs--set-tool-call-duration section (pimacs--json-get call :durationMs)))))))
+
 (defun pimacs--insert-nested-tool-calls (parent-id parent record)
   "Restore tool-call metadata from RECORD beneath PARENT with id PARENT-ID.
 Pi persists child metadata, not results."
@@ -1519,8 +1562,10 @@ Pi persists child metadata, not results."
              (caller-id (substring id 0 (string-match "/[0-9]+\\'" id)))
              (entry (pimacs--create-child-tool-call
                      (gethash caller-id entries)
-                     (plist-get call :name) (plist-get call :arguments) t)))
+                     (plist-get call :name) (plist-get call :arguments) t id)))
         (puthash id entry entries)
+        (pimacs--set-tool-call-duration (pimacs-tool-call-call-section entry)
+                                        (pimacs--json-get call :durationMs))
         (unless (plist-member call :arguments)
           (pimacs--widget-save-excursion
             (pimacs-section--append-section (pimacs-tool-call-call-section entry)
@@ -1538,7 +1583,8 @@ Pi persists child metadata, not results."
     (puthash (plist-get event :toolCallId)
              (pimacs--create-child-tool-call
               (gethash parent-id pimacs--tool-calls)
-              (plist-get event :toolName) (plist-get event :args))
+              (plist-get event :toolName) (plist-get event :args)
+              nil (plist-get event :toolCallId))
              pimacs--tool-calls)))
 
 (defun pimacs--insert-tool-result (tool-name content is-error &optional details args)
@@ -1593,11 +1639,15 @@ Pi persists child metadata, not results."
          (content (pimacs--content-normalize (plist-get result :content)))
          (is-error (plist-get event :isError))
          (tool-name (plist-get event :toolName))
-         (entry (gethash tool-call-id pimacs--tool-calls)))
+         (entry (gethash tool-call-id pimacs--tool-calls))
+         (pimacs-section--timestamp (current-time)))
     (when entry
+      (setf (pimacs-section-timestamp (pimacs-tool-call-call-section entry))
+            pimacs-section--timestamp)
       (let ((result-section (pimacs-tool-call-result-section entry))
             (details (plist-get result :details))
             (args (pimacs-tool-call-args entry)))
+        (pimacs--apply-tool-call-durations entry (pimacs--json-get details :calls))
         (pimacs--widget-save-excursion
           (pimacs-section--replace-section result-section
             (pimacs--insert-tool-result tool-name content is-error
@@ -2621,23 +2671,25 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
   (pimacs--update-status-widget))
 
 (defun pimacs--render-session-entry (entry)
-  (pcase (plist-get entry :type)
-    ("message"
-     (pimacs--insert-message (plist-get entry :message)))
-    ("compaction"
-     (pimacs--insert-compaction (plist-get entry :summary)
-                                (plist-get entry :tokensBefore)))
-    ("model_change"
-     (pimacs--insert-model-change (plist-get entry :provider)
-                                  (plist-get entry :modelId)))
-    ("thinking_level_change"
-     (pimacs--insert-thinking-level-change (plist-get entry :thinkingLevel)))
-    ("custom_message"
-     (pimacs--insert-custom-message entry))
-    ("session_info"
-     (when-let ((name (pimacs--json-get entry :name)))
-       (pimacs--insert-session-info name)))
-    (_ nil)))
+  (let ((pimacs-section--timestamp
+         (pimacs--parse-section-timestamp (pimacs--json-get entry :timestamp))))
+    (pcase (plist-get entry :type)
+      ("message"
+       (pimacs--insert-message (plist-get entry :message)))
+      ("compaction"
+       (pimacs--insert-compaction (plist-get entry :summary)
+                                  (plist-get entry :tokensBefore)))
+      ("model_change"
+       (pimacs--insert-model-change (plist-get entry :provider)
+                                    (plist-get entry :modelId)))
+      ("thinking_level_change"
+       (pimacs--insert-thinking-level-change (plist-get entry :thinkingLevel)))
+      ("custom_message"
+       (pimacs--insert-custom-message entry))
+      ("session_info"
+       (when-let ((name (pimacs--json-get entry :name)))
+         (pimacs--insert-session-info name)))
+      (_ nil))))
 
 (defun pimacs--render-session-entries (entries)
   (dolist (entry entries)
@@ -2680,7 +2732,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
 
 (defun pimacs--history-create-loading-section (count)
   (let ((section (pimacs-section--new-section
-                  'history pimacs-section--root-section :face nil)))
+                  'history pimacs-section--root-section :face nil :timestamp nil)))
     (pimacs-section--insert-section section
       (insert (format "Loading history: %d entries pending" count)))
     (setq pimacs--history-loading-section section)
@@ -3172,6 +3224,24 @@ With a prefix argument OTHER-WINDOW, visit in other window."
              groups)
     result))
 
+(defun pimacs--section-eldoc (callback &rest _)
+  (when pimacs-eldoc-enabled
+    (when-let ((section (pimacs-section--current-section)))
+      (let ((timestamp (pimacs-section-timestamp section))
+            (duration (pimacs-section-duration section)))
+        (when (or timestamp duration)
+          (funcall callback
+                   (string-join
+                    (delq nil
+                          (list (when timestamp
+                                  (format "%s · %s"
+                                          (pimacs--format-timestamp timestamp)
+                                          (pimacs--format-relative-time timestamp)))
+                                (when duration
+                                  (format "took %s" (pimacs--format-duration duration)))))
+                    " · "))
+          t)))))
+
 (define-derived-mode pimacs-chat-mode nil "pimacs-chat"
   "Major mode for pimacs chat.
 
@@ -3184,6 +3254,12 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (setq pimacs--content-sections (make-hash-table :test 'eql))
   (pimacs-section--create-root-section)
   (setq imenu-create-index-function #'pimacs--imenu-create-index)
+  (when pimacs-eldoc-enabled
+    (eldoc-add-command-completions
+     "pimacs-goto-" "pimacs-toggle-section" "pimacs-mouse-toggle-section"
+     "pimacs-section-show-level-" "pimacs-section-cycle-global")
+    (add-hook 'eldoc-documentation-functions #'pimacs--section-eldoc nil t)
+    (eldoc-mode 1))
   (setq pimacs--prompt-history (make-ring pimacs-prompt-history-max-size))
   (setq-local completion-at-point-functions
               (append (list #'pimacs--completion-at-point-slash

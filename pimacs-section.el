@@ -132,6 +132,7 @@ Set this to nil to disable fringe indicators."
 (defvar-local pimacs-section--root-section nil)
 (defvar pimacs-section--insertion-parent nil)
 (defvar pimacs-section--insertion-before nil)
+(defvar pimacs-section--timestamp :now)
 
 (defmacro pimacs-section--with-insertion-before (parent boundary &rest body)
   (declare (indent 2)
@@ -305,10 +306,10 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
              (pimacs-section--prefix-p (cdr prefix) (cdr list))))))
 
 (cl-defstruct pimacs-section
-  parent children beginning end type visibility initial-visibility info padding face)
+  parent children beginning end type visibility initial-visibility info padding face timestamp duration)
 
 (cl-defstruct pimacs-section-tool-call-info
-  tool-name args header)
+  tool-name args header id)
 
 (cl-defstruct pimacs-section-tool-result-info
   tool-name details args)
@@ -375,6 +376,11 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
       (pimacs-section-beginning pimacs-section--insertion-before)
     (pimacs-section-end parent)))
 
+(defun pimacs-section--timestamp-value ()
+  (if (eq pimacs-section--timestamp :now)
+      (current-time)
+    pimacs-section--timestamp))
+
 (defun pimacs-section--new-section (type parent &rest args)
   (let* ((padding (or (plist-get args :padding) pimacs-section-padding))
          (face (or (plist-get args :face)
@@ -384,7 +390,11 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
                                  :face face
                                  :visibility pimacs-section--visibility-default
                                  :info (plist-get args :info)
-                                 :padding padding)))
+                                 :padding padding
+                                 :timestamp (and parent
+                                                 (if (plist-member args :timestamp)
+                                                     (plist-get args :timestamp)
+                                                   (pimacs-section--timestamp-value))))))
     (when parent
       (let ((visibility (if (pimacs-section--filter-matches-p
                              s pimacs-section-initial-hide-filter)
@@ -593,6 +603,8 @@ BODY may start with :info followed by the initial section metadata."
         (body-beginning (make-symbol "*body-beginning*"))
         (padding-beginning (make-symbol "*padding-beginning*")))
     `(let* ((,s ,section))
+       (unless (eq pimacs-section--timestamp :now)
+         (setf (pimacs-section-timestamp ,s) pimacs-section--timestamp))
        (pimacs--with-point-transaction
            ((pimacs-section-beginning ,s) (pimacs-section-end ,s))
            ((pimacs-section-beginning ,s) (pimacs-section-end ,s))

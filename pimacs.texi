@@ -691,6 +691,14 @@ Completion backend for @-prefixed file paths in prompts.
 @code{file} uses @code{file-name-all-completions} to list files under the project root.
 @end defopt
 
+@defopt pimacs-eldoc-enabled @code{t}
+
+Whether to show section timestamps and durations through ElDoc.
+When non-nil, new chat buffers enable ElDoc and register Pimacs's
+timing provider.  When nil, the provider also stops reporting
+timing information in existing chat buffers.
+@end defopt
+
 @defopt pimacs-prompt-history-max-size @code{500}
 
 Maximum number of prompt history entries to keep.

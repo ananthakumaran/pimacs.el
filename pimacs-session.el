@@ -44,32 +44,13 @@
   id timestamp modified cwd path parent-path parent-id name preview)
 
 (defun pimacs-session--timestamp-time (timestamp)
-  (if (stringp timestamp)
-      (condition-case nil
-          (parse-iso8601-time-string timestamp)
-        (error nil))
-    timestamp))
+  (pimacs--timestamp-time timestamp))
 
 (defun pimacs-session-format-timestamp (timestamp)
-  (when-let ((time (pimacs-session--timestamp-time timestamp)))
-    (condition-case nil
-        (format-time-string "%d %b %Y, %R" time)
-      (error nil))))
+  (pimacs--format-timestamp timestamp))
 
 (defun pimacs-session-format-relative-time (timestamp)
-  (when-let ((time (pimacs-session--timestamp-time timestamp)))
-    (condition-case nil
-        (let ((seconds (max 0
-                            (floor (pimacs--seconds-elapsed-since time)))))
-          (if (< seconds 60)
-              "just now"
-            (concat
-             (cond
-              ((< seconds 3600) (format-seconds "%M" seconds))
-              ((< seconds 86400) (format-seconds "%H" seconds))
-              (t (format-seconds "%D" seconds)))
-             " ago")))
-      (error nil))))
+  (pimacs--format-relative-time timestamp))
 
 (defun pimacs-session-project-directory (session-directory project-root)
   (let* ((project-root (directory-file-name (expand-file-name project-root)))

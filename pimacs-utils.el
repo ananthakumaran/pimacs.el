@@ -22,6 +22,8 @@
 ;;; Code:
 
 (require 'subr-x)
+(require 'parse-time)
+(require 'time-date)
 (require 'widget)
 (require 'ffap)
 (require 'diff-mode)
@@ -239,6 +241,39 @@ BODY must not modify the input field; retained undo entries must belong to it."
 
 (defun pimacs--seconds-elapsed-since (time)
   (time-to-seconds (time-subtract (current-time) time)))
+
+(defun pimacs--timestamp-time (timestamp)
+  (if (stringp timestamp)
+      (condition-case nil
+          (parse-iso8601-time-string timestamp)
+        (error nil))
+    timestamp))
+
+(defun pimacs--format-timestamp (timestamp)
+  (when-let ((time (pimacs--timestamp-time timestamp)))
+    (condition-case nil
+        (format-time-string "%d %b %Y, %R" time)
+      (error nil))))
+
+(defun pimacs--format-relative-time (timestamp)
+  (when-let ((time (pimacs--timestamp-time timestamp)))
+    (condition-case nil
+        (let ((seconds (max 0 (floor (pimacs--seconds-elapsed-since time)))))
+          (if (< seconds 60)
+              "just now"
+            (concat
+             (cond
+              ((< seconds 3600) (format-seconds "%M" seconds))
+              ((< seconds 86400) (format-seconds "%H" seconds))
+              (t (format-seconds "%D" seconds)))
+             " ago")))
+      (error nil))))
+
+(defun pimacs--format-duration (seconds)
+  (when (and (numberp seconds) (>= seconds 0))
+    (if (< seconds 60)
+        (format "%.2fs" seconds)
+      (format-seconds "%x%dd %hh %mm %z%ss" (floor seconds)))))
 
 (defun pimacs--hash-remove-if (pred table)
   "Remove entries from TABLE for which PRED return non-nil.

@@ -1165,10 +1165,13 @@
 
     (pimacs--handle-message-end
      '(:message (:role "assistant"
+                       :timestamp 1767323040000
                        :content ((:type "text" :text "Hello")))))
 
     (let ((section (car (pimacs-section-children pimacs-section--root-section))))
       (should (eq (pimacs-section-type section) 'assistant))
+      (should (time-equal-p (pimacs-section-timestamp section)
+                            (seconds-to-time 1767323040)))
       (should (equal (pimacs-section-assistant-info-content
                       (pimacs-section-info section))
                      '((:type "text" :text "Hello"))))
@@ -1694,6 +1697,7 @@
         (pimacs--history-render-idle (current-buffer) pimacs--history-render-generation))
       (let ((roots (pimacs-section-children pimacs-section--root-section)))
         (should (= (length roots) 12))
+        (should-not (seq-some #'pimacs-section-timestamp roots))
         (should-not pimacs--history-loading-section)
         (should-not pimacs--history-render-pending)
         (should (cl-every #'pimacs-section--hidden-p (seq-take roots 7)))
@@ -1705,6 +1709,75 @@
                                "user> message-9|user> message-10|user> message-11|\n")))
         (should (equal scheduled
                        (list (current-buffer) pimacs--history-render-generation)))))))
+
+(ert-deftest pimacs-nested-tool-durations-live-and-restored ()
+  (dolist (live '(t nil))
+    (with-temp-buffer
+      (let* ((pimacs-eldoc-enabled nil)
+             (time (encode-time 0 4 3 2 1 2026))
+             (pimacs-section--timestamp time)
+             (calls '((:id "parent/1" :name "bash" :arguments (:command "true") :durationMs 90000)
+                      (:id "parent/2" :name "bash" :arguments (:command "true") :durationMs 0)
+                      (:id "parent/3" :name "bash" :arguments (:command "true")))))
+        (cl-letf (((symbol-function 'pimacs--fetch-commands) #'ignore))
+          (pimacs-chat-mode))
+        (pimacs--handle-message-update
+         '(:assistantMessageEvent (:type "toolcall_start" :id "parent" :toolName "codemode")))
+        (pimacs--handle-message-update
+         '(:assistantMessageEvent
+           (:type "toolcall_end" :toolCall (:id "parent" :name "codemode" :arguments (:code "")))))
+        (let ((parent (gethash "parent" pimacs--tool-calls)))
+          (if live
+              (cl-letf (((symbol-function 'current-time) (lambda () time)))
+                (dolist (call calls)
+                  (pimacs--handle-tool-execution-start
+                   (list :parentToolCallId "parent" :toolCallId (plist-get call :id)
+                         :toolName "bash" :args (plist-get call :arguments)))
+                  (pimacs--handle-tool-execution-end
+                   (list :toolCallId (plist-get call :id) :toolName "bash"
+                         :result '(:content ((:type "text" :text "ok"))))))
+                (pimacs--handle-tool-execution-end
+                 (list :toolCallId "parent" :toolName "codemode"
+                       :result (list :content nil :details (list :calls (reverse calls))))))
+            (pimacs--insert-nested-tool-calls "parent" parent (list :calls calls :complete t)))
+          (should-not (pimacs-section-duration (pimacs-tool-call-call-section parent)))
+          (let ((children (seq-filter (lambda (section) (eq (pimacs-section-type section) 'tool-call))
+                                      (pimacs-section-children (pimacs-tool-call-call-section parent)))))
+            (should (equal (mapcar #'pimacs-section-duration children) '(90.0 0.0 nil)))
+            (dolist (section children)
+              (should (equal (pimacs-section-timestamp section) time))
+              (when live
+                (should (equal (pimacs-section-duration (car (pimacs-section-children section)))
+                               (pimacs-section-duration section)))))))))))
+
+(ert-deftest pimacs-section-eldoc-timing-and-option ()
+  (with-temp-buffer
+    (let ((pimacs-eldoc-enabled t)
+          (time (encode-time 0 4 3 2 1 2026)))
+      (cl-letf (((symbol-function 'pimacs--fetch-commands) #'ignore))
+        (pimacs-chat-mode))
+      (should (memq #'pimacs--section-eldoc eldoc-documentation-functions))
+      (let ((stamp "02 Jan 2026, 03:04 · 1 minute ago") section)
+        (pimacs--widget-save-excursion
+          (setq section (pimacs-section--create-section 'assistant pimacs-section--root-section
+                          (insert "body"))))
+        (goto-char (pimacs-section-beginning section))
+        (cl-letf (((symbol-function 'pimacs--seconds-elapsed-since) (lambda (_time) 65)))
+          (dolist (case (list (list time 90 (concat stamp " · took 1m 30s"))
+                              (list time nil stamp) '(nil 90 "took 1m 30s") '(nil nil nil)))
+            (setf (pimacs-section-timestamp section) (nth 0 case)
+                  (pimacs-section-duration section) (nth 1 case))
+            (let (doc)
+              (pimacs--section-eldoc (lambda (text) (setq doc text)))
+              (should (equal doc (nth 2 case))))))
+        (setf (pimacs-section-duration section) 90)
+        (let ((pimacs-eldoc-enabled nil))
+          (should-not (pimacs--section-eldoc #'ert-fail))))))
+  (let ((pimacs-eldoc-enabled nil))
+    (with-temp-buffer
+      (cl-letf (((symbol-function 'pimacs--fetch-commands) #'ignore))
+        (pimacs-chat-mode))
+      (should-not (memq #'pimacs--section-eldoc eldoc-documentation-functions)))))
 
 (ert-deftest pimacs--render-session-history-disables-lazy-autohide-with-nil-count ()
   (with-temp-buffer

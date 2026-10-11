@@ -611,6 +611,13 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      uses ‘file-name-all-completions’ to list files under the project
      root.
 
+ -- User Option: pimacs-eldoc-enabled t
+
+     Whether to show section timestamps and durations through ElDoc.
+     When non-nil, new chat buffers enable ElDoc and register Pimacs's
+     timing provider.  When nil, the provider also stops reporting
+     timing information in existing chat buffers.
+
  -- User Option: pimacs-prompt-history-max-size 500
 
      Maximum number of prompt history entries to keep.
@@ -1377,7 +1384,7 @@ Node: Sandbox18278
 Node: How It Works18671
 Node: Keybindings19823
 Node: Custom Variables24601
-Node: Custom Faces44721
+Node: Custom Faces45020
 
 End Tag Table
 

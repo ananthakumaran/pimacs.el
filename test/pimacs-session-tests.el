@@ -43,10 +43,17 @@
     (should (equal (pimacs-session-format-timestamp "2026-01-02T03:04:00Z")
                    (format-time-string "%d %b %Y, %R"
                                        (parse-iso8601-time-string "2026-01-02T03:04:00Z"))))
-    (cl-letf (((symbol-function 'pimacs--seconds-elapsed-since)
-               (lambda (_time) 65)))
-      (should (equal (pimacs-session-format-relative-time time)
-                     "1 minute ago")))))
+    (dolist (case '((0 . "just now") (65 . "1 minute ago")
+                    (3600 . "1 hour ago") (86400 . "1 day ago")))
+      (cl-letf (((symbol-function 'pimacs--seconds-elapsed-since)
+                 (lambda (_time) (car case))))
+        (should (equal (pimacs-session-format-relative-time time) (cdr case)))))))
+
+(ert-deftest pimacs-formats-durations ()
+  (dolist (case '((nil . nil) (-1 . nil) (0 . "0.00s") (1.24 . "1.24s")
+                  (59.99 . "59.99s") (60 . "1m") (90 . "1m 30s")
+                  (3735 . "1h 2m 15s") (86400 . "1d")))
+    (should (equal (pimacs--format-duration (car case)) (cdr case)))))
 
 (ert-deftest pimacs-session-read-record-respects-max-bytes ()
   (let ((file (make-temp-file "pimacs-session-" nil ".jsonl")))
