@@ -400,6 +400,37 @@
              state))))
       (pimacs--markdown-delete-inline-parser-pool state))))
 
+(ert-deftest pimacs-markdown-inline-cache-drops-unused-generations ()
+  (let* ((old-cache (make-hash-table :test #'equal))
+         (state (make-pimacs--markdown-inline-parser-state :cache old-cache)))
+    (puthash "*old*" "old" old-cache)
+    (pimacs--markdown-advance-inline-cache state)
+    (should (eq old-cache (pimacs--markdown-inline-parser-state-previous-cache state)))
+    (should (= 0 (hash-table-count (pimacs--markdown-inline-parser-state-cache state))))
+    (puthash "*new*" "new" (pimacs--markdown-inline-parser-state-cache state))
+    (pimacs--markdown-advance-inline-cache state)
+    (should (= 0 (hash-table-count (pimacs--markdown-inline-parser-state-cache state))))
+    (should (equal "new" (gethash "*new*" (pimacs--markdown-inline-parser-state-previous-cache state))))
+    (should-not (gethash "*old*" (pimacs--markdown-inline-parser-state-previous-cache state)))))
+
+(ert-deftest pimacs-markdown-inline-cache-preserves-properties ()
+  (let ((state (make-pimacs--markdown-inline-parser-state
+                :depth 0 :cache (make-hash-table :test #'equal))))
+    (unwind-protect
+        (let* ((context (make-pimacs--markdown-render-context :inline-parser-state state))
+               (text "*styled* and [link](https://example.com)")
+               (expected (pimacs--markdown-render-inline-source text context)))
+          (pimacs--markdown-propertize-face
+           (pimacs--markdown-render-inline-source text context) 'bold)
+          (should (equal-including-properties
+                   expected (pimacs--markdown-render-inline-source text context)))
+          (pimacs--markdown-advance-inline-cache state)
+          (cl-letf (((symbol-function 'pimacs--markdown-with-inline-parser)
+                     (lambda (&rest _) (ert-fail "Unchanged fragment was reparsed"))))
+            (should (equal-including-properties
+                     expected (pimacs--markdown-render-inline-source text context)))))
+      (pimacs--markdown-delete-inline-parser-pool state))))
+
 (ert-deftest pimacs-markdown-checkpoint-validation-is-local ()
   (dolist (source '("Top-level paragraph\n\n> Quote" "# Heading\n\nParagraph\n\n> Quote"))
     (let ((state (pimacs--render-markdown :create)))

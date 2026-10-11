@@ -106,6 +106,8 @@
 
 (cl-defstruct pimacs--markdown-inline-parser-state
   pool
+  cache
+  previous-cache
   depth)
 
 (cl-defstruct pimacs--markdown-render-context
@@ -569,6 +571,14 @@ When non-nil, diagnostics are appended to the temporary buffer
               (not (null (member (treesit-node-type node)
                                  pimacs-markdown-leading-newline-block-types)))))))
 
+(defun pimacs--markdown-advance-inline-cache (state)
+  ;; Only retain fragments used in the current and preceding suffix render.
+  ;; References are unresolved here, so source text is a sufficient cache key.
+  (setf (pimacs--markdown-inline-parser-state-previous-cache state)
+        (pimacs--markdown-inline-parser-state-cache state)
+        (pimacs--markdown-inline-parser-state-cache state)
+        (make-hash-table :test #'equal)))
+
 (defun pimacs--markdown-render-top-level (session root start output-offset &optional leading-newline-p)
   (let* ((inline-state (pimacs--markdown-render-session-inline-parser-state session))
          (context (make-pimacs--markdown-render-context
@@ -580,6 +590,7 @@ When non-nil, diagnostics are appended to the temporary buffer
          (length 0)
          checkpoints
          chunks)
+    (pimacs--markdown-advance-inline-cache inline-state)
     (cl-labels ((append-text (text)
                   (push text chunks)
                   (cl-incf length (length text)))
@@ -1189,7 +1200,19 @@ When non-nil, diagnostics are appended to the temporary buffer
 (defun pimacs--markdown-render-inline-source (text context)
   (if (not (string-match-p pimacs--markdown-inline-syntax-regexp text))
       text
-    (pimacs--markdown-render-inline-uncached text context)))
+    (let* ((state (pimacs--markdown-render-context-inline-parser-state context))
+           (cache (and state (pimacs--markdown-inline-parser-state-cache state)))
+           (previous (and cache (pimacs--markdown-inline-parser-state-previous-cache state)))
+           (cached (and cache (or (gethash text cache)
+                                  (and previous (gethash text previous))))))
+      (if cached
+          (progn
+            (puthash text cached cache)
+            (copy-sequence cached))
+        (let ((rendered (pimacs--markdown-render-inline-uncached text context)))
+          (when cache
+            (puthash text (copy-sequence rendered) cache))
+          rendered)))))
 
 (defun pimacs--markdown-render-inline-range (begin end context)
   (pimacs--markdown-render-inline-source
