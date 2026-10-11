@@ -1162,7 +1162,7 @@ Render these on a fresh line when the renderer starts mid-line.
 Whether to capture incremental Markdown rendering diagnostics.
 
 When non-nil, diagnostics are appended to the temporary buffer
-@code{*pimacs-markdown-incremental-debug*}, and every checkpoint is validated.
+@code{*pimacs-markdown-incremental-debug*}.
 @end defopt
 
 @defopt pimacs-markdown-use-unicode-tables @code{t}

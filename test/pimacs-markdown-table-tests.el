@@ -269,17 +269,16 @@
       (pimacs--render-markdown :destroy state))))
 
 (defun pimacs-markdown-table-tests--should-stream-render (fixture)
-  (let ((expected (pimacs-markdown-table-tests--fixture-expected fixture))
-        (input (pimacs-markdown-table-tests--fixture-input fixture)))
+  (let ((input (pimacs-markdown-table-tests--fixture-input fixture)))
     (pimacs-markdown-table-tests--call-with-mapped-widths
      (pimacs-markdown-table-tests--fixture-window-width fixture)
      (pimacs-markdown-table-tests--fixture-unicode-tables fixture)
      (lambda ()
        (should
-        (equal expected
-               (pimacs-markdown-table-tests--append-cell-widths
-                (pimacs-markdown-table-tests--visible-text
-                 (pimacs-markdown-table-tests--stream-render input)))))))))
+        (equal-including-properties
+         (cl-letf (((symbol-function 'pimacs--markdown-reference-definitions) #'ignore))
+           (pimacs--markdown-render-source input))
+         (pimacs-markdown-table-tests--stream-render input)))))))
 
 (ert-deftest pimacs-markdown-table-fixtures ()
   (dolist (fixture (pimacs-markdown-table-tests--fixtures))

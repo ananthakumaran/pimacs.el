@@ -17,7 +17,8 @@
 
 ;;; Commentary:
 
-;; Markdown is parsed by tree-sitter after streaming has completed.
+;; Markdown is rendered incrementally while streaming.  Reference resolution,
+;; code fontification and URL widgets are deferred to the complete final render.
 
 ;;; Code:
 
@@ -295,7 +296,6 @@ Render these on a fresh line when the renderer starts mid-line."
   parser
   checkpoints
   changed-ranges
-  reference-definitions
   rendered-length
   update-number
   debug-output
@@ -359,7 +359,6 @@ When non-nil, diagnostics are appended to the temporary buffer
    (pimacs--markdown-render-session-checkpoints session))
   (setf (pimacs--markdown-render-session-checkpoints session) nil
         (pimacs--markdown-render-session-changed-ranges session) nil
-        (pimacs--markdown-render-session-reference-definitions session) nil
         (pimacs--markdown-render-session-rendered-length session) 0
         (pimacs--markdown-render-session-update-number session) 0
         (pimacs--markdown-render-session-debug-output session) nil
@@ -406,19 +405,17 @@ When non-nil, diagnostics are appended to the temporary buffer
         (push (cons (car range) (cdr range)) result)))
     (nreverse result)))
 
-(defun pimacs--markdown-safe-boundary (node document-start)
+(defun pimacs--markdown-safe-boundary (node)
   (let (candidate)
     (while node
       (let ((type (treesit-node-type node))
             (parent (treesit-node-parent node)))
         (cond
-         ((string= type "link_reference_definition")
-          (setq candidate document-start node nil))
          ((member type '("pipe_table" "list" "block_quote" "fenced_code_block"))
           (setq candidate (treesit-node-start node) node nil))
          ((and (null candidate)
                (member type '("paragraph" "atx_heading" "section" "html_block"
-                              "indented_code_block" "thematic_break")))
+                              "link_reference_definition" "indented_code_block" "thematic_break")))
           (setq candidate (treesit-node-start node)))
          ((and (null candidate) parent
                (string= (treesit-node-type parent) "document"))
@@ -434,9 +431,9 @@ When non-nil, diagnostics are appended to the temporary buffer
          (start-node (treesit-node-at start parser t))
          (end-node (treesit-node-at end parser t))
          (start-boundary (and start-node
-                              (pimacs--markdown-safe-boundary start-node document-start)))
+                              (pimacs--markdown-safe-boundary start-node)))
          (end-boundary (and end-node
-                            (pimacs--markdown-safe-boundary end-node document-start))))
+                            (pimacs--markdown-safe-boundary end-node))))
     (cond
      ((and start-boundary end-boundary) (min start-boundary end-boundary))
      (start-boundary start-boundary)
@@ -552,8 +549,7 @@ When non-nil, diagnostics are appended to the temporary buffer
 (defun pimacs--markdown-render-top-level (session root start output-offset &optional leading-newline-p)
   (let* ((inline-state (make-pimacs--markdown-inline-parser-state :depth 0))
          (context (make-pimacs--markdown-render-context
-                   :reference-definitions
-                   (pimacs--markdown-render-session-reference-definitions session)
+                   :reference-definitions nil
                    :list-depth 0 :list-index nil
                    :inline-parser-state inline-state
                    :fontify-code nil))
@@ -658,33 +654,27 @@ When non-nil, diagnostics are appended to the temporary buffer
              (pimacs--markdown-render-checkpoint-output-offset checkpoint)
              :type (pimacs--markdown-render-checkpoint-type checkpoint))))
 
-(defun pimacs--markdown-incremental-render-plan (session root raw-ranges references-changed edit-position leading-newline-changed)
+(defun pimacs--markdown-incremental-render-plan (session root raw-ranges edit-position leading-newline-changed)
   (let* ((ranges (pimacs--markdown-coalesce-ranges raw-ranges))
          (boundary-positions
           (mapcar (lambda (range)
                     (pimacs--markdown-range-boundary range (pimacs--markdown-render-session-parser session)
                                                      (point-min)))
                   ranges))
-         (restart (if references-changed
-                      (point-min)
-                    (if boundary-positions
-                        (apply #'min boundary-positions)
-                      edit-position)))
+         (restart (if boundary-positions
+                      (apply #'min boundary-positions)
+                    edit-position))
          (checkpoint (pimacs--markdown-checkpoint-before session restart))
          checkpoint-valid
          (fallback-reason
           (cond
            (leading-newline-changed :leading-newline-changed)
-           (references-changed :reference-definitions-changed)
            ((null checkpoint) :no-checkpoint)
            ((= restart (point-min)) :document-start)
            ((not (pimacs--markdown-checkpoint-markers-valid-p session))
             :invalid-checkpoint-set)
            ((not (setq checkpoint-valid
-                       (and checkpoint
-                            (not (null
-                                  (pimacs--markdown-checkpoint-valid-p
-                                   session root checkpoint))))))
+                       (pimacs--markdown-checkpoint-valid-p session root checkpoint)))
             :invalid-checkpoint)
            (t nil))))
     (list :ranges ranges
@@ -794,11 +784,6 @@ When non-nil, diagnostics are appended to the temporary buffer
             (let* ((root (treesit-parser-root-node parser))
                    (raw-ranges
                     (pimacs--markdown-render-session-changed-ranges session))
-                   (definitions (pimacs--markdown-reference-definitions root))
-                   (references-changed
-                    (not (equal definitions
-                                (pimacs--markdown-render-session-reference-definitions
-                                 session))))
                    (leading-newline-needed
                     (pimacs--markdown-leading-newline-needed-p
                      root
@@ -808,11 +793,9 @@ When non-nil, diagnostics are appended to the temporary buffer
                              (pimacs--markdown-render-session-leading-newline-rendered
                               session))))
                    (plan (pimacs--markdown-incremental-render-plan
-                          session root raw-ranges references-changed edit-position
+                          session root raw-ranges edit-position
                           leading-newline-changed)))
-              (setf (pimacs--markdown-render-session-changed-ranges session) nil
-                    (pimacs--markdown-render-session-reference-definitions session)
-                    definitions)
+              (setf (pimacs--markdown-render-session-changed-ranges session) nil)
               (let* ((fallback-reason (plist-get plan :fallback-reason))
                      (checkpoint (plist-get plan :checkpoint))
                      (replacement
@@ -1492,7 +1475,7 @@ When non-nil, diagnostics are appended to the temporary buffer
       (pcase operation
         (:create
          (make-pimacs--markdown-render-session
-          :checkpoints nil :changed-ranges nil :reference-definitions nil
+          :checkpoints nil :changed-ranges nil
           :rendered-length 0 :update-number 0
           :leading-newline-eligible (not (bolp))
           :leading-newline-rendered nil))

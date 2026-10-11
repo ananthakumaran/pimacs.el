@@ -221,6 +221,14 @@
                        (pimacs-markdown-tests--format-tape
                         (pimacs-markdown-tests--render-complete input))))))))
 
+(defun pimacs-markdown-tests--preview (source &optional raw)
+  (pimacs--markdown-parse-source
+   (if raw source (pimacs--markdown-normalize-source source))
+   (lambda (root context)
+     (setf (pimacs--markdown-render-context-reference-definitions context) nil
+           (pimacs--markdown-render-context-fontify-code context) nil)
+     (pimacs--markdown-render-block-node root context))))
+
 (ert-deftest pimacs-markdown-streaming-fuzz-matches-full-render ()
   (let ((random-state (cl-make-random-state t)))
     (cl-labels ((next-chunk-size ()
@@ -246,14 +254,96 @@
                              (setq output
                                    (concat (substring output 0 (- (length output) count)) text)))))
                         (setq position end)))
-                    (should (equal output
-                                   (pimacs--markdown-render-source source)))
+                    (should (equal-including-properties
+                             output (pimacs-markdown-tests--preview source)))
                     (let ((final
                            (car (pimacs--render-markdown :final state source))))
                       (should
-                       (equal (plist-get final :append)
-                              (pimacs--markdown-render-source source)))))
+                       (equal-including-properties (plist-get final :append)
+                                                   (pimacs--markdown-render-source source)))))
                 (pimacs--render-markdown :destroy state)))))))))
+
+(defun pimacs-markdown-tests--render-properties (text)
+  (let ((result (substring-no-properties text)))
+    (dolist (property '(face font-lock-face display invisible composition mouse-face
+                             help-echo pimacs-markdown-link-url pimacs-markdown-link-title
+                             pimacs-markdown-image-url))
+      (let ((position 0))
+        (while (< position (length text))
+          (let ((end (next-single-property-change position property text (length text)))
+                (value (get-text-property position property text)))
+            (when value
+              (put-text-property position end property value result))
+            (setq position end)))))
+    result))
+
+(ert-deftest pimacs-markdown-recorded-streams-match-full-render ()
+  (skip-unless (getenv "PIMACS_BENCHMARK_CORPUS"))
+  (let ((baseline-file (getenv "PIMACS_BENCHMARK_FINAL_BASELINE"))
+        messages baseline)
+    (with-temp-buffer
+      (insert-file-contents (getenv "PIMACS_BENCHMARK_CORPUS"))
+      (goto-char (point-min))
+      (while (not (eobp))
+        (push (pimacs--json-read-object) messages)
+        (skip-chars-forward " \t\r\n")))
+    (when baseline-file
+      (with-temp-buffer
+        (insert-file-contents baseline-file)
+        (goto-char (point-min))
+        (setq baseline (read (current-buffer))))
+      (should (= (length baseline) (length messages))))
+    (dolist (message (nreverse messages))
+      (let ((source (plist-get message :source))
+            (chunks (plist-get message :chunks))
+            (state (pimacs--render-markdown :create))
+            (output ""))
+        (ert-info ((format "Recorded stream starting at line %s" (plist-get message :line)))
+          (unwind-protect
+              (progn
+                (should (equal source (apply #'concat chunks)))
+                (dolist (chunk chunks)
+                  (when-let ((operation (car (pimacs--render-markdown :stream state chunk))))
+                    (setq output (concat (substring output 0 (- (length output) (cadr operation)))
+                                         (caddr operation)))))
+                (should (equal-including-properties output (pimacs-markdown-tests--preview source t)))
+                (let ((final (pimacs-markdown-tests--render-properties
+                              (plist-get (car (pimacs--render-markdown :final state source)) :append))))
+                  (should (equal-including-properties
+                           final (pimacs-markdown-tests--render-properties
+                                  (pimacs--markdown-render-source source))))
+                  (when baseline-file
+                    (should (equal-including-properties final (pop baseline))))))
+            (pimacs--render-markdown :destroy state)))))))
+
+(ert-deftest pimacs-markdown-streaming-defers-references ()
+  (dolist (source '("[site] and [label][site] and [site][].\n\n[site]: https://example.com \"Title\"\n"
+                    "# Section\n\n[site]: /first \"First\"\n\n[site]\n\n[site]: /second \"Second\"\n"
+                    "[site]\n\n[site]: /target\n  \"Multiline title\"\n\n**Following** block\n"))
+    (dolist (size '(1 5 17))
+      (let ((state (pimacs--render-markdown :create))
+            (output "")
+            (position 0))
+        (unwind-protect
+            (progn
+              (cl-letf (((symbol-function 'pimacs--markdown-reference-definitions)
+                         (lambda (_root) (ert-fail "Reference scan during streaming"))))
+                (while (< position (length source))
+                  (let* ((end (min (length source) (+ position size)))
+                         (operation (car (pimacs--render-markdown
+                                          :stream state (substring source position end)))))
+                    (when operation
+                      (setq output (concat (substring output 0 (- (length output) (cadr operation)))
+                                           (caddr operation))))
+                    (setq position end))))
+              (should (string-match-p (regexp-quote "[site]") output))
+              (should (equal-including-properties output (pimacs-markdown-tests--preview source)))
+              (let ((final (car (pimacs--render-markdown :final state source))))
+                (should (equal-including-properties
+                         (plist-get final :append) (pimacs--markdown-render-source source)))
+                (should (eq (plist-get (cddr final) :after-insert)
+                            #'pimacs--markdown-apply-url-widgets))))
+          (pimacs--render-markdown :destroy state))))))
 
 (ert-deftest pimacs-markdown-streaming-renders-source ()
   (with-temp-buffer
