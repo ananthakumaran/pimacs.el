@@ -296,6 +296,7 @@ Render these on a fresh line when the renderer starts mid-line."
   parser
   checkpoints
   changed-ranges
+  inline-parser-state
   rendered-length
   update-number
   debug-output
@@ -353,6 +354,9 @@ When non-nil, diagnostics are appended to the temporary buffer
         (set-marker marker nil)))))
 
 (defun pimacs--markdown-cleanup-session (session)
+  (when-let ((state (pimacs--markdown-render-session-inline-parser-state session)))
+    (pimacs--markdown-delete-inline-parser-pool state)
+    (setf (pimacs--markdown-render-session-inline-parser-state session) nil))
   (when pimacs-markdown-incremental-render-debug
     (pimacs--markdown-debug-log
      session :event :destroy
@@ -385,6 +389,8 @@ When non-nil, diagnostics are appended to the temporary buffer
       (condition-case error
           (with-current-buffer buffer
             (setq-local pimacs--markdown-render-session session)
+            (setf (pimacs--markdown-render-session-inline-parser-state session)
+                  (make-pimacs--markdown-inline-parser-state :depth 0))
             (let ((parser (pimacs--markdown-create-parser 'markdown)))
               (setf (pimacs--markdown-render-session-parser session) parser)
               (treesit-parser-add-notifier parser #'pimacs--markdown-parser-notifier)))
@@ -561,7 +567,7 @@ When non-nil, diagnostics are appended to the temporary buffer
                                  pimacs-markdown-leading-newline-block-types)))))))
 
 (defun pimacs--markdown-render-top-level (session root start output-offset &optional leading-newline-p)
-  (let* ((inline-state (make-pimacs--markdown-inline-parser-state :depth 0))
+  (let* ((inline-state (pimacs--markdown-render-session-inline-parser-state session))
          (context (make-pimacs--markdown-render-context
                    :reference-definitions nil
                    :list-depth 0 :list-index nil
@@ -585,28 +591,25 @@ When non-nil, diagnostics are appended to the temporary buffer
                     (append-text
                      (pimacs--markdown-render-block-node node context)))
                   (setq position (treesit-node-end node))))
-      (unwind-protect
-          (progn
-            (when leading-newline-p
-              (append-text "\n"))
-            (dolist (node (pimacs--markdown-node-children root))
-              (when (> (treesit-node-end node) start)
-                (cond
-                 ((>= (treesit-node-start node) start)
-                  (append-text
-                   (buffer-substring-no-properties position
-                                                   (treesit-node-start node)))
-                  (push (pimacs--markdown-make-render-checkpoint
-                         node (+ output-offset length))
-                        checkpoints)
-                  (render-node node))
-                 ((string= (treesit-node-type node) "section")
-                  (render-node node))
-                 (t
-                  (error "Markdown checkpoint is not at a top-level block boundary")))))
-            (append-text (buffer-substring-no-properties position (point-max)))
-            (list (apply #'concat (nreverse chunks)) (nreverse checkpoints)))
-        (pimacs--markdown-delete-inline-parser-pool inline-state)))))
+      (when leading-newline-p
+        (append-text "\n"))
+      (dolist (node (pimacs--markdown-node-children root))
+        (when (> (treesit-node-end node) start)
+          (cond
+           ((>= (treesit-node-start node) start)
+            (append-text
+             (buffer-substring-no-properties position
+                                             (treesit-node-start node)))
+            (push (pimacs--markdown-make-render-checkpoint
+                   node (+ output-offset length))
+                  checkpoints)
+            (render-node node))
+           ((string= (treesit-node-type node) "section")
+            (render-node node))
+           (t
+            (error "Markdown checkpoint is not at a top-level block boundary")))))
+      (append-text (buffer-substring-no-properties position (point-max)))
+      (list (apply #'concat (nreverse chunks)) (nreverse checkpoints)))))
 
 (defun pimacs--markdown-replace-rendered-suffix (session root checkpoint)
   (let* ((start (marker-position
@@ -1486,7 +1489,8 @@ When non-nil, diagnostics are appended to the temporary buffer
 
 
 (defun pimacs--render-markdown (operation &optional state text)
-  (if (pimacs--markdown-available-p)
+  (if (or (pimacs--markdown-render-session-p state)
+          (pimacs--markdown-available-p))
       (pcase operation
         (:create
          (make-pimacs--markdown-render-session

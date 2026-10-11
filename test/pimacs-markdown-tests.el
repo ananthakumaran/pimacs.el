@@ -345,6 +345,44 @@
                             #'pimacs--markdown-apply-url-widgets))))
           (pimacs--render-markdown :destroy state))))))
 
+(ert-deftest pimacs-markdown-streaming-reuses-and-cleans-inline-parsers ()
+  (let ((state (pimacs--render-markdown :create))
+        pool)
+    (unwind-protect
+        (progn
+          (pimacs--render-markdown :stream state "**bold and *nested* emphasis**")
+          (setq pool (copy-sequence (pimacs--markdown-inline-parser-state-pool
+                                     (pimacs--markdown-render-session-inline-parser-state state))))
+          (should pool)
+          (cl-letf (((symbol-function 'pimacs--markdown-create-parser)
+                     (lambda (_grammar) (ert-fail "Recreated an inline parser")))
+                    ((symbol-function 'pimacs--markdown-available-p)
+                     (lambda () (ert-fail "Repeated grammar availability check"))))
+            (pimacs--render-markdown :stream state " and **more**"))
+          (should (equal pool (pimacs--markdown-inline-parser-state-pool
+                               (pimacs--markdown-render-session-inline-parser-state state))))
+          (pimacs--render-markdown :final state "**Final**")
+          (should-not (pimacs--markdown-render-session-inline-parser-state state))
+          (dolist (entry pool)
+            (should-not (buffer-live-p (car entry)))))
+      (pimacs--render-markdown :destroy state))))
+
+(ert-deftest pimacs-markdown-streaming-error-cleans-inline-parsers ()
+  (let ((state (pimacs--render-markdown :create)))
+    (unwind-protect
+        (progn
+          (pimacs--render-markdown :stream state "**bold**")
+          (let ((pool (copy-sequence (pimacs--markdown-inline-parser-state-pool
+                                      (pimacs--markdown-render-session-inline-parser-state state)))))
+            (cl-letf (((symbol-function 'pimacs--markdown-render-top-level)
+                       (lambda (&rest _) (error "Deliberate render failure"))))
+              (should-error (pimacs--render-markdown :stream state " more")))
+            (should-not (pimacs--markdown-render-session-buffer state))
+            (should-not (pimacs--markdown-render-session-inline-parser-state state))
+            (dolist (entry pool)
+              (should-not (buffer-live-p (car entry))))))
+      (pimacs--render-markdown :destroy state))))
+
 (ert-deftest pimacs-markdown-checkpoint-validation-is-local ()
   (dolist (source '("Top-level paragraph\n\n> Quote" "# Heading\n\nParagraph\n\n> Quote"))
     (let ((state (pimacs--render-markdown :create)))
