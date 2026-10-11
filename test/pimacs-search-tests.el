@@ -26,4 +26,17 @@
     (pimacs-search--set-status "Search complete")
     (should (= (point) (+ (pimacs-section-beginning pimacs-search--status-section) 5)))))
 
+(ert-deftest pimacs-search-resume-new-buffer-passes-new-buffer-option ()
+  (with-temp-buffer
+    (setq pimacs-search--session-metadata (make-hash-table :test 'equal))
+    (puthash "/tmp/session.jsonl" '(:cwd "/tmp/project/")
+             pimacs-search--session-metadata)
+    (let* (arguments
+           (pimacs-search-resume-function
+            (lambda (&rest args) (setq arguments args))))
+      (cl-letf (((symbol-function 'pimacs-search--resume-info-at-point)
+                 (lambda () (make-pimacs-search-result-info :path "/tmp/session.jsonl"))))
+        (pimacs-search-resume-at-point-new-buffer)
+        (should (equal arguments '("/tmp/session.jsonl" "/tmp/project/" t)))))))
+
 ;;; pimacs-search-tests.el ends here

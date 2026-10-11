@@ -229,7 +229,8 @@ select(.type == \"match\")
   "M-g l" #'pimacs-goto-last-section
   "l" #'pimacs-goto-last-section
   "g" #'pimacs-search-refresh
-  "RET" #'pimacs-search-resume-at-point)
+  "RET" #'pimacs-search-resume-at-point
+  "M-RET" #'pimacs-search-resume-at-point-new-buffer)
 
 (defun pimacs-search-cycle-sections ()
   "Cycle visibility of all sections in the current search buffer."
@@ -721,16 +722,24 @@ select(.type == \"match\")
       (setq section (pimacs-section-parent section)))
     (and section (pimacs-section-info section))))
 
-(defun pimacs-search-resume-at-point ()
-  "Resume the session associated with the result at point."
+(defun pimacs-search-resume-at-point (&optional new-buffer)
+  "Resume the session associated with the result at point.
+If NEW-BUFFER is non-nil, create a separate chat."
   (interactive)
   (if-let* ((info (pimacs-search--resume-info-at-point))
             (path (pimacs-search-result-info-path info))
             (cwd (plist-get (gethash path pimacs-search--session-metadata) :cwd)))
       (if (functionp pimacs-search-resume-function)
-          (funcall pimacs-search-resume-function path cwd)
+          (if new-buffer
+              (funcall pimacs-search-resume-function path cwd t)
+            (funcall pimacs-search-resume-function path cwd))
         (user-error "Session resumption is unavailable"))
     (user-error "No session result at point")))
+
+(defun pimacs-search-resume-at-point-new-buffer ()
+  "Resume the session at point in a separate chat."
+  (interactive)
+  (pimacs-search-resume-at-point t))
 
 (defun pimacs-search--plain-text (content)
   (cond

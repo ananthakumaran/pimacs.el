@@ -1,7 +1,7 @@
 \input texinfo   @c -*-texinfo-*-
 @c %**start of header
 @setfilename pimacs.info
-@set VERSION 0.9.0
+@set VERSION 0.10.0-pre
 @settitle Pimacs User Manual v@value{VERSION}
 @c %**end of header
 
@@ -373,8 +373,10 @@ that both executables are available.
 The search buffer provides controls for the search type, case sensitivity,
 context lines, project scope, and content types.  Results are rendered as
 they arrive and grouped by session.  Press @kbd{RET} on a result to resume
-that session, or @kbd{g} to refresh the search.  Standard section navigation
-and visibility commands are also available in the search buffer.
+that session, or @kbd{M-RET} (Alt+Enter) to resume it in a separate chat with
+its own agent, leaving existing chats unchanged.  Press @kbd{g} to refresh
+the search.  Standard section navigation and visibility commands are also
+available in the search buffer.
 
 @node Section Visibility
 @section Section Visibility

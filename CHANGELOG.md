@@ -5,6 +5,7 @@
 ### Added
 
 - Optional ElDoc displays section timestamps and Pi-provided nested tool-call durations, controlled by `pimacs-eldoc-enabled`.
+- `M-RET` (Alt+Enter) resumes a session search result in a separate chat and agent, leaving existing chats unchanged.
 
 ### Fixed
 

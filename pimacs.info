@@ -322,9 +322,10 @@ check that both executables are available.
    The search buffer provides controls for the search type, case
 sensitivity, context lines, project scope, and content types.  Results
 are rendered as they arrive and grouped by session.  Press ‘RET’ on a
-result to resume that session, or ‘g’ to refresh the search.  Standard
-section navigation and visibility commands are also available in the
-search buffer.
+result to resume that session, or ‘M-RET’ (Alt+Enter) to resume it in a
+separate chat with its own agent, leaving existing chats unchanged.
+Press ‘g’ to refresh the search.  Standard section navigation and
+visibility commands are also available in the search buffer.
 
 
 File: pimacs.info,  Node: Section Visibility,  Prev: Searching and Resuming Sessions,  Up: Usage
@@ -1378,13 +1379,13 @@ Node: Images7359
 Node: State Lines8224
 Node: Managing Chats9574
 Node: Searching and Resuming Sessions10167
-Node: Section Visibility12284
-Node: UI Customization15007
-Node: Sandbox18278
-Node: How It Works18671
-Node: Keybindings19823
-Node: Custom Variables24601
-Node: Custom Faces45020
+Node: Section Visibility12400
+Node: UI Customization15123
+Node: Sandbox18394
+Node: How It Works18787
+Node: Keybindings19939
+Node: Custom Variables24717
+Node: Custom Faces45136
 
 End Tag Table
 
