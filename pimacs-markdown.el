@@ -306,7 +306,7 @@ Render these on a fresh line when the renderer starts mid-line."
   "Whether to capture incremental Markdown rendering diagnostics.
 
 When non-nil, diagnostics are appended to the temporary buffer
-`*pimacs-markdown-incremental-debug*'."
+`*pimacs-markdown-incremental-debug*', and every checkpoint is validated."
   :type 'boolean
   :group 'pimacs)
 
@@ -348,7 +348,9 @@ When non-nil, diagnostics are appended to the temporary buffer
 
 (defun pimacs--markdown-clear-checkpoints (checkpoints)
   (dolist (checkpoint checkpoints)
-    (set-marker (pimacs--markdown-render-checkpoint-marker checkpoint) nil)))
+    (let ((marker (pimacs--markdown-render-checkpoint-marker checkpoint)))
+      (when (markerp marker)
+        (set-marker marker nil)))))
 
 (defun pimacs--markdown-cleanup-session (session)
   (when pimacs-markdown-incremental-render-debug
@@ -442,14 +444,17 @@ When non-nil, diagnostics are appended to the temporary buffer
 
 (defun pimacs--markdown-checkpoint-before (session position)
   (let (result)
-    (dolist (checkpoint (pimacs--markdown-render-session-checkpoints session))
-      (let ((marker (pimacs--markdown-render-checkpoint-marker checkpoint)))
-        (when (and (eq (marker-buffer marker)
-                       (pimacs--markdown-render-session-buffer session))
-                   (integerp (marker-position marker))
-                   (<= (marker-position marker) position))
-          (setq result checkpoint))))
-    result))
+    (catch 'invalid
+      (dolist (checkpoint (pimacs--markdown-render-session-checkpoints session))
+        (let ((marker (pimacs--markdown-render-checkpoint-marker checkpoint)))
+          (unless (and (markerp marker)
+                       (eq (marker-buffer marker)
+                           (pimacs--markdown-render-session-buffer session))
+                       (integerp (marker-position marker)))
+            (throw 'invalid nil))
+          (when (<= (marker-position marker) position)
+            (setq result checkpoint))))
+      result)))
 
 (defun pimacs--markdown-checkpoint-markers-valid-p (session)
   (let ((length (pimacs--markdown-render-session-rendered-length session))
@@ -459,7 +464,8 @@ When non-nil, diagnostics are appended to the temporary buffer
     (cl-every (lambda (checkpoint)
                 (let ((marker (pimacs--markdown-render-checkpoint-marker checkpoint))
                       (offset (pimacs--markdown-render-checkpoint-output-offset checkpoint)))
-                  (and (eq (marker-buffer marker) buffer)
+                  (and (markerp marker)
+                       (eq (marker-buffer marker) buffer)
                        (integerp (marker-position marker))
                        (<= (point-min) (marker-position marker) (point-max))
                        (integerp offset)
@@ -471,30 +477,38 @@ When non-nil, diagnostics are appended to the temporary buffer
                              previous-offset offset))))
               (pimacs--markdown-render-session-checkpoints session))))
 
-(defun pimacs--markdown-checkpoint-valid-p (session root checkpoint)
+(defun pimacs--markdown-checkpoint-node (session position type)
+  (let ((node (treesit-node-at
+               position (pimacs--markdown-render-session-parser session) t))
+        result)
+    (while (and node (not result))
+      (let* ((parent (treesit-node-parent node))
+             (grandparent (and parent (treesit-node-parent parent))))
+        (when (and (= (treesit-node-start node) position)
+                   (string= (treesit-node-type node) type)
+                   (or (and parent (string= (treesit-node-type parent) "document"))
+                       (and parent grandparent
+                            (string= (treesit-node-type parent) "section")
+                            (string= (treesit-node-type grandparent) "document"))))
+          (setq result node)))
+      (setq node (treesit-node-parent node)))
+    result))
+
+(defun pimacs--markdown-checkpoint-valid-p (session checkpoint)
   (let ((marker (pimacs--markdown-render-checkpoint-marker checkpoint))
         (offset (pimacs--markdown-render-checkpoint-output-offset checkpoint))
         (type (pimacs--markdown-render-checkpoint-type checkpoint)))
-    (and (eq (marker-buffer marker) (pimacs--markdown-render-session-buffer session))
+    (and (markerp marker)
+         (eq (marker-buffer marker) (pimacs--markdown-render-session-buffer session))
          (integerp (marker-position marker))
+         (<= (point-min) (marker-position marker) (point-max))
          (integerp offset)
          (<= 0 offset (pimacs--markdown-render-session-rendered-length session))
-         (or (and (string= type "document")
-                  (= (marker-position marker) (point-min)))
-             (cl-find-if
-              (lambda (node)
-                (and (= (treesit-node-start node) (marker-position marker))
-                     (string= (treesit-node-type node) type)))
-              (pimacs--markdown-node-children root))
-             (cl-loop for section in (pimacs--markdown-node-children root)
-                      thereis
-                      (and (string= (treesit-node-type section) "section")
-                           (cl-find-if
-                            (lambda (node)
-                              (and (= (treesit-node-start node)
-                                      (marker-position marker))
-                                   (string= (treesit-node-type node) type)))
-                            (pimacs--markdown-node-children section))))))))
+         (if (equal type "document")
+             (and (= (marker-position marker) (point-min)) (zerop offset))
+           (and (stringp type)
+                (pimacs--markdown-checkpoint-node session (marker-position marker) type)
+                t)))))
 
 (defun pimacs--markdown-make-render-checkpoint (node output-offset)
   (make-pimacs--markdown-render-checkpoint
@@ -654,7 +668,7 @@ When non-nil, diagnostics are appended to the temporary buffer
              (pimacs--markdown-render-checkpoint-output-offset checkpoint)
              :type (pimacs--markdown-render-checkpoint-type checkpoint))))
 
-(defun pimacs--markdown-incremental-render-plan (session root raw-ranges edit-position leading-newline-changed)
+(defun pimacs--markdown-incremental-render-plan (session raw-ranges edit-position leading-newline-changed)
   (let* ((ranges (pimacs--markdown-coalesce-ranges raw-ranges))
          (boundary-positions
           (mapcar (lambda (range)
@@ -671,10 +685,11 @@ When non-nil, diagnostics are appended to the temporary buffer
            (leading-newline-changed :leading-newline-changed)
            ((null checkpoint) :no-checkpoint)
            ((= restart (point-min)) :document-start)
-           ((not (pimacs--markdown-checkpoint-markers-valid-p session))
+           ((and pimacs-markdown-incremental-render-debug
+                 (not (pimacs--markdown-checkpoint-markers-valid-p session)))
             :invalid-checkpoint-set)
            ((not (setq checkpoint-valid
-                       (pimacs--markdown-checkpoint-valid-p session root checkpoint)))
+                       (pimacs--markdown-checkpoint-valid-p session checkpoint)))
             :invalid-checkpoint)
            (t nil))))
     (list :ranges ranges
@@ -793,7 +808,7 @@ When non-nil, diagnostics are appended to the temporary buffer
                              (pimacs--markdown-render-session-leading-newline-rendered
                               session))))
                    (plan (pimacs--markdown-incremental-render-plan
-                          session root raw-ranges edit-position
+                          session raw-ranges edit-position
                           leading-newline-changed)))
               (setf (pimacs--markdown-render-session-changed-ranges session) nil)
               (let* ((fallback-reason (plist-get plan :fallback-reason))

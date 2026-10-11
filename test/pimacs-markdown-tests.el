@@ -345,6 +345,60 @@
                             #'pimacs--markdown-apply-url-widgets))))
           (pimacs--render-markdown :destroy state))))))
 
+(ert-deftest pimacs-markdown-checkpoint-validation-is-local ()
+  (dolist (source '("Top-level paragraph\n\n> Quote" "# Heading\n\nParagraph\n\n> Quote"))
+    (let ((state (pimacs--render-markdown :create)))
+      (unwind-protect
+          (progn
+            (pimacs--render-markdown :stream state source)
+            (with-current-buffer (pimacs--markdown-render-session-buffer state)
+              (cl-letf (((symbol-function 'pimacs--markdown-node-children)
+                         (lambda (_node) (ert-fail "Checkpoint validation scanned children"))))
+                (dolist (checkpoint (pimacs--markdown-render-session-checkpoints state))
+                  (should (pimacs--markdown-checkpoint-valid-p state checkpoint))))))
+        (pimacs--render-markdown :destroy state)))))
+
+(ert-deftest pimacs-markdown-invalid-checkpoint-falls-back ()
+  (dolist (corruption '(type position offset detached marker))
+    (let ((state (pimacs--render-markdown :create))
+          (original (symbol-function 'pimacs--markdown-render-entire-session))
+          (fallbacks 0))
+      (unwind-protect
+          (progn
+            (pimacs--render-markdown :stream state "# Heading\n\nPrefix\n\nLast")
+            (let ((checkpoint (car (last (pimacs--markdown-render-session-checkpoints state)))))
+              (pcase corruption
+                ('type (setf (pimacs--markdown-render-checkpoint-type checkpoint) "list"))
+                ('position (set-marker (pimacs--markdown-render-checkpoint-marker checkpoint)
+                                       (1+ (marker-position (pimacs--markdown-render-checkpoint-marker checkpoint)))))
+                ('offset (setf (pimacs--markdown-render-checkpoint-output-offset checkpoint) -1))
+                ('detached (set-marker (pimacs--markdown-render-checkpoint-marker checkpoint) nil))
+                ('marker
+                 (set-marker (pimacs--markdown-render-checkpoint-marker checkpoint) nil)
+                 (setf (pimacs--markdown-render-checkpoint-marker checkpoint) nil))))
+            (cl-letf (((symbol-function 'pimacs--markdown-render-entire-session)
+                       (lambda (&rest args) (cl-incf fallbacks) (apply original args))))
+              (let ((operation (car (pimacs--render-markdown :stream state " text"))))
+                (should (= fallbacks 1))
+                (should (equal-including-properties
+                         (caddr operation)
+                         (pimacs-markdown-tests--preview "# Heading\n\nPrefix\n\nLast text"))))))
+        (pimacs--render-markdown :destroy state)))))
+
+(ert-deftest pimacs-markdown-debug-validates-entire-checkpoint-set ()
+  (let ((state (pimacs--render-markdown :create)))
+    (unwind-protect
+        (progn
+          (pimacs--render-markdown :stream state "# Heading\n\nPrefix\n\nLast")
+          (setf (pimacs--markdown-render-checkpoint-output-offset
+                 (car (pimacs--markdown-render-session-checkpoints state))) -1)
+          (with-current-buffer (pimacs--markdown-render-session-buffer state)
+            (let ((pimacs-markdown-incremental-render-debug t))
+              (should (eq :invalid-checkpoint-set
+                          (plist-get (pimacs--markdown-incremental-render-plan
+                                      state nil (point-max) nil) :fallback-reason))))))
+      (pimacs--render-markdown :destroy state))))
+
 (ert-deftest pimacs-markdown-streaming-renders-source ()
   (with-temp-buffer
     (let ((state (pimacs--render-markdown :create)))
