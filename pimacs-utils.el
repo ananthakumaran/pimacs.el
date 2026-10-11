@@ -79,31 +79,33 @@
     (substring uuid -8)))
 
 (defun pimacs--buffer-string-common-prefix-length (buffer start end string)
-  (with-current-buffer buffer
-    (let ((buffer-position start)
-          (string-position 0)
-          (string-end (length string))
-          done)
-      (while (and (not done)
-                  (< buffer-position end)
-                  (< string-position string-end))
-        (if (not (equal (text-properties-at buffer-position buffer)
-                        (text-properties-at string-position string)))
-            (setq done t)
-          (let* ((buffer-property-end
-                  (next-property-change buffer-position buffer end))
-                 (string-property-end
-                  (next-property-change string-position string string-end))
-                 (span-end
-                  (+ buffer-position
-                     (min (- buffer-property-end buffer-position)
-                          (- string-property-end string-position)))))
-            (while (and (< buffer-position span-end) (not done))
-              (if (= (char-after buffer-position) (aref string string-position))
-                  (setq buffer-position (1+ buffer-position)
-                        string-position (1+ string-position))
-                (setq done t))))))
-      (- buffer-position start))))
+  ;; Compare property runs in C without taking a snapshot of BUFFER.
+  (with-temp-buffer
+    (insert string)
+    (let ((comparison-buffer (current-buffer)))
+      (with-current-buffer buffer
+        (let ((buffer-position start)
+              (string-position 0)
+              (string-end (length string))
+              (case-fold-search nil))
+          (catch 'mismatch
+            (while (and (< buffer-position end) (< string-position string-end))
+              (unless (equal (text-properties-at buffer-position buffer)
+                             (text-properties-at string-position string))
+                (throw 'mismatch string-position))
+              (let* ((buffer-run-end (next-property-change buffer-position buffer end))
+                     (string-run-end (next-property-change string-position string string-end))
+                     (run-length (min (- buffer-run-end buffer-position)
+                                      (- string-run-end string-position)))
+                     (comparison
+                      (compare-buffer-substrings
+                       buffer buffer-position (+ buffer-position run-length)
+                       comparison-buffer (1+ string-position) (+ string-position run-length 1))))
+                (unless (zerop comparison)
+                  (throw 'mismatch (+ string-position (1- (abs comparison)))))
+                (cl-incf buffer-position run-length)
+                (cl-incf string-position run-length)))
+            string-position))))))
 
 (defun pimacs--make-temp-buffer (&optional name)
   "Create a temporary buffer named NAME with undo disabled."

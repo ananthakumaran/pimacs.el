@@ -441,6 +441,7 @@
       (should (= warnings 1))
       (pimacs--discard-and-shift-undo-list undo-list 1 0)
       (should (= warnings 1)))))
+
 (ert-deftest pimacs--buffer-string-common-prefix-length ()
   (cl-labels ((common-prefix (buffer-text string)
                 (with-temp-buffer
@@ -451,6 +452,16 @@
     (should (= (common-prefix "" "text") 0))
     (should (= (common-prefix "text" "") 0))
     (should (= (common-prefix "matching" "matching") 8))
+    (should (= (common-prefix "世界🙂café" "世界🙂camel") 5))
+    (should (= (common-prefix "world" "World") 0))
+    (should (= (common-prefix "世界🙂" "世界🙂 suffix") 3))
+    (let ((text (unibyte-string 128 255 65)))
+      (should (= (common-prefix text text) 3))
+      (with-temp-buffer
+        (set-buffer-multibyte nil)
+        (insert text)
+        (should (= (pimacs--buffer-string-common-prefix-length
+                    (current-buffer) (point-min) (point-max) text) 3))))
     (with-temp-buffer
       (insert "ignoredmatching")
       (should (= (pimacs--buffer-string-common-prefix-length
