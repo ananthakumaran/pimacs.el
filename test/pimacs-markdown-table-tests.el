@@ -280,6 +280,35 @@
            (pimacs--markdown-render-source input))
          (pimacs-markdown-table-tests--stream-render input)))))))
 
+(ert-deftest pimacs-markdown-table-column-measurements ()
+  (cl-letf (((symbol-function 'string-pixel-width) #'string-width))
+    (let* ((header '(("header words") ("x")))
+           (rows '((("wideword") ("y")) (("a b") ("two" "three")) (("end"))))
+           (original-rows (copy-tree rows)))
+      (should (equal
+               (pimacs--markdown-table-measure-columns header rows 1)
+               (list (make-pimacs--markdown-table-size
+                      :width 12 :hard-minimum 8 :preferred-minimum 12)
+                     (make-pimacs--markdown-table-size
+                      :width 5 :hard-minimum 5 :preferred-minimum 5))))
+      (should (equal rows original-rows)))
+    (let ((header (list (list (mapconcat #'identity (make-list 15 "a") " ")))))
+      (should (equal
+               (pimacs--markdown-table-measure-columns header nil 1)
+               (list (make-pimacs--markdown-table-size
+                      :width 29 :hard-minimum 4 :preferred-minimum 20)))))))
+
+(ert-deftest pimacs-markdown-table-wrap-fast-path-matches-fill ()
+  (cl-letf (((symbol-function 'string-pixel-width) #'string-width))
+    (dolist (source '("" "identifier" "世界🙂" "word word" "two  spaces"
+                      " leading" "trailing " "tab\ttext" "x\ny"))
+      (dolist (width '(1 5 20))
+        (let ((text (propertize source 'face 'bold)))
+          (should (equal-including-properties
+                   (pimacs--markdown-table-wrap-line text width)
+                   (if (string-empty-p text) (list text)
+                     (split-string (string-fill text width) "\n")))))))))
+
 (ert-deftest pimacs-markdown-table-fixtures ()
   (dolist (fixture (pimacs-markdown-table-tests--fixtures))
     (let ((input-file (pimacs-markdown-table-tests--fixture-input-file fixture))

@@ -82,22 +82,12 @@
   (max 1 (floor (/ width (string-pixel-width " ")))))
 
 (defun pimacs--markdown-table-wrap-line (text width)
-  (if (string-empty-p text)
-      (list text)
-    (split-string
-     (string-fill text (pimacs--markdown-table-width-in-columns width))
-     "\n")))
-
-(defun pimacs--markdown-table-line-hard-minimum-width (line)
-  (max 1
-       (min (string-pixel-width line)
-            (max (* 4 (string-pixel-width " "))
-                 (pimacs--markdown-table-max-word-width line)))))
-
-(defun pimacs--markdown-table-line-preferred-minimum-width (line)
-  (max (pimacs--markdown-table-line-hard-minimum-width line)
-       (min (* 20 (string-pixel-width " "))
-            (pimacs--markdown-table-max-word-width line))))
+  (let ((columns (pimacs--markdown-table-width-in-columns width)))
+    (if (or (string-empty-p text)
+            (and (not (string-match-p "[[:space:]]" text))
+                 (<= (string-width text) columns)))
+        (list text)
+      (split-string (string-fill text columns) "\n"))))
 
 (defun pimacs--markdown-table-wrap-cell (cell width)
   (apply #'append
@@ -130,6 +120,46 @@
                (setq allocated cumulative-allocation))))
          widths minimums))))))
 
+(cl-defstruct pimacs--markdown-table-size
+  width
+  hard-minimum
+  preferred-minimum)
+
+(defun pimacs--markdown-table-measure-cell (cell space-width)
+  (let ((width 0) (hard-minimum 1) (preferred-minimum 1))
+    (dolist (line cell)
+      (let* ((line-width (string-pixel-width line))
+             (word-width (pimacs--markdown-table-max-word-width line))
+             (line-minimum (max 1 (min line-width (max (* 4 space-width) word-width)))))
+        (setq width (max width line-width)
+              hard-minimum (max hard-minimum line-minimum)
+              preferred-minimum (max preferred-minimum line-minimum
+                                     (min (* 20 space-width) word-width)))))
+    (make-pimacs--markdown-table-size
+     :width width :hard-minimum hard-minimum :preferred-minimum preferred-minimum)))
+
+(defun pimacs--markdown-table-measure-columns (header rows space-width)
+  (let ((columns (mapcar (lambda (cell)
+                           (pimacs--markdown-table-measure-cell cell space-width))
+                         header)))
+    (dolist (column columns)
+      (setf (pimacs--markdown-table-size-preferred-minimum column)
+            (min (* 20 space-width) (pimacs--markdown-table-size-width column))))
+    (dolist (row rows)
+      (cl-loop for column in columns
+               for cell = (pop row)
+               for size = (pimacs--markdown-table-measure-cell cell space-width)
+               do (setf (pimacs--markdown-table-size-width column)
+                        (max (pimacs--markdown-table-size-width column)
+                             (pimacs--markdown-table-size-width size))
+                        (pimacs--markdown-table-size-hard-minimum column)
+                        (max (pimacs--markdown-table-size-hard-minimum column)
+                             (pimacs--markdown-table-size-hard-minimum size))
+                        (pimacs--markdown-table-size-preferred-minimum column)
+                        (max (pimacs--markdown-table-size-preferred-minimum column)
+                             (pimacs--markdown-table-size-preferred-minimum size)))))
+    columns))
+
 (defun pimacs--markdown-table-render (header-data alignments row-data final-newline-p)
   (let* ((column-count (length header-data))
          (vertical (pimacs--markdown-table-propertize-face
@@ -153,38 +183,11 @@
                                            (copy-sequence line)))
                                         cell))
                               header-data))
-         (all-rows (cons header-data row-data))
-         (hard-minimums
-          (cl-loop for column below column-count
-                   collect (cl-loop for row in all-rows
-                                    maximize
-                                    (cl-loop for line in (or (nth column row) '(""))
-                                             maximize
-                                             (pimacs--markdown-table-line-hard-minimum-width
-                                              line)))))
-         (preferred-minimums
-          (cl-loop for column below column-count
-                   collect
-                   (max
-                    (cl-loop for line in (or (nth column header-data) '(""))
-                             maximize
-                             (min (* 20 (string-pixel-width " "))
-                                  (string-pixel-width line)))
-                    (or
-                     (cl-loop for row in row-data
-                              maximize
-                              (cl-loop for line in (or (nth column row) '(""))
-                                       maximize
-                                       (pimacs--markdown-table-line-preferred-minimum-width
-                                        line)))
-                     0))))
-         (widths
-          (cl-loop for column below column-count
-                   collect (cl-loop for row in all-rows
-                                    maximize
-                                    (cl-loop for line in (or (nth column row) '(""))
-                                             maximize
-                                             (string-pixel-width line)))))
+         (column-sizes (pimacs--markdown-table-measure-columns
+                        header-data row-data margin-width))
+         (hard-minimums (mapcar #'pimacs--markdown-table-size-hard-minimum column-sizes))
+         (preferred-minimums (mapcar #'pimacs--markdown-table-size-preferred-minimum column-sizes))
+         (widths (mapcar #'pimacs--markdown-table-size-width column-sizes))
          (horizontal-width
           (string-pixel-width
            (pimacs--markdown-table-propertize-face
