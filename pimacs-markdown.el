@@ -81,6 +81,9 @@
      (hard_line_break) @special
      (html_tag) @special)))
 
+(defconst pimacs--markdown-inline-syntax-regexp
+  (rx (any "\n\r\\`*_~[]<>!$")))
+
 (defun pimacs--markdown-reference-definitions (root)
   (let (definitions)
     (dolist (node (treesit-query-capture
@@ -1174,14 +1177,19 @@ When non-nil, diagnostics are appended to the temporary buffer
     (push (buffer-substring-no-properties position end) chunks)
     (apply #'concat (nreverse chunks))))
 
-(defun pimacs--markdown-render-inline-source (text context)
-  (let ((renderer (lambda (root)
+(defun pimacs--markdown-render-inline-uncached (text context)
+  (let ((state (pimacs--markdown-render-context-inline-parser-state context))
+        (renderer (lambda (root)
                     (pimacs--markdown-render-inline-tree-range
-                     root 1 (point-max) context)))
-        (state (pimacs--markdown-render-context-inline-parser-state context)))
+                     root 1 (point-max) context))))
     (if state
         (pimacs--markdown-with-inline-parser text renderer state)
       (pimacs--markdown-with-parser text 'markdown-inline renderer))))
+
+(defun pimacs--markdown-render-inline-source (text context)
+  (if (not (string-match-p pimacs--markdown-inline-syntax-regexp text))
+      text
+    (pimacs--markdown-render-inline-uncached text context)))
 
 (defun pimacs--markdown-render-inline-range (begin end context)
   (pimacs--markdown-render-inline-source

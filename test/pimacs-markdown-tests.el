@@ -383,6 +383,23 @@
               (should-not (buffer-live-p (car entry))))))
       (pimacs--render-markdown :destroy state))))
 
+(ert-deftest pimacs-markdown-inline-fast-path-matches-parser ()
+  (let* ((state (make-pimacs--markdown-inline-parser-state :depth 0))
+         (context (make-pimacs--markdown-render-context :inline-parser-state state)))
+    (unwind-protect
+        (dolist (source '("Plain words" "世界 café 🙂" "https://example.com"
+                          "a@example.com" "&amp; &#123;" "plain  \rnext"
+                          "plain  \nnext" "[ref]" "**bold**" "\\*literal*"
+                          "<b>HTML</b>" "`code`" "$x$" "~~strike~~"))
+          (should
+           (equal-including-properties
+            (pimacs--markdown-render-inline-source source context)
+            (pimacs--markdown-with-inline-parser
+             source (lambda (root)
+                      (pimacs--markdown-render-inline-tree-range root 1 (point-max) context))
+             state))))
+      (pimacs--markdown-delete-inline-parser-pool state))))
+
 (ert-deftest pimacs-markdown-checkpoint-validation-is-local ()
   (dolist (source '("Top-level paragraph\n\n> Quote" "# Heading\n\nParagraph\n\n> Quote"))
     (let ((state (pimacs--render-markdown :create)))
