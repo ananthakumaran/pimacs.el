@@ -1,0 +1,14 @@
+name: pimacs-tramp
+
+services:
+  server:
+    build: .
+    init: true
+    ports:
+      - "127.0.0.1:${PIMACS_TRAMP_PORT:-2222}:22"
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /run/sshd.pid && kill -0 \"$$(cat /run/sshd.pid)\""]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+      start_period: 5s
