@@ -1,13 +1,11 @@
 FROM node:22.22.2-bookworm-slim
 
-ARG PI_VERSION=1.1.0
-
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends openssh-server jq ripgrep \
     && rm -rf /var/lib/apt/lists/* \
     && rm -f /etc/ssh/ssh_host_* \
     && npm install --global --ignore-scripts --prefix /opt/pimacs-test \
-       "@earendil-works/pi-coding-agent@${PI_VERSION}" \
+       "@earendil-works/pi-coding-agent" \
     && npm cache clean --force \
     && useradd --create-home --shell /bin/bash pimacs \
     && printf 'pimacs:pimacs\n' | chpasswd \
@@ -32,6 +30,13 @@ RUN printf '%s\n' \
     'X11Forwarding no' \
     'Subsystem sftp internal-sftp' \
     > /etc/ssh/sshd_config
+
+COPY fixture/package.json fixture/package-lock.json /srv/pimacs-tramp/fixture/
+RUN cd /srv/pimacs-tramp/fixture && npm ci --ignore-scripts && npm cache clean --force
+COPY fixture/src /srv/pimacs-tramp/fixture/src
+COPY fixture/tapes /srv/pimacs-tramp/fixture/tapes
+COPY project/.project /srv/pimacs-tramp/project/.project
+COPY --chown=pimacs:pimacs project/agent/settings.json /srv/pimacs-tramp/project/agent/settings.json
 
 WORKDIR /srv/pimacs-tramp/project
 

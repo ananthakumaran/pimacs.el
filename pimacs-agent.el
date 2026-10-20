@@ -265,7 +265,7 @@
            (command-line (mapconcat #'shell-quote-argument (cons pimacs-executable process-arguments) " "))
            (stderr-file (make-temp-file "pimacs-version-stderr-")))
       (unwind-protect
-          (let ((exit-code (apply #'call-process pimacs-executable nil
+          (let ((exit-code (apply #'process-file pimacs-executable nil
                                   (list (current-buffer) stderr-file) nil
                                   process-arguments)))
             (if (zerop exit-code)

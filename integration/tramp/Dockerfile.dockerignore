@@ -1,0 +1,13 @@
+**
+!fixture/
+!fixture/package.json
+!fixture/package-lock.json
+!fixture/src/
+!fixture/src/**
+!fixture/tapes/
+!fixture/tapes/*.yml
+!fixture/tapes/*.gates.json
+!project/
+!project/.project
+!project/agent/
+!project/agent/settings.json

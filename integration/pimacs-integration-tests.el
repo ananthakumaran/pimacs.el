@@ -30,8 +30,18 @@
             (file-truename buffer-file-name)))))
 
 (defconst pimacs-tape-directory (expand-file-name "fixture/tapes" pimacs-integration-directory))
-(defconst pimacs-project-directory (expand-file-name "project" pimacs-integration-directory))
-(defconst pimacs-project-agent-directory (expand-file-name "project/agent" pimacs-integration-directory))
+(defconst pimacs-integration-remote-directory
+  (when (getenv "PIMACS_INTEGRATION_TRAMP")
+    (format "/ssh:pimacs@127.0.0.1#%s:/srv/pimacs-tramp/"
+            (or (getenv "PIMACS_TRAMP_PORT") "2222"))))
+
+(when pimacs-integration-remote-directory
+  (load (expand-file-name "tramp/setup.el" pimacs-integration-directory) nil t))
+
+(defconst pimacs-project-directory
+  (expand-file-name "project" (or pimacs-integration-remote-directory
+                                  pimacs-integration-directory)))
+(defconst pimacs-project-agent-directory (expand-file-name "agent" pimacs-project-directory))
 
 (defun pimacs-fixture-mode ()
   (or (getenv "FIXTURE_MODE") "replay"))
@@ -71,11 +81,15 @@
             (enable-local-variables :all)
             (fixture-process-environment
              (list (concat "FIXTURE_SCENARIO=" ,scenario)
-                   (concat "PI_CODING_AGENT_DIR=" pimacs-project-agent-directory)
+                   (concat "PI_CODING_AGENT_DIR=" (file-local-name pimacs-project-agent-directory))
                    (concat "FIXTURE_MODE=" (pimacs-fixture-mode))))
             (process-environment
              (append fixture-process-environment process-environment))
-            (pimacs-flags (list "--tools" pimacs-integration-tools "--extension" (expand-file-name "fixture" pimacs-integration-directory))))
+            (pimacs-flags
+             (list "--tools" pimacs-integration-tools "--extension"
+                   (file-local-name
+                    (expand-file-name "fixture" (or pimacs-integration-remote-directory
+                                                    pimacs-integration-directory))))))
        (let ((sessions-dir (expand-file-name "sessions" pimacs-project-agent-directory)))
          (when (file-exists-p sessions-dir)
            (delete-directory sessions-dir t)
@@ -88,6 +102,8 @@
        (unwind-protect
            (progn
              ,@body
+             (when pimacs-integration-remote-directory
+               (pimacs-integration-assert-remote-session))
              (pimacs-drain-process-output)
              (pimacs-integration-check-resume-candidates)
              (pimacs-render-pending-history)
@@ -126,6 +142,22 @@
       (pimacs--history-render-idle
        (current-buffer) pimacs--history-render-generation))))
 
+(defun pimacs-integration-assert-remote-session ()
+  (let* ((agent (pimacs--current-agent))
+         (response (pimacs--send-command-sync "get_state" '()))
+         (path (plist-get (plist-get response :data) :sessionFile)))
+    (should (process-get agent 'remote-command))
+    (should (equal (process-get agent 'project-root)
+                   (file-name-as-directory pimacs-project-directory)))
+    (should (pimacs--response-success-p response))
+    (should (string-prefix-p
+             (concat (file-local-name pimacs-project-agent-directory) "/sessions/") path))
+    (let ((record (pimacs-session-read-record
+                   (concat (file-remote-p pimacs-project-directory) path))))
+      (should record)
+      (should (equal (pimacs-session-record-cwd record)
+                     (file-local-name pimacs-project-directory))))))
+
 (defun pimacs-integration-check-resume-candidates ()
   (let* ((directory (expand-file-name "sessions" pimacs-project-agent-directory))
          (records (pimacs-session-with-ancestors
@@ -155,12 +187,14 @@
          (abbreviated-temporary-file-directory
           (abbreviate-file-name temporary-file-directory))
          (session_dir (concat "--" (replace-regexp-in-string "/" "-"
-                                                             (substring pimacs-project-directory 1))
+                                                             (substring (file-local-name pimacs-project-directory) 1))
                               "--")))
     (->> text
          (replace-regexp-in-string (regexp-quote pimacs-project-directory) "PROJECT_DIR")
          (replace-regexp-in-string
           (regexp-quote abbreviated-project-directory) "PROJECT_DIR")
+         (replace-regexp-in-string
+          (regexp-quote (file-local-name pimacs-project-directory)) "PROJECT_DIR")
          (replace-regexp-in-string
           "/[^[:space:]`\"']*/integration/project" "PROJECT_DIR")
          (replace-regexp-in-string (regexp-quote session_dir) "SESSION_DIR")
@@ -195,6 +229,8 @@
   (let* ((tape-file (expand-file-name (concat scenario suffix) pimacs-tape-directory))
          (current-text (pimacs-normalize-buffer-text text))
          (fixture-mode (pimacs-fixture-mode)))
+    (when (and pimacs-integration-remote-directory (not (file-exists-p tape-file)))
+      (ert-fail (format "Missing replay tape: %s" tape-file)))
     (if (or (not (file-exists-p tape-file))
             (string= fixture-mode "record"))
         (write-region current-text nil tape-file nil 'silent)

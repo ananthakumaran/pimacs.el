@@ -2,7 +2,9 @@ name: pimacs-tramp
 
 services:
   server:
-    build: .
+    build:
+      context: ..
+      dockerfile: tramp/Dockerfile
     init: true
     ports:
       - "127.0.0.1:${PIMACS_TRAMP_PORT:-2222}:22"

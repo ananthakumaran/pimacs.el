@@ -8,21 +8,28 @@ SSH := sshpass -p pimacs ssh -F /dev/null \
 	-o PreferredAuthentications=password -o ConnectTimeout=5 \
 	-p "$(PIMACS_TRAMP_PORT)" pimacs@127.0.0.1
 
-.PHONY: help up down ssh logs check require-sshpass
+MATCH ?= ^pimacs-send-region$$
+
+.PHONY: help up rebuild down ssh logs check integration require-sshpass
 
 help:
 	@printf '%s\n' \
 	  'up     Build and start the SSH/Pi server' \
+	  'rebuild  Rebuild this fixture without cache to refresh Pi' \
 	  'down   Remove the server and its disposable data' \
 	  'ssh    Open a shell on the server (requires sshpass)' \
 	  'logs   Show server logs' \
 	  'check  Run remote Pi and read the remote-only file (requires sshpass)' \
+	  'integration  Run the opt-in SSH scenario (server must already be up)' \
 	  '' \
 	  'Disposable loopback-only server; username/password: pimacs/pimacs' \
 	  'TRAMP: /ssh:pimacs@127.0.0.1#$(PIMACS_TRAMP_PORT):/srv/pimacs-tramp/project/'
 
 up:
 	$(COMPOSE) up --build --detach --wait --wait-timeout 60
+
+rebuild:
+	$(COMPOSE) build --no-cache
 
 down:
 	$(COMPOSE) down --volumes --remove-orphans
@@ -36,6 +43,9 @@ logs:
 check: require-sshpass
 	$(SSH) /opt/pimacs-test/bin/pi --version
 	$(SSH) cat /srv/pimacs-tramp/project/remote-only.txt
+
+integration:
+	PIMACS_INTEGRATION_TRAMP=1 $(MAKE) -C ../.. integration MATCH='$(MATCH)'
 
 require-sshpass:
 	@command -v sshpass >/dev/null || { echo 'Install sshpass on the client for ssh/check.' >&2; exit 1; }
