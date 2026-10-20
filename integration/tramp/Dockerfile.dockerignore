@@ -9,5 +9,12 @@
 !fixture/tapes/*.gates.json
 !project/
 !project/.project
+!project/.dir-locals.el
+!project/.gitignore
+!project/README.md
+!project/config.json
+!project/green-triangle.png
+!project/notes.txt
+!project/utils.py
 !project/agent/
 !project/agent/settings.json
