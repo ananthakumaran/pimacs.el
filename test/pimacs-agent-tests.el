@@ -137,6 +137,20 @@
       (should (equal responses '((:type "message_start" :index 1)
                                  (:type "message_start" :index 2)))))))
 
+(ert-deftest pimacs-agent-net-filter-only-decodes-newline-chunks ()
+  (with-temp-buffer
+    (let ((process (make-pipe-process :name "pimacs-filter-test"
+                                      :buffer (current-buffer) :noquery t))
+          (calls 0))
+      (unwind-protect
+          (cl-letf (((symbol-function 'pimacs--decode-response)
+                     (lambda (_process) (cl-incf calls))))
+            (dolist (chunk '("" "{\"text\":" "\"escaped\\nnewline\"}" "" "\n" ""))
+              (pimacs--net-filter process chunk))
+            (should (= calls 1))
+            (should (equal (buffer-string) "{\"text\":\"escaped\\nnewline\"}\n")))
+        (delete-process process)))))
+
 (defmacro pimacs-agent-tests-with-event-listeners (&rest body)
   (declare (indent 0))
   `(let ((pimacs--event-listeners (make-hash-table :test 'equal))

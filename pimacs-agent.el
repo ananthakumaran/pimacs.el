@@ -225,7 +225,8 @@
   (with-current-buffer (process-buffer process)
     (goto-char (point-max))
     (insert data))
-  (pimacs--decode-response process))
+  (when (string-search "\n" data)
+    (pimacs--decode-response process)))
 
 (defun pimacs--enough-response-p ()
   (goto-char (point-min))
