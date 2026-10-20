@@ -768,6 +768,50 @@
       (should (equal (widget-value pimacs--status-widget) "Status B\n"))
       (should (equal (gethash "status-a" pimacs--status-texts) "Status\nA")))))
 
+(ert-deftest pimacs--insert-bash-args-displays-timeout-prefix ()
+  (dolist (case '((0 . "0s") (30 . "30s") (60 . "1m")
+                  (90 . "1m 30s") (120 . "2m") (3600 . "1h")))
+    (with-temp-buffer
+      (pimacs-ui--insert-tool-name "bash")
+      (pimacs--insert-bash-args (list :command "make test" :timeout (car case)))
+      (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                     (format "bash ⏱%s make test" (cdr case)))))))
+
+(ert-deftest pimacs--insert-bash-args-omits-unset-or-invalid-timeout ()
+  (dolist (args '((:command "make test")
+                  (:command "make test" :timeout nil)
+                  (:command "make test" :timeout -1)
+                  (:command "make test" :timeout "30")))
+    (with-temp-buffer
+      (pimacs--insert-bash-args args)
+      (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                     "make test")))))
+
+(ert-deftest pimacs--insert-bash-args-keeps-timeout-separate-from-multiline-command ()
+  (with-temp-buffer
+    (let ((command "for file in *.el; do\n  echo \"$file\"\ndone"))
+      (pimacs--insert-bash-args (list :command command :timeout 30))
+      (should (equal (buffer-substring-no-properties (point-min) (point-max))
+                     (concat "⏱30s " command)))
+      (should (eq (get-text-property (point-min) 'face) 'shadow))
+      (should (equal (get-text-property (point-min) 'help-echo)
+                     "Timeout: 30 seconds"))
+      (should-not (get-text-property (+ (point-min) (length "⏱30s "))
+                                     'help-echo)))))
+
+(ert-deftest pimacs--copy-bash-call-excludes-timeout-prefix ()
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (setq pimacs--prompt-widget
+          (widget-create 'editable-field :format "%v" :value ""))
+    (widget-setup)
+    (let* ((command "echo first\necho second")
+           (args (list :command command :timeout 120))
+           (section (pimacs-section--new-section 'tool-call pimacs-section--root-section)))
+      (pimacs--insert-tool-call section "bash" args)
+      (should (string-prefix-p "bash ⏱2m " (buffer-string)))
+      (should (equal (pimacs--copy-tool-call-section section) command)))))
+
 (ert-deftest pimacs--handle-bash-execution-update-appends-deltas-by-request-id ()
   (with-temp-buffer
     (pimacs-section--create-root-section)

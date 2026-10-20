@@ -33,7 +33,7 @@ Could not find the exact text in README.md. The old text must match exactly incl
 read README.md:9999
 Offset 9999 is beyond end of file (10 lines total)
 
-bash sleep 2
+bash ⏱0s sleep 2
 Command timed out after 0.05 seconds
 
 codemode output

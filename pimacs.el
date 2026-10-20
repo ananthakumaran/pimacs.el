@@ -1333,6 +1333,12 @@ the tail again, move point back to the prompt and resume following."
 
 ;; bash
 (defun pimacs--insert-bash-args (args)
+  (when-let* ((timeout (pimacs--json-get args :timeout))
+              (duration (pimacs--format-duration timeout 0)))
+    (pimacs-section--insert-chrome
+     (propertize (format "⏱%s " duration)
+                 'help-echo (format "Timeout: %s seconds" timeout))
+     'shadow))
   (when-let ((command (pimacs--json-get args :command)))
     (insert (pimacs--render-content "tmp.sh" command))))
 
