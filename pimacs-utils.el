@@ -49,6 +49,23 @@
     (unless (pimacs--json-null-p value)
       value)))
 
+(defun pimacs--remote-paths (object directory &rest key-paths)
+  (when-let ((remote (file-remote-p directory)))
+    (dolist (key-path key-paths)
+      (let ((keys (if (listp key-path) key-path (list key-path)))
+            (parent object))
+        (while (and (cdr keys) (listp parent))
+          (setq parent (pimacs--json-get parent (car keys))
+                keys (cdr keys)))
+        (when (and keys (null (cdr keys)) (listp parent))
+          (let* ((key (car keys))
+                 (path (pimacs--json-get parent key)))
+            (when (and (stringp path)
+                       (not (file-remote-p path))
+                       (file-name-absolute-p path))
+              (setf (plist-get parent key) (concat remote path))))))))
+  object)
+
 (defun pimacs--json-encode (obj)
   "Encode OBJ into a JSON string.  JSON arrays must be represented with vectors."
   (json-serialize obj :null-object 'json-null :false-object 'json-false))

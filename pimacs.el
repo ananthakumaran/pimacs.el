@@ -2404,6 +2404,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (pimacs--send-command
      "get_session_stats" '()
      (pimacs--on-response-success-callback resp
+       (pimacs--remote-paths resp (pimacs--project-root) '(:data :sessionFile))
        (let* ((data (plist-get resp :data))
               (tokens (plist-get data :tokens))
               (cost (plist-get data :cost)))
@@ -2603,6 +2604,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
    "get_state" '()
    (lambda (resp)
      (when (pimacs--response-success-p resp)
+       (pimacs--remote-paths resp (pimacs--project-root) '(:data :sessionFile))
        (let* ((data (plist-get resp :data))
               (session-file (plist-get data :sessionFile))
               (session-dir (file-name-directory session-file))
@@ -2616,12 +2618,13 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                     (abbreviate-file-name session-dir))))))))
 
 (defun pimacs--resume-standalone-directory (scope)
-  (pcase scope
-    ('current-project
-     (pimacs-session-project-directory pimacs-session-directory
-                                       (pimacs--project-root)))
-    ('all (expand-file-name pimacs-session-directory))
-    (_ (error "Unknown resume scope: %S" scope))))
+  (with-connection-local-variables
+   (pcase scope
+     ('current-project
+      (pimacs-session-project-directory pimacs-session-directory
+                                        (pimacs--project-root)))
+     ('all (expand-file-name pimacs-session-directory))
+     (_ (error "Unknown resume scope: %S" scope)))))
 
 
 (defun pimacs--resume-standalone (scope &optional new-buffer)
@@ -2886,11 +2889,12 @@ CALLBACK is called after a successful refresh."
             (read-file-name "Export to file: ")))))
   (pimacs--with-chat-buffer
     (let ((args (if (and output-path (not (string-empty-p output-path)))
-                    (list :outputPath (expand-file-name output-path))
+                    (list :outputPath (file-local-name (expand-file-name output-path)))
                   '())))
       (pimacs--send-command
        "export_html" args
        (pimacs--on-response-success-callback resp
+         (pimacs--remote-paths resp (pimacs--project-root) '(:data :path))
          (pimacs--update-header-line)
          (let ((path (plist-get (plist-get resp :data) :path)))
            (pimacs--widget-save-excursion
@@ -3410,7 +3414,7 @@ If non-nil, call CB after the session refresh finishes."
   (pimacs--widget-save-excursion
     (pimacs--clear-session-widgets))
   (pimacs--send-command
-   "switch_session" (list :sessionPath session-file)
+   "switch_session" (list :sessionPath (file-local-name session-file))
    (pimacs--on-response-success-callback resp
      (pimacs--update-header-line)
      (pimacs--unless-cancelled resp "Session switch"

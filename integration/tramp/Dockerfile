@@ -33,7 +33,9 @@ RUN cd /srv/pimacs-tramp/fixture && npm ci --ignore-scripts && npm cache clean -
 COPY fixture/src /srv/pimacs-tramp/fixture/src
 COPY fixture/tapes /srv/pimacs-tramp/fixture/tapes
 COPY --chown=pimacs:pimacs project/ /srv/pimacs-tramp/project/
-RUN printf '%s\n' '{}' > /srv/pimacs-tramp/project/agent/auth.json \
+# Match the local checkout's parent Git marker so rg honors project ignores.
+RUN mkdir /srv/pimacs-tramp/.git \
+    && printf '%s\n' '{}' > /srv/pimacs-tramp/project/agent/auth.json \
     && chown pimacs:pimacs /srv/pimacs-tramp/project/agent/auth.json
 
 WORKDIR /srv/pimacs-tramp/project

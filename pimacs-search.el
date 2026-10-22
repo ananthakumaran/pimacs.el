@@ -22,8 +22,10 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'files-x)
 (require 'json)
 (require 'parse-time)
+(require 'shell)
 (require 'pimacs-core)
 (require 'pimacs-utils)
 (require 'pimacs-section)
@@ -510,15 +512,16 @@ select(.type == \"match\")
 
 
 (defun pimacs-search--default-request ()
-  (make-pimacs-search-request
-   :directory (expand-file-name pimacs-session-directory)
-   :scope pimacs-search-default-scope
-   :query ""
-   :search-type pimacs-search-default-search-type
-   :case pimacs-search-default-case
-   :context (copy-tree pimacs-search-default-context)
-   :filters (copy-sequence pimacs-search-default-filters)
-   :project-root (pimacs--project-root)))
+  (with-connection-local-variables
+   (make-pimacs-search-request
+    :directory (expand-file-name pimacs-session-directory)
+    :scope pimacs-search-default-scope
+    :query ""
+    :search-type pimacs-search-default-search-type
+    :case pimacs-search-default-case
+    :context (copy-tree pimacs-search-default-context)
+    :filters (copy-sequence pimacs-search-default-filters)
+    :project-root (pimacs--project-root))))
 
 (defun pimacs-search--request-directory (request)
   (pcase (pimacs-search-request-scope request)
@@ -552,10 +555,10 @@ select(.type == \"match\")
          "-e" "\"type\":\"session\""
          "-e" "\"type\":\"session_info\""
          "--"
-         (pimacs-search--request-directory request))))
+         (file-local-name (pimacs-search--request-directory request)))))
 
 (defun pimacs-search--jq-arguments (request)
-  (list "--unbuffered" "-c"
+  (list "--unbuffered" "--monochrome-output" "-c"
         "--argjson" "filters"
         (pimacs--json-encode
          (vconcat
@@ -567,10 +570,10 @@ select(.type == \"match\")
   (cond
    ((equal (pimacs-search-request-query request) "")
     "Enter a search term.")
-   ((not (executable-find pimacs-search-rg-executable))
+   ((not (executable-find pimacs-search-rg-executable t))
     (format "Cannot find ripgrep executable: %s"
             pimacs-search-rg-executable))
-   ((not (executable-find pimacs-search-jq-executable))
+   ((not (executable-find pimacs-search-jq-executable t))
     (format "Cannot find jq executable: %s"
             pimacs-search-jq-executable))
    ((not (file-directory-p (pimacs-search--request-directory request)))
@@ -591,32 +594,36 @@ select(.type == \"match\")
            (pimacs-search--jq-arguments request))))
 
 (defun pimacs-search--start-pipeline (request output-filter sentinel)
-  (if-let ((message (pimacs-search--startup-error request)))
-      (progn
-        (pimacs-search--set-status message)
-        nil)
-    (let (process)
-      (condition-case-unless-debug error-data
-          (progn
-            (setq process
-                  (make-process
-                   :name "pimacs-search-pipeline"
-                   :buffer nil
-                   :command (list shell-file-name shell-command-switch
-                                  (pimacs-search--pipeline-command request))
-                   :connection-type 'pipe
-                   :coding 'utf-8-unix
-                   :filter output-filter
-                   :sentinel sentinel
-                   :noquery t))
-            (setq pimacs-search--pipeline-process process)
-            (pimacs-search--set-status "Searching…")
-            process)
-        (error
-         (when (and process (process-live-p process))
-           (delete-process process))
-         (pimacs-search--set-status (error-message-string error-data))
-         nil)))))
+  (let ((default-directory
+         (file-name-as-directory (pimacs-search-request-directory request))))
+    (with-connection-local-variables
+     (if-let ((message (pimacs-search--startup-error request)))
+         (progn
+           (pimacs-search--set-status message)
+           nil)
+       (let (process)
+         (condition-case-unless-debug error-data
+             (progn
+               (setq process
+                     (make-process
+                      :name "pimacs-search-pipeline"
+                      :buffer nil
+                      :command (list shell-file-name shell-command-switch
+                                     (pimacs-search--pipeline-command request))
+                      :connection-type 'pipe
+                      :coding 'utf-8-unix
+                      :filter output-filter
+                      :sentinel sentinel
+                      :noquery t
+                      :file-handler t))
+               (setq pimacs-search--pipeline-process process)
+               (pimacs-search--set-status "Searching…")
+               process)
+           (error
+            (when (and process (process-live-p process))
+              (delete-process process))
+            (pimacs-search--set-status (error-message-string error-data))
+            nil)))))))
 
 (defun pimacs-search--reset-results ()
   (let ((inhibit-read-only t))
@@ -640,11 +647,11 @@ select(.type == \"match\")
 
 (defun pimacs-search--cancel-pipeline ()
   (when-let ((process pimacs-search--pipeline-process))
+    (setq pimacs-search--pipeline-process nil)
     (set-process-filter process #'ignore)
     (set-process-sentinel process #'ignore)
     (when (process-live-p process)
-      (interrupt-process process t)))
-  (setq pimacs-search--pipeline-process nil))
+      (delete-process process))))
 
 
 (defun pimacs-search--session-short-id (path)
@@ -995,9 +1002,11 @@ If NEW-BUFFER is non-nil, create a separate chat."
 (defun pimacs-search--parse-entry (line)
   (unless (equal line "")
     (condition-case error-data
-        (progn
-          (pimacs-search--enqueue-entry
-           (pimacs--json-parse-string line)))
+        (pimacs-search--enqueue-entry
+         (pimacs--remote-paths
+          (pimacs--json-parse-string line)
+          (pimacs-search-request-directory pimacs-search--request)
+          :path :cwd))
       (error
        (setq pimacs-search--parse-error
              (error-message-string error-data))))))
