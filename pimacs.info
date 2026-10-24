@@ -34,6 +34,7 @@ release history, see the changelog (changelog.html).
 * Usage::
 * UI Customization::
 * Sandbox::
+* TRAMP::
 * How It Works::
 * Keybindings::
 * Custom Variables::
@@ -471,7 +472,7 @@ customized independently:
    The ‘user>’ prompt label uses ‘pimacs-chat-user-role-face’.
 
 
-File: pimacs.info,  Node: Sandbox,  Next: How It Works,  Prev: UI Customization,  Up: Top
+File: pimacs.info,  Node: Sandbox,  Next: TRAMP,  Prev: UI Customization,  Up: Top
 
 6 Sandbox
 *********
@@ -484,9 +485,36 @@ To run Pi inside a sandbox, customize ‘pimacs-executable’ and
                       "--tools" "read,bash,edit,write,grep,find,ls"))
 
 
-File: pimacs.info,  Node: How It Works,  Next: Keybindings,  Prev: Sandbox,  Up: Top
+File: pimacs.info,  Node: TRAMP,  Next: How It Works,  Prev: Sandbox,  Up: Top
 
-7 How It Works
+7 TRAMP
+*******
+
+Pimacs runs Pi on the host of a TRAMP project.  Install and configure Pi
+on the remote host (*note Setup::), then visit the project, for example
+‘/ssh:alice@devbox:/srv/project/’, and run ‘M-x pimacs-chat’.
+
+   Use Emacs connection-local profiles for host-specific settings:
+
+     (require 'files-x)
+
+     (connection-local-set-profile-variables
+      'pimacs-devbox
+      '((pimacs-executable . "/home/alice/.local/bin/pi")
+        (pimacs-session-directory . "~/.pi/agent/sessions/")))
+
+     (connection-local-set-profiles
+      '(:application tramp :protocol "ssh"
+        :user "alice" :machine "devbox")
+      'pimacs-devbox)
+
+   The default session directory, ‘~/.pi/agent/sessions/’, is resolved
+against the remote user's home.
+
+
+File: pimacs.info,  Node: How It Works,  Next: Keybindings,  Prev: TRAMP,  Up: Top
+
+8 How It Works
 **************
 
 Emacs starts Pi in RPC mode (https://pi.dev/docs/latest/rpc).  In this
@@ -495,7 +523,7 @@ interface.  Some features, such as ‘/login’ and ‘/logout’, are not
 supported (https://github.com/earendil-works/pi/issues/885) because they
 are not currently exposed through the RPC API.
 
-7.1 Extension UI
+8.1 Extension UI
 ================
 
 Pimacs supports the RPC-compatible extension UI methods: notifications,
@@ -514,10 +542,10 @@ the full extension API.
 
 File: pimacs.info,  Node: Keybindings,  Next: Custom Variables,  Prev: How It Works,  Up: Top
 
-8 Keybindings
+9 Keybindings
 *************
 
-8.1 Chat Buffer Keybindings
+9.1 Chat Buffer Keybindings
 ===========================
 
 Key            Command                Description
@@ -560,7 +588,7 @@ Key            Command                Description
                                       kill ring
 ‘q’            ‘pimacs-quit-chat’     Quit the chat buffer
 
-8.2 Prompt Input Keybindings
+9.2 Prompt Input Keybindings
 ============================
 
 Key            Command                Description
@@ -593,8 +621,8 @@ Key            Command                Description
 
 File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindings,  Up: Top
 
-9 Custom Variables
-******************
+10 Custom Variables
+*******************
 
  -- User Option: pimacs-status-widget-hidden-keys nil
 
@@ -1133,7 +1161,7 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
 
 File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
-10 Custom Faces
+11 Custom Faces
 ***************
 
  -- Face: pimacs-chat-title-face '((t :inherit font-lock-builtin-face))
@@ -1373,25 +1401,26 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
 Tag Table:
 Node: Top746
-Node: Introduction1161
-Node: Setup1418
-Node: Doctor2215
-Node: Usage2587
-Node: Slash Commands3468
-Node: File Name Completion5966
-Node: Bash6294
-Node: Sending Context6561
-Node: Images7369
-Node: State Lines8234
-Node: Managing Chats9584
-Node: Searching and Resuming Sessions10177
-Node: Section Visibility12410
-Node: UI Customization15133
-Node: Sandbox18404
-Node: How It Works18797
-Node: Keybindings19949
-Node: Custom Variables24727
-Node: Custom Faces45457
+Node: Introduction1171
+Node: Setup1428
+Node: Doctor2225
+Node: Usage2597
+Node: Slash Commands3478
+Node: File Name Completion5976
+Node: Bash6304
+Node: Sending Context6571
+Node: Images7379
+Node: State Lines8244
+Node: Managing Chats9594
+Node: Searching and Resuming Sessions10187
+Node: Section Visibility12420
+Node: UI Customization15143
+Node: Sandbox18414
+Node: TRAMP18800
+Node: How It Works19647
+Node: Keybindings20797
+Node: Custom Variables25575
+Node: Custom Faces46307
 
 End Tag Table
 

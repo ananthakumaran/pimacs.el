@@ -70,6 +70,7 @@ Pimacs is an Emacs client for @uref{https://pi.dev/, Pi Coding Agent}.  For rele
 * Usage::
 * UI Customization::
 * Sandbox::
+* TRAMP::
 * How It Works::
 * Keybindings::
 * Custom Variables::
@@ -529,6 +530,32 @@ To run Pi inside a sandbox, customize @code{pimacs-executable} and
 (setq pimacs-flags '("run" "--silent" "--profile" "pi" "--allow-cwd" "--" "pi"
                  "--tools" "read,bash,edit,write,grep,find,ls"))
 @end lisp
+
+@node TRAMP
+@chapter TRAMP
+
+Pimacs runs Pi on the host of a TRAMP project.  Install and configure Pi
+on the remote host (@pxref{Setup}), then visit the project, for example
+@file{/ssh:alice@@devbox:/srv/project/}, and run @kbd{M-x pimacs-chat}.
+
+Use Emacs connection-local profiles for host-specific settings:
+
+@lisp
+(require 'files-x)
+
+(connection-local-set-profile-variables
+ 'pimacs-devbox
+ '((pimacs-executable . "/home/alice/.local/bin/pi")
+   (pimacs-session-directory . "~/.pi/agent/sessions/")))
+
+(connection-local-set-profiles
+ '(:application tramp :protocol "ssh"
+   :user "alice" :machine "devbox")
+ 'pimacs-devbox)
+@end lisp
+
+The default session directory, @file{~/.pi/agent/sessions/}, is resolved
+against the remote user's home.
 
 @node How It Works
 @chapter How It Works
