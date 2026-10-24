@@ -514,7 +514,7 @@ select(.type == \"match\")
 (defun pimacs-search--default-request ()
   (with-connection-local-variables
    (make-pimacs-search-request
-    :directory (expand-file-name pimacs-session-directory)
+    :directory (pimacs--expand-file-name pimacs-session-directory default-directory)
     :scope pimacs-search-default-scope
     :query ""
     :search-type pimacs-search-default-search-type
@@ -570,10 +570,10 @@ select(.type == \"match\")
   (cond
    ((equal (pimacs-search-request-query request) "")
     "Enter a search term.")
-   ((not (executable-find pimacs-search-rg-executable t))
+   ((not (pimacs--executable-find pimacs-search-rg-executable))
     (format "Cannot find ripgrep executable: %s"
             pimacs-search-rg-executable))
-   ((not (executable-find pimacs-search-jq-executable t))
+   ((not (pimacs--executable-find pimacs-search-jq-executable))
     (format "Cannot find jq executable: %s"
             pimacs-search-jq-executable))
    ((not (file-directory-p (pimacs-search--request-directory request)))

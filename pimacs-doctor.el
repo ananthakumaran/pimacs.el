@@ -45,9 +45,7 @@
   (setq-local revert-buffer-function (lambda (&rest _) (pimacs-doctor-refresh))))
 
 (defun pimacs-doctor--find-executable (executable)
-  (if (file-name-absolute-p executable)
-      (and (file-executable-p executable) executable)
-    (executable-find executable)))
+  (pimacs--executable-find executable))
 
 (defun pimacs-doctor--treesit-ready-p (language)
   (condition-case nil
@@ -62,8 +60,7 @@
 (defun pimacs-doctor--insert-pi-status ()
   (insert (propertize "Pi\n" 'face 'bold))
   (if-let ((executable (pimacs-doctor--find-executable pimacs-executable)))
-      (let ((pimacs-executable executable)
-            (display-executable (abbreviate-file-name executable)))
+      (let ((display-executable (abbreviate-file-name executable)))
         (condition-case err
             (let* ((version (pimacs--agent-version))
                    (compatible (pimacs--agent-version-compatible-p version)))
@@ -125,8 +122,9 @@
     (erase-buffer)
     (pimacs-doctor-mode)
     (insert (propertize "Pimacs Doctor\n\n" 'face 'bold))
-    (pimacs-doctor--insert-pi-status)
-    (pimacs-doctor--insert-search-status)
+    (with-connection-local-variables
+     (pimacs-doctor--insert-pi-status)
+     (pimacs-doctor--insert-search-status))
     (pimacs-doctor--insert-treesit-status)
     (insert "Press g to refresh this report.\n")
     (goto-char (point-min))))
@@ -163,8 +161,10 @@
 (defun pimacs-doctor ()
   "Show the Pimacs dependency report."
   (interactive)
-  (let ((buffer (get-buffer-create "*Pimacs Doctor*")))
+  (let ((directory (file-name-as-directory default-directory))
+        (buffer (get-buffer-create "*Pimacs Doctor*")))
     (with-current-buffer buffer
+      (setq default-directory directory)
       (pimacs-doctor--render))
     (pop-to-buffer buffer)))
 

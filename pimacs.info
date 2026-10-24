@@ -743,7 +743,9 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
           '(("read" . pimacs--visit-read-result)
             ("write" . pimacs--visit-write-result)
             ("edit" . pimacs--visit-edit-result)
-            ("grep" . pimacs--visit-grep-result))
+            ("grep" . pimacs--visit-grep-result)
+            ("find" . pimacs--visit-listed-file)
+            ("ls" . pimacs--visit-listed-file))
 
      Alist mapping tool names to result visitor functions.
 
@@ -870,10 +872,10 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
      The car is a header from ‘pimacs-list-chats-table’.  A non-nil cdr
      sorts in descending order.
 
- -- User Option: pimacs-session-directory (expand-file-name "sessions/"
-          "~/.pi/agent/")
+ -- User Option: pimacs-session-directory "~/.pi/agent/sessions/"
 
-     Root directory containing persisted Pi session files.
+     Root directory containing persisted Pi session files.  Native paths
+     are resolved on the project host.
 
  -- User Option: pimacs-session-record-max-bytes (* 100 1024)
 
@@ -1389,7 +1391,7 @@ Node: Sandbox18404
 Node: How It Works18797
 Node: Keybindings19949
 Node: Custom Variables24727
-Node: Custom Faces45340
+Node: Custom Faces45457
 
 End Tag Table
 

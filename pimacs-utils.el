@@ -66,6 +66,17 @@
               (setf (plist-get parent key) (concat remote path))))))))
   object)
 
+(defun pimacs--expand-file-name (path directory)
+  (expand-file-name
+   (plist-get (pimacs--remote-paths (list :path path) directory :path) :path)
+   directory))
+
+(defun pimacs--executable-find (executable)
+  (if (file-name-directory executable)
+      (let ((path (pimacs--expand-file-name executable default-directory)))
+        (and (file-executable-p path) (file-local-name path)))
+    (executable-find executable t)))
+
 (defun pimacs--json-encode (obj)
   "Encode OBJ into a JSON string.  JSON arrays must be represented with vectors."
   (json-serialize obj :null-object 'json-null :false-object 'json-false))
@@ -222,7 +233,7 @@ BODY must not modify the input field; retained undo entries must belong to it."
         (find-file-func (if other-window #'find-file-other-window #'find-file)))
     (when file
       (xref-push-marker-stack)
-      (funcall find-file-func file)
+      (funcall find-file-func (pimacs--expand-file-name file default-directory))
       (when line
         (goto-char (point-min))
         (forward-line (1- line)))
@@ -241,7 +252,7 @@ BODY must not modify the input field; retained undo entries must belong to it."
 
 (defun pimacs--insert-file-link (path root &optional suffix)
   (let* ((root (file-name-as-directory (expand-file-name root)))
-         (path (expand-file-name path root))
+         (path (pimacs--expand-file-name path root))
          (relative-path (file-relative-name path root))
          (display-path (if (string-prefix-p "../" relative-path)
                            path
@@ -305,8 +316,13 @@ PRED is called with KEY VALUE."
    table))
 
 (defun pimacs--file-at-point ()
-  (let ((ffap-url-regexp nil))
+  (let* ((ffap-url-regexp nil)
+         (ffap-alist (if (and (file-remote-p default-directory)
+                              (file-name-absolute-p (ffap-string-at-point)))
+                         (remove '("" . ffap-in-project) ffap-alist)
+                       ffap-alist)))
     (when-let ((file (ffap-file-at-point)))
+      (setq file (pimacs--expand-file-name file default-directory))
       (when (file-exists-p file)
         file))))
 

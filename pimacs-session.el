@@ -30,8 +30,9 @@
 (require 'pimacs-core)
 
 (defcustom pimacs-session-directory
-  (expand-file-name "sessions/" "~/.pi/agent/")
-  "Root directory containing persisted Pi session files."
+  "~/.pi/agent/sessions/"
+  "Root directory containing persisted Pi session files.
+Native paths are resolved on the project host."
   :type 'directory
   :group 'pimacs)
 
@@ -53,7 +54,8 @@
   (pimacs--format-relative-time timestamp))
 
 (defun pimacs-session-project-directory (session-directory project-root)
-  (let* ((project-root (file-local-name (directory-file-name (expand-file-name project-root))))
+  (let* ((session-directory (pimacs--expand-file-name session-directory project-root))
+         (project-root (file-local-name (directory-file-name (expand-file-name project-root))))
          (path (replace-regexp-in-string "\\`[/\\\\]+" "" project-root))
          (path (replace-regexp-in-string "[:/\\\\]" "-" path)))
     (expand-file-name (format "--%s--" path) session-directory)))
