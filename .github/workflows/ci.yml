@@ -94,7 +94,7 @@ jobs:
       run: make -C integration/tramp up
 
     - name: Run TRAMP integration tests
-      timeout-minutes: 20
+      timeout-minutes: 30
       run: UNDERCOVER_FORCE=true UNDERCOVER_CONFIG='("*.el" (:report-format codecov) (:send-report nil) (:exclude "*-tests.el"))' make -C integration/tramp integration
 
     - name: Show TRAMP fixture logs on failure

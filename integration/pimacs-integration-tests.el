@@ -349,7 +349,7 @@
   (pimacs-search-test-activate-button
    buffer 'action #'pimacs-search--clear-context)
   (cl-letf (((symbol-function 'read-directory-name)
-             (lambda (&rest _) pimacs-session-directory)))
+             (lambda (_prompt directory &rest _) directory)))
     (pimacs-search-test-activate-button
      buffer 'pimacs-search-focus 'directory)))
 
