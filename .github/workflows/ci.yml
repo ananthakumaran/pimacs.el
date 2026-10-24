@@ -17,6 +17,10 @@ jobs:
             pgtk: false
           - emacs_version: '30.2'
             pgtk: true
+            nix_package: nixos-25.05#emacs30-pgtk
+          - emacs_version: '31.1'
+            pgtk: true
+            nix_package: nixos-unstable#emacs31-pgtk
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-node@v6
@@ -31,7 +35,7 @@ jobs:
     - name: Install Emacs with image support
       if: ${{ matrix.pgtk }}
       run: |
-        nix profile install github:NixOS/nixpkgs/nixos-25.05#emacs30-pgtk
+        nix profile install github:NixOS/nixpkgs/${{ matrix.nix_package }}
         echo "$HOME/.nix-profile/bin" >> "$GITHUB_PATH"
         "$HOME/.nix-profile/bin/emacs" --batch -Q --eval \
           "(unless (image-type-available-p 'png) (error \"PNG unavailable\"))"
