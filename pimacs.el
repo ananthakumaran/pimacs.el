@@ -273,7 +273,9 @@ it, or `pimacs--content-text' to extract text from content."
   '(("read" . pimacs--visit-read-result)
     ("write" . pimacs--visit-write-result)
     ("edit" . pimacs--visit-edit-result)
-    ("grep" . pimacs--visit-grep-result))
+    ("grep" . pimacs--visit-grep-result)
+    ("find" . pimacs--visit-listed-file)
+    ("ls" . pimacs--visit-listed-file))
   "Alist mapping tool names to result visitor functions.
 
 Each entry is (TOOL-NAME . FUNCTION) where FUNCTION is called
@@ -773,7 +775,7 @@ the tail again, move point back to the prompt and resume following."
 (defun pimacs--native-file-completions (prefix)
   (let* ((dir (or (file-name-directory prefix) ""))
          (file (file-name-nondirectory prefix))
-         (full-dir (expand-file-name dir (pimacs--project-root))))
+         (full-dir (pimacs--expand-file-name dir (pimacs--project-root))))
     (when (file-directory-p full-dir)
       (let ((candidates (file-name-all-completions file full-dir)))
         (mapcar (lambda (c) (concat dir c)) candidates)))))
@@ -1226,7 +1228,7 @@ the tail again, move point back to the prompt and resume following."
          (let ((text (pimacs--json-get item :text)))
            (when (and (stringp text) (not (string-empty-p text)))
              (pcase-let ((`(,clean-text . ,truncated-line) (pimacs--extract-truncation-notice text)))
-               (insert (pimacs--render-content (expand-file-name path (pimacs--project-root)) clean-text))
+               (insert (pimacs--render-content (pimacs--expand-file-name path (pimacs--project-root)) clean-text))
                (when truncated-line
                  (insert truncated-line))))))
         ("image"
@@ -1238,13 +1240,13 @@ the tail again, move point back to the prompt and resume following."
 (defun pimacs--visit-read-result (_details args)
   (when-let ((path (pimacs--json-get args :path)))
     (let ((section-line (pimacs-section--section-line)))
-      (list :file (expand-file-name path (pimacs--project-root))
+      (list :file (pimacs--expand-file-name path (pimacs--project-root))
             :line (+ (or (pimacs--json-get args :offset) 1) section-line)
             :column (- (point) (line-beginning-position))))))
 
 (defun pimacs--visit-read-call (args)
   (when-let ((path (pimacs--json-get args :path)))
-    (list :file (expand-file-name path (pimacs--project-root))
+    (list :file (pimacs--expand-file-name path (pimacs--project-root))
           :line (or (pimacs--json-get args :offset) 1))))
 
 ;; write
@@ -1261,12 +1263,12 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--visit-write-result (_details args)
   (when-let ((path (pimacs--json-get args :path)))
-    (list :file (expand-file-name path (pimacs--project-root)))))
+    (list :file (pimacs--expand-file-name path (pimacs--project-root)))))
 
 (defun pimacs--visit-write-call (args)
   (when-let ((path (pimacs--json-get args :path)))
     (let ((section-line (pimacs-section--section-line)))
-      (list :file (expand-file-name path (pimacs--project-root))
+      (list :file (pimacs--expand-file-name path (pimacs--project-root))
             :line (max 1 section-line)
             :column (if (zerop section-line)
                         0
@@ -1287,7 +1289,7 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--visit-edit-call (args)
   (when-let ((path (pimacs--json-get args :path)))
-    (list :file (expand-file-name path (pimacs--project-root)) :line 1)))
+    (list :file (pimacs--expand-file-name path (pimacs--project-root)) :line 1)))
 
 (defun pimacs--visit-edit-result (_details args)
   (when-let ((path (pimacs--json-get args :path)))
@@ -1297,7 +1299,7 @@ the tail again, move point back to the prompt and resume following."
               (narrow-to-region (pimacs-section-beginning section)
                                 (pimacs-section-end section))
               (pimacs--diff-hunk-location))))
-      (list :file (expand-file-name path (pimacs--project-root))
+      (list :file (pimacs--expand-file-name path (pimacs--project-root))
             :line (or (plist-get location :line) 1)
             :column (plist-get location :column)))))
 
@@ -1425,9 +1427,10 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--normalize-grep-file (file args)
   (if-let ((path (pimacs--json-get args :path)))
-      (if (file-directory-p path)
-          (expand-file-name file path)
-        path)
+      (let ((path (pimacs--expand-file-name path (pimacs--project-root))))
+        (if (file-directory-p path)
+            (pimacs--expand-file-name file path)
+          path))
     file))
 
 (defun pimacs--visit-grep-match (args cursor-position file-group line-group content-group)
@@ -1474,6 +1477,15 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--insert-ls-result (content _details _args)
   (pimacs--insert-content content))
+
+(defun pimacs--visit-listed-file (_details args)
+  (let* ((file (string-trim (buffer-substring-no-properties
+                             (line-beginning-position) (line-end-position))))
+         (directory (pimacs--expand-file-name
+                     (or (pimacs--json-get args :path) ".") (pimacs--project-root)))
+         (path (pimacs--expand-file-name file directory)))
+    (when (and (not (string-empty-p file)) (file-exists-p path))
+      (list :file path))))
 
 (defun pimacs--insert-tool-args (tool-name args)
   (if-let ((inserter (pimacs--alist-get-equal tool-name pimacs-insert-tool-args-functions)))
@@ -2404,6 +2416,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
     (pimacs--send-command
      "get_session_stats" '()
      (pimacs--on-response-success-callback resp
+       (pimacs--remote-paths resp (pimacs--project-root) '(:data :sessionFile))
        (let* ((data (plist-get resp :data))
               (tokens (plist-get data :tokens))
               (cost (plist-get data :cost)))
@@ -2603,6 +2616,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
    "get_state" '()
    (lambda (resp)
      (when (pimacs--response-success-p resp)
+       (pimacs--remote-paths resp (pimacs--project-root) '(:data :sessionFile))
        (let* ((data (plist-get resp :data))
               (session-file (plist-get data :sessionFile))
               (session-dir (file-name-directory session-file))
@@ -2616,12 +2630,13 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
                     (abbreviate-file-name session-dir))))))))
 
 (defun pimacs--resume-standalone-directory (scope)
-  (pcase scope
-    ('current-project
-     (pimacs-session-project-directory pimacs-session-directory
-                                       (pimacs--project-root)))
-    ('all (expand-file-name pimacs-session-directory))
-    (_ (error "Unknown resume scope: %S" scope))))
+  (with-connection-local-variables
+   (pcase scope
+     ('current-project
+      (pimacs-session-project-directory pimacs-session-directory
+                                        (pimacs--project-root)))
+     ('all (pimacs--expand-file-name pimacs-session-directory default-directory))
+     (_ (error "Unknown resume scope: %S" scope)))))
 
 
 (defun pimacs--resume-standalone (scope &optional new-buffer)
@@ -2886,11 +2901,12 @@ CALLBACK is called after a successful refresh."
             (read-file-name "Export to file: ")))))
   (pimacs--with-chat-buffer
     (let ((args (if (and output-path (not (string-empty-p output-path)))
-                    (list :outputPath (expand-file-name output-path))
+                    (list :outputPath (file-local-name (expand-file-name output-path)))
                   '())))
       (pimacs--send-command
        "export_html" args
        (pimacs--on-response-success-callback resp
+         (pimacs--remote-paths resp (pimacs--project-root) '(:data :path))
          (pimacs--update-header-line)
          (let ((path (plist-get (plist-get resp :data) :path)))
            (pimacs--widget-save-excursion
@@ -3410,7 +3426,7 @@ If non-nil, call CB after the session refresh finishes."
   (pimacs--widget-save-excursion
     (pimacs--clear-session-widgets))
   (pimacs--send-command
-   "switch_session" (list :sessionPath session-file)
+   "switch_session" (list :sessionPath (file-local-name session-file))
    (pimacs--on-response-success-callback resp
      (pimacs--update-header-line)
      (pimacs--unless-cancelled resp "Session switch"

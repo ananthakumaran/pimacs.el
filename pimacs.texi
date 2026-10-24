@@ -70,6 +70,7 @@ Pimacs is an Emacs client for @uref{https://pi.dev/, Pi Coding Agent}.  For rele
 * Usage::
 * UI Customization::
 * Sandbox::
+* TRAMP::
 * How It Works::
 * Keybindings::
 * Custom Variables::
@@ -530,6 +531,32 @@ To run Pi inside a sandbox, customize @code{pimacs-executable} and
                  "--tools" "read,bash,edit,write,grep,find,ls"))
 @end lisp
 
+@node TRAMP
+@chapter TRAMP
+
+Pimacs runs Pi on the host of a TRAMP project.  Install and configure Pi
+on the remote host (@pxref{Setup}), then visit the project, for example
+@file{/ssh:alice@@devbox:/srv/project/}, and run @kbd{M-x pimacs-chat}.
+
+Use Emacs connection-local profiles for host-specific settings:
+
+@lisp
+(require 'files-x)
+
+(connection-local-set-profile-variables
+ 'pimacs-devbox
+ '((pimacs-executable . "/home/alice/.local/bin/pi")
+   (pimacs-session-directory . "~/.pi/agent/sessions/")))
+
+(connection-local-set-profiles
+ '(:application tramp :protocol "ssh"
+   :user "alice" :machine "devbox")
+ 'pimacs-devbox)
+@end lisp
+
+The default session directory, @file{~/.pi/agent/sessions/}, is resolved
+against the remote user's home.
+
 @node How It Works
 @chapter How It Works
 
@@ -840,7 +867,9 @@ it, or @code{pimacs--content-text} to extract text from content.
 '(("read" . pimacs--visit-read-result)
   ("write" . pimacs--visit-write-result)
   ("edit" . pimacs--visit-edit-result)
-  ("grep" . pimacs--visit-grep-result))
+  ("grep" . pimacs--visit-grep-result)
+  ("find" . pimacs--visit-listed-file)
+  ("ls" . pimacs--visit-listed-file))
 @end lisp
 
 Alist mapping tool names to result visitor functions.
@@ -991,9 +1020,10 @@ The car is a header from @code{pimacs-list-chats-table}.  A non-nil cdr sorts
 in descending order.
 @end defopt
 
-@defopt pimacs-session-directory @code{(expand-file-name "sessions/" "~/.pi/agent/")}
+@defopt pimacs-session-directory @code{"~/.pi/agent/sessions/"}
 
 Root directory containing persisted Pi session files.
+Native paths are resolved on the project host.
 @end defopt
 
 @defopt pimacs-session-record-max-bytes @code{(* 100 1024)}

@@ -28,6 +28,8 @@
 (require 'warnings)
 (require 'widget)
 (require 'wid-edit)
+(require 'url-parse)
+(require 'url-util)
 (require 'pimacs-core)
 (require 'pimacs-utils)
 (require 'pimacs-markdown-table)
@@ -1503,16 +1505,28 @@ When non-nil, diagnostics are appended to the temporary buffer
        (not (string-prefix-p "//" url))
        (not (string-prefix-p "#" url))))
 
+(defun pimacs--markdown-file-link-path (url)
+  (when-let
+      ((path
+        (cond
+         ((pimacs--markdown-relative-link-p url) url)
+         ((string-prefix-p "file:" url t)
+          (let* ((parsed (url-generic-parse-url url))
+                 (host (url-host parsed)))
+            (when (member (downcase (or host "")) '("" "localhost"))
+              (car (url-path-and-query parsed))))))))
+    (decode-coding-string (url-unhex-string path) 'utf-8)))
+
 (defun pimacs--markdown-apply-url-widgets (start end _data)
   (let ((position start))
     (while (< position end)
       (let ((next (next-single-property-change
                    position 'pimacs-markdown-link-url nil end)))
         (when-let ((url (get-text-property position 'pimacs-markdown-link-url)))
-          (let ((relative (pimacs--markdown-relative-link-p url)))
-            (widget-convert-button (if relative 'file-link 'url-link) position next
-                                   :value (if relative
-                                              (expand-file-name url (pimacs--project-root))
+          (let ((file (pimacs--markdown-file-link-path url)))
+            (widget-convert-button (if file 'file-link 'url-link) position next
+                                   :value (if file
+                                              (pimacs--expand-file-name file (pimacs--project-root))
                                             url)
                                    :suppress-face t
                                    :help-echo url)))

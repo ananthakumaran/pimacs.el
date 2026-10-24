@@ -113,6 +113,10 @@ docs-lint:
 .PHONY: docs
 docs: docs/index.html docs/index.md docs/changelog.html docs/changelog.md
 
+.PHONY: docs-serve
+docs-serve: docs
+	@http-server -p 3333 ./docs
+
 pimacs.info: Makefile pimacs.texi $(PIMACS_DOC_SOURCES) docs/build.el
 	@PIMACS_DOC_SOURCES="$(PIMACS_DOC_SOURCES)" $(EMACS) -Q --batch -l docs/build.el
 	@makeinfo -o pimacs.info pimacs.texi

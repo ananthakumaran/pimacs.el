@@ -52,11 +52,11 @@ jobs:
             (setq treesit-language-source-alist
                   '((markdown
                      \"https://github.com/tree-sitter-grammars/tree-sitter-markdown\"
-                     \"split_parser\"
+                     \"v0.5.3\"
                      \"tree-sitter-markdown/src\")
                     (markdown-inline
                      \"https://github.com/tree-sitter-grammars/tree-sitter-markdown\"
-                     \"split_parser\"
+                     \"v0.5.3\"
                      \"tree-sitter-markdown-inline/src\")))
             (setq user-emacs-directory
                   (file-name-as-directory (expand-file-name \".cask\")))
@@ -84,6 +84,22 @@ jobs:
         sudo apt-get install --yes jq ripgrep
         npm install -g --ignore-scripts @earendil-works/pi-coding-agent
         UNDERCOVER_FORCE=true UNDERCOVER_CONFIG='("*.el" (:report-format codecov) (:send-report nil) (:exclude "*-tests.el"))' make integration
+
+    - name: Start TRAMP fixture
+      id: tramp
+      run: make -C integration/tramp up
+
+    - name: Run TRAMP integration tests
+      timeout-minutes: 20
+      run: UNDERCOVER_FORCE=true UNDERCOVER_CONFIG='("*.el" (:report-format codecov) (:send-report nil) (:exclude "*-tests.el"))' make -C integration/tramp integration
+
+    - name: Show TRAMP fixture logs on failure
+      if: ${{ failure() && steps.tramp.outcome != 'skipped' }}
+      run: make -C integration/tramp logs
+
+    - name: Stop TRAMP fixture
+      if: ${{ always() && steps.tramp.outcome != 'skipped' }}
+      run: make -C integration/tramp down
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v7

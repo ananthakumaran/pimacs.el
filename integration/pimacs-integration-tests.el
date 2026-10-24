@@ -6,6 +6,7 @@
 
 (require 'cl-lib)
 (require 'ert)
+(require 'url-util)
 
 ;; development only packages, not declared as a package-dependency
 (package-initialize)
@@ -30,8 +31,18 @@
             (file-truename buffer-file-name)))))
 
 (defconst pimacs-tape-directory (expand-file-name "fixture/tapes" pimacs-integration-directory))
-(defconst pimacs-project-directory (expand-file-name "project" pimacs-integration-directory))
-(defconst pimacs-project-agent-directory (expand-file-name "project/agent" pimacs-integration-directory))
+(defconst pimacs-integration-remote-directory
+  (when (getenv "PIMACS_INTEGRATION_TRAMP")
+    (format "/ssh:pimacs@127.0.0.1#%s:/srv/pimacs-tramp/"
+            (or (getenv "PIMACS_TRAMP_PORT") "2222"))))
+
+(when pimacs-integration-remote-directory
+  (load (expand-file-name "tramp/setup.el" pimacs-integration-directory) nil t))
+
+(defconst pimacs-project-directory
+  (expand-file-name "project" (or pimacs-integration-remote-directory
+                                  pimacs-integration-directory)))
+(defconst pimacs-project-agent-directory (expand-file-name "agent" pimacs-project-directory))
 
 (defun pimacs-fixture-mode ()
   (or (getenv "FIXTURE_MODE") "replay"))
@@ -71,11 +82,15 @@
             (enable-local-variables :all)
             (fixture-process-environment
              (list (concat "FIXTURE_SCENARIO=" ,scenario)
-                   (concat "PI_CODING_AGENT_DIR=" pimacs-project-agent-directory)
+                   (concat "PI_CODING_AGENT_DIR=" (file-local-name pimacs-project-agent-directory))
                    (concat "FIXTURE_MODE=" (pimacs-fixture-mode))))
             (process-environment
              (append fixture-process-environment process-environment))
-            (pimacs-flags (list "--tools" pimacs-integration-tools "--extension" (expand-file-name "fixture" pimacs-integration-directory))))
+            (pimacs-flags
+             (list "--tools" pimacs-integration-tools "--extension"
+                   (file-local-name
+                    (expand-file-name "fixture" (or pimacs-integration-remote-directory
+                                                    pimacs-integration-directory))))))
        (let ((sessions-dir (expand-file-name "sessions" pimacs-project-agent-directory)))
          (when (file-exists-p sessions-dir)
            (delete-directory sessions-dir t)
@@ -88,6 +103,8 @@
        (unwind-protect
            (progn
              ,@body
+             (when pimacs-integration-remote-directory
+               (pimacs-integration-assert-remote-session))
              (pimacs-drain-process-output)
              (pimacs-integration-check-resume-candidates)
              (pimacs-render-pending-history)
@@ -126,6 +143,23 @@
       (pimacs--history-render-idle
        (current-buffer) pimacs--history-render-generation))))
 
+(defun pimacs-integration-assert-remote-session ()
+  (let* ((agent (pimacs--current-agent))
+         (response (pimacs--send-command-sync "get_state" '()))
+         (path (plist-get (plist-get response :data) :sessionFile)))
+    (should (process-get agent 'remote-command))
+    (should (equal (process-get agent 'project-root)
+                   (file-name-as-directory pimacs-project-directory)))
+    (should (pimacs--response-success-p response))
+    (should (string-prefix-p
+             (concat (file-local-name pimacs-project-agent-directory) "/sessions/") path))
+    (let ((file (concat (file-remote-p pimacs-project-directory) path)))
+      (when (file-exists-p file)
+        (let ((record (pimacs-session-read-record file)))
+          (should record)
+          (should (equal (pimacs-session-record-cwd record)
+                         pimacs-project-directory)))))))
+
 (defun pimacs-integration-check-resume-candidates ()
   (let* ((directory (expand-file-name "sessions" pimacs-project-agent-directory))
          (records (pimacs-session-with-ancestors
@@ -150,22 +184,31 @@
      (pimacs-drain-process-output)))
 
 (defun pimacs-normalize-buffer-text (text)
-  (let* ((abbreviated-project-directory
+  (let* ((temporary-directory
+          (let ((default-directory pimacs-project-directory))
+            (temporary-file-directory)))
+         (abbreviated-project-directory
           (abbreviate-file-name pimacs-project-directory))
          (abbreviated-temporary-file-directory
-          (abbreviate-file-name temporary-file-directory))
+          (abbreviate-file-name temporary-directory))
          (session_dir (concat "--" (replace-regexp-in-string "/" "-"
-                                                             (substring pimacs-project-directory 1))
+                                                             (substring (file-local-name pimacs-project-directory) 1))
                               "--")))
     (->> text
+         (replace-regexp-in-string
+          (concat "^Session exported to: "
+                  (regexp-quote (or (file-remote-p pimacs-project-directory) "")))
+          "Session exported to: ")
          (replace-regexp-in-string (regexp-quote pimacs-project-directory) "PROJECT_DIR")
          (replace-regexp-in-string
           (regexp-quote abbreviated-project-directory) "PROJECT_DIR")
          (replace-regexp-in-string
+          (regexp-quote (file-local-name pimacs-project-directory)) "PROJECT_DIR")
+         (replace-regexp-in-string
           "/[^[:space:]`\"']*/integration/project" "PROJECT_DIR")
          (replace-regexp-in-string (regexp-quote session_dir) "SESSION_DIR")
          (replace-regexp-in-string
-          (concat (regexp-quote (file-name-as-directory temporary-file-directory))
+          (concat (regexp-quote (file-name-as-directory temporary-directory))
                   "pimacs-parent-[^/]+/")
           "PARENT_DIR/")
          (replace-regexp-in-string
@@ -195,6 +238,8 @@
   (let* ((tape-file (expand-file-name (concat scenario suffix) pimacs-tape-directory))
          (current-text (pimacs-normalize-buffer-text text))
          (fixture-mode (pimacs-fixture-mode)))
+    (when (and pimacs-integration-remote-directory (not (file-exists-p tape-file)))
+      (ert-fail (format "Missing replay tape: %s" tape-file)))
     (if (or (not (file-exists-p tape-file))
             (string= fixture-mode "record"))
         (write-region current-text nil tape-file nil 'silent)
@@ -250,10 +295,6 @@
       (if entries
           (concat (mapconcat #'identity (nreverse entries) "\n\n") "\n")
         ""))))
-
-(defun pimacs-send-prompt-and-wait (prompt)
-  (pimacs-send-prompt prompt)
-  (pimacs-drain-process-output))
 
 (defun pimacs-wait-until (predicate &optional timeout)
   (let ((timeout (or timeout 120))
@@ -357,9 +398,10 @@
                  (or tape-scenario "session-search") ".txt"
                  (buffer-substring (point-min) (point-max))))))
         (when-let ((buffer (get-buffer pimacs-search--buffer-name)))
-          (with-current-buffer buffer
-            (pimacs-search--cancel-pipeline))
-          (kill-buffer buffer))))))
+          (unwind-protect
+              (with-current-buffer buffer
+                (pimacs-search--cancel-pipeline))
+            (kill-buffer buffer)))))))
 
 
 (defmacro pimacs-wait-for-agent-event (predicate &rest body)
@@ -380,6 +422,16 @@
        (pimacs--with-chat-buffer
          (pimacs--remove-event-listener t 'pimacs-wait-for-agent-event)))))
 
+(defun pimacs-send-command-and-wait (command)
+  (pimacs-send-prompt command)
+  (pimacs-drain-process-output))
+
+(defun pimacs-send-prompt-and-wait (prompt)
+  (pimacs-wait-for-agent-event
+      (lambda (event) (equal (plist-get event :type) "agent_settled"))
+    (pimacs-send-prompt prompt))
+  (pimacs-drain-process-output))
+
 (defun pimacs-assert-prompt (buffer expected)
   (with-current-buffer buffer
     (should (equal (widget-value pimacs--prompt-widget) expected))))
@@ -392,6 +444,244 @@
           (append (listify-key-sequence ,input)
                   unread-command-events)))
      ,@body))
+
+(defun pimacs-assert-visited-file (file visit)
+  (let ((existing (get-file-buffer file))
+        (xref--history (cons nil nil)))
+    (unwind-protect
+        (save-window-excursion
+          (save-current-buffer
+            (funcall visit)
+            (should (equal buffer-file-name file))
+            (should (file-exists-p buffer-file-name))
+            (should (> (buffer-size) 0))))
+      (unless existing
+        (when-let ((buffer (get-file-buffer file)))
+          (kill-buffer buffer))))))
+
+(defun pimacs-assert-search-resume (query)
+  (let ((chats (mapcar #'cdr (pimacs--active-chat-candidates)))
+        (process-environment (copy-sequence process-environment))
+        search-buffer resumed-chat)
+    (setenv "FIXTURE_MODE" "replay")
+    (setenv "FIXTURE_SCENARIO" "resume-standalone-resumed")
+    (save-window-excursion
+      (unwind-protect
+          (progn
+            (pimacs-search-sessions query)
+            (setq search-buffer (get-buffer pimacs-search--buffer-name))
+            (pimacs-wait-for-search search-buffer)
+            (with-current-buffer search-buffer
+              (should (> pimacs-search--rendered-count 0))
+              (let ((section (car (hash-table-values pimacs-search--session-sections))))
+                (should section)
+                (goto-char (pimacs-section-beginning section))
+                (pimacs-search-resume-at-point-new-buffer)))
+            (pimacs-wait-until
+             (lambda ()
+               (setq resumed-chat
+                     (car (seq-difference
+                           (mapcar #'cdr (pimacs--active-chat-candidates)) chats)))))
+            (with-current-buffer resumed-chat
+              (should (equal default-directory (file-name-as-directory pimacs-project-directory)))
+              (when pimacs-integration-remote-directory
+                (should (process-get (pimacs--current-agent) 'remote-command))))
+            (pimacs-wait-until
+             (lambda ()
+               (with-current-buffer resumed-chat
+                 (pimacs-render-pending-history)
+                 (string-match-p (regexp-quote query) (buffer-string)))))
+            (let* ((key (buffer-local-value 'pimacs--project-key resumed-chat))
+                   (agent (gethash key pimacs--agents)))
+              (should (process-live-p agent))
+              (delete-process agent)
+              (pimacs-wait-until
+               (lambda ()
+                 (and (not (buffer-live-p resumed-chat))
+                      (not (gethash key pimacs--agents))))))
+            (should (seq-every-p #'buffer-live-p chats)))
+        (when (buffer-live-p resumed-chat)
+          (with-current-buffer resumed-chat
+            (pimacs-quit-chat)))
+        (when (buffer-live-p search-buffer)
+          (unwind-protect
+              (with-current-buffer search-buffer (pimacs-search--cancel-pipeline))
+            (kill-buffer search-buffer)))))))
+
+(ert-deftest pimacs-file-links-preserve-project-host ()
+  (let* ((default-directory pimacs-project-directory)
+         (pimacs--project-root pimacs-project-directory)
+         (file (expand-file-name "utils.py" pimacs-project-directory)))
+    (with-temp-buffer
+      (dolist (path (delete-dups (list "utils.py" (file-local-name file) file)))
+        (let ((widget (pimacs--insert-file-link path pimacs-project-directory))
+              (args (list :path path)))
+          (should (equal (widget-value widget) file))
+          (dolist (result (list (pimacs--visit-read-call args)
+                                (pimacs--visit-write-result nil args)
+                                (pimacs--visit-edit-call args)))
+            (should (equal (plist-get result :file) file)))
+          (pimacs-assert-visited-file file (lambda () (widget-apply widget :action)))))
+      (dolist (path (delete-dups (list "utils.py" (file-local-name file) file
+                                       (concat (file-local-name file) ":2"))))
+        (erase-buffer)
+        (insert path)
+        (goto-char (point-min))
+        (should (equal (pimacs--file-at-point) file)))
+      (let ((default-directory (file-name-as-directory
+                                (expand-file-name "agent" pimacs-project-directory))))
+        (erase-buffer)
+        (insert "../utils.py")
+        (goto-char (point-min))
+        (should (equal (pimacs--file-at-point) file)))
+      (pimacs-assert-visited-file
+       file (lambda () (pimacs--visit-file (list :file (file-local-name file))))))))
+
+(ert-deftest pimacs-grep-navigation-preserves-project-host ()
+  (let* ((default-directory pimacs-project-directory)
+         (pimacs--project-root pimacs-project-directory)
+         (file (expand-file-name "utils.py" pimacs-project-directory)))
+    (with-temp-buffer
+      (insert "utils.py:1: def greet(name):")
+      (dolist (path (list "." (file-local-name pimacs-project-directory)
+                          (file-local-name file)))
+        (goto-char (point-min))
+        (search-forward "def")
+        (let ((result (pimacs--visit-grep-result nil (list :path path))))
+          (should (equal (plist-get result :file) file))
+          (should (= (plist-get result :line) 1))
+          (pimacs-assert-visited-file file (lambda () (pimacs--visit-file result))))))))
+
+(ert-deftest pimacs-listed-file-navigation-preserves-project-host ()
+  (let* ((default-directory pimacs-project-directory)
+         (pimacs--project-root pimacs-project-directory)
+         (directory (expand-file-name "agent" pimacs-project-directory))
+         (file (expand-file-name "settings.json" directory)))
+    (with-temp-buffer
+      (insert "settings.json")
+      (dolist (tool '("find" "ls"))
+        (let ((visitor (pimacs--alist-get-equal tool pimacs-visit-tool-result-functions)))
+          (should (functionp visitor))
+          (dolist (path (list "agent" (file-local-name directory)))
+            (let ((result (funcall visitor nil (list :path path))))
+              (should (equal (plist-get result :file) file))
+              (pimacs-assert-visited-file file (lambda () (pimacs--visit-file result))))))))))
+
+(ert-deftest pimacs-native-file-completions-preserve-project-host ()
+  (let* ((default-directory pimacs-project-directory)
+         (pimacs--project-root pimacs-project-directory)
+         (native-root (file-local-name (file-name-as-directory pimacs-project-directory))))
+    (should (member "utils.py" (pimacs--native-file-completions "u")))
+    (should (member (concat native-root "utils.py")
+                    (pimacs--native-file-completions (concat native-root "u"))))
+    (let ((pimacs--project-file-cache nil))
+      (should (member "utils.py" (pimacs--project-file-completions ""))))))
+
+(ert-deftest pimacs-markdown-file-links-preserve-project-host ()
+  (require 'pimacs-markdown)
+  (let* ((default-directory pimacs-project-directory)
+         (pimacs--project-root pimacs-project-directory)
+         (file (expand-file-name "utils.py" pimacs-project-directory)))
+    (dolist (url (list "utils.py" (file-local-name file)
+                       (concat "file://" (file-local-name file))))
+      (with-temp-buffer
+        (insert (propertize "source" 'pimacs-markdown-link-url url))
+        (pimacs--markdown-apply-url-widgets (point-min) (point-max) nil)
+        (let ((widget (widget-at (point-min))))
+          (should (eq (car widget) 'file-link))
+          (should (equal (widget-value widget) file))
+          (pimacs-assert-visited-file file (lambda () (widget-apply widget :action))))))
+    (dolist (url '("https://example.com/source" "file://other-host/source"))
+      (with-temp-buffer
+        (insert (propertize "external" 'pimacs-markdown-link-url url))
+        (pimacs--markdown-apply-url-widgets (point-min) (point-max) nil)
+        (let ((widget (widget-at (point-min))))
+          (should (eq (car widget) 'url-link))
+          (should (equal (widget-value widget) url)))))))
+
+(ert-deftest pimacs-full-output-links-preserve-project-host ()
+  (require 'pimacs-markdown)
+  (let* ((default-directory pimacs-project-directory)
+         (pimacs--project-root pimacs-project-directory)
+         (file (make-nearby-temp-file "pimacs path λ-" nil ".txt")))
+    (unwind-protect
+        (progn
+          (with-temp-file file
+            (insert "full output\n"))
+          (when pimacs-integration-remote-directory
+            (should-not (file-exists-p (file-local-name file))))
+          (with-temp-buffer
+            (pimacs--insert-tool-output
+             (concat "Full output saved to: " (file-local-name file)) (file-local-name file))
+            (goto-char (point-min))
+            (search-forward "Full output saved to: ")
+            (let ((widget (widget-at (point))))
+              (should (equal (widget-value widget) file))
+              (pimacs-assert-visited-file file (lambda () (widget-apply widget :action)))))
+          (with-temp-buffer
+            (insert (propertize "output" 'pimacs-markdown-link-url
+                                (url-encode-url (concat "file://" (file-local-name file)))))
+            (pimacs--markdown-apply-url-widgets (point-min) (point-max) nil)
+            (let ((widget (widget-at (point-min))))
+              (should (equal (widget-value widget) file))
+              (pimacs-assert-visited-file file (lambda () (widget-apply widget :action))))))
+      (delete-file file))))
+
+(ert-deftest pimacs-search-native-executable-checks-use-project-host ()
+  (let* ((default-directory pimacs-project-directory)
+         (file (make-nearby-temp-file "pimacs executable λ-"))
+         (pimacs-search-rg-executable (file-local-name file))
+         (pimacs-search-jq-executable (file-local-name file))
+         (request (make-pimacs-search-request
+                   :directory pimacs-project-directory :scope 'all :query "probe")))
+    (unwind-protect
+        (progn
+          (set-file-modes file #o700)
+          (when pimacs-integration-remote-directory
+            (should-not (file-exists-p (file-local-name file))))
+          (should-not (pimacs-search--startup-error request)))
+      (delete-file file))))
+
+(ert-deftest pimacs-session-directory-uses-project-host ()
+  (let* ((default-directory pimacs-project-directory)
+         (remote (or (file-remote-p pimacs-project-directory) ""))
+         (sessions (expand-file-name "agent/sessions/" pimacs-project-directory))
+         (home (with-temp-buffer
+                 (should (= (process-file "sh" nil t nil "-c" "printf %s \"$HOME\"") 0))
+                 (buffer-string))))
+    (should (string-prefix-p
+             sessions
+             (pimacs-session-project-directory (file-local-name sessions)
+                                               pimacs-project-directory)))
+    (should (string-prefix-p
+             (concat remote (file-name-as-directory home) ".pi/agent/sessions/")
+             (pimacs-session-project-directory (default-value 'pimacs-session-directory)
+                                               pimacs-project-directory)))))
+
+(ert-deftest pimacs-doctor-uses-caller-host ()
+  (let ((existing (get-buffer "*Pimacs Doctor*")))
+    (unwind-protect
+        (save-window-excursion
+          (with-temp-buffer
+            (let ((default-directory pimacs-integration-directory)
+                  (pimacs-executable "pimacs-integration-missing-pi"))
+              (pimacs-doctor)))
+          (with-temp-buffer
+            (let ((default-directory pimacs-project-directory)
+                  (pimacs-executable (if pimacs-integration-remote-directory
+                                         "pimacs-integration-missing-client-pi"
+                                       pimacs-executable)))
+              (pimacs-doctor)
+              (with-current-buffer "*Pimacs Doctor*"
+                (should (equal default-directory (file-name-as-directory pimacs-project-directory)))
+                (pimacs-doctor-refresh)
+                (should (string-match-p "(minimum " (buffer-string)))
+                (should-not (string-match-p "was not found\\|could not be determined" (buffer-string)))
+                (when pimacs-integration-remote-directory
+                  (should (string-match-p "/opt/pimacs-test/bin/pi" (buffer-string))))))))
+      (unless existing
+        (when-let ((buffer (get-buffer "*Pimacs Doctor*")))
+          (kill-buffer buffer))))))
 
 (ert-deftest pimacs-custom-tool ()
   (pimacs-with-integration-project "custom-tool"
@@ -565,6 +855,15 @@
               (insert-file-contents-literally image-file)
               (buffer-string)))
       (pimacs--with-chat-buffer
+        (pimacs--dnd-handler
+         (url-encode-url
+          (concat "file://" (expand-file-name "project/green-triangle.png"
+                                              pimacs-integration-directory))) nil)
+        (should (= (length pimacs--attached-images) 1))
+        (should (equal (plist-get (aref pimacs--attached-images 0) :data)
+                       (base64-encode-string image-data t)))
+        (setq pimacs--attached-images (vector))
+        (pimacs--update-images-preview)
         (pimacs--yank-media-handler 'image/png image-data)
         (should (= (length pimacs--attached-images) 1))
         (let ((image (aref pimacs--attached-images 0)))
@@ -620,7 +919,19 @@
     (pimacs-send-prompt-and-wait "create test.txt with some text")
     (pimacs-send-prompt-and-wait "remove the 3rd line using edit tool")
     (pimacs-send-prompt-and-wait "delete text.txt")
-    (pimacs-send-prompt-and-wait "/export /tmp/pimacs-session.html")
+    (let ((file (concat (or (file-remote-p pimacs-project-directory) "")
+                        "/tmp/pimacs-session.html"))
+          widget)
+      (pimacs-send-command-and-wait (concat "/export " file))
+      (pimacs--with-chat-buffer
+        (pimacs-wait-until
+         (lambda ()
+           (save-excursion
+             (goto-char (point-min))
+             (when (search-forward "Session exported to: " nil t)
+               (setq widget (widget-at (point)))))))
+        (should (equal (widget-value widget) file))
+        (pimacs-assert-visited-file file (lambda () (widget-apply widget :action)))))
     (pimacs-search-session-and-wait
      "utils.py"
      '(:scope current-project
@@ -647,28 +958,28 @@
                               (format "%s" (pimacs--plist-get state :sessionStats :toolCalls)))
                   :spacer
                   "provider=" :provider))
-    (pimacs-send-prompt-and-wait "/new")
-    (pimacs-send-prompt-and-wait "/name session1")
-    (pimacs-send-prompt-and-wait "/session")
+    (pimacs-send-command-and-wait "/new")
+    (pimacs-send-command-and-wait "/name session1")
+    (pimacs-send-command-and-wait "/session")
     (pimacs-send-prompt-and-wait "hello")
-    (pimacs-send-prompt-and-wait "/copy")
+    (pimacs-send-command-and-wait "/copy")
     (pimacs-with-minibuffer-input "n"
-      (pimacs-send-prompt-and-wait "/set-auto-compaction"))
+      (pimacs-send-command-and-wait "/set-auto-compaction"))
     (pimacs-with-minibuffer-input "y"
-      (pimacs-send-prompt-and-wait "/set-auto-compaction"))
+      (pimacs-send-command-and-wait "/set-auto-compaction"))
     (pimacs-with-minibuffer-input "(fixture) gemma4:12b"
-      (pimacs-send-prompt-and-wait "/model"))
+      (pimacs-send-command-and-wait "/model"))
     (pimacs-with-minibuffer-input "minimal (Very brief reasoning ~1k tokens)"
-      (pimacs-send-prompt-and-wait "/set-thinking-level"))
-    (pimacs-send-prompt-and-wait "/cycle-thinking-level")
+      (pimacs-send-command-and-wait "/set-thinking-level"))
+    (pimacs-send-command-and-wait "/cycle-thinking-level")
     (pimacs-with-minibuffer-input "n"
-      (pimacs-send-prompt-and-wait "/set-auto-retry"))
+      (pimacs-send-command-and-wait "/set-auto-retry"))
     (pimacs-with-minibuffer-input "y"
-      (pimacs-send-prompt-and-wait "/set-auto-retry"))
+      (pimacs-send-command-and-wait "/set-auto-retry"))
     (pimacs-with-minibuffer-input "One at a time"
-      (pimacs-send-prompt-and-wait "/set-steering-mode"))
+      (pimacs-send-command-and-wait "/set-steering-mode"))
     (pimacs-with-minibuffer-input "All"
-      (pimacs-send-prompt-and-wait "/set-follow-up-mode"))))
+      (pimacs-send-command-and-wait "/set-follow-up-mode"))))
 
 (ert-deftest pimacs-session ()
   (pimacs-with-integration-project "session"
@@ -677,11 +988,11 @@
                   " messages=" :message_count "/" :pending_message_count
                   :spacer
                   "total=" :total_messages))
-    (pimacs-send-prompt-and-wait "/new")
-    (pimacs-send-prompt-and-wait "/name test-session")
-    (pimacs-send-prompt-and-wait "/session")
+    (pimacs-send-command-and-wait "/new")
+    (pimacs-send-command-and-wait "/name test-session")
+    (pimacs-send-command-and-wait "/session")
     (pimacs-send-prompt-and-wait "say hello")
-    (pimacs-send-prompt-and-wait "/session")
+    (pimacs-send-command-and-wait "/session")
     (pimacs-search-session-and-wait "say hello")
     (pimacs-search-session-and-wait
      "term-that-does-not-exist"
@@ -714,13 +1025,13 @@
                   " hit=" :cache_hit_percent
                   :spacer
                   "cost=" :cost))
-    (pimacs-send-prompt-and-wait "/name clone-test")
+    (pimacs-send-command-and-wait "/name clone-test")
     (pimacs-send-prompt-and-wait "say hello")
     (pimacs-send-prompt-and-wait "tell me a story, 100 words")
-    (pimacs-send-prompt-and-wait "/compact")
+    (pimacs-send-command-and-wait "/compact")
     (pimacs-with-minibuffer-input "high (Deep reasoning ~16k tokens)"
-      (pimacs-send-prompt-and-wait "/set-thinking-level"))
-    (pimacs-send-prompt-and-wait "/clone")
+      (pimacs-send-command-and-wait "/set-thinking-level"))
+    (pimacs-send-command-and-wait "/clone")
     (pimacs-send-prompt-and-wait "cloned")
     (pimacs-search-session-and-wait
      "story"
@@ -740,7 +1051,7 @@
     (pimacs-send-prompt-and-wait "hello")
     (pimacs-send-prompt-and-wait "hello again")
     (pimacs-with-minibuffer-input "hello again"
-      (pimacs-send-prompt-and-wait "/fork"))
+      (pimacs-send-command-and-wait "/fork"))
     (pimacs-send-prompt-and-wait "hello fork")))
 
 (ert-deftest pimacs-resume ()
@@ -750,14 +1061,14 @@
                   " assistants=" :assistant_messages
                   :spacer
                   "total=" :total_messages))
-    (pimacs-send-prompt-and-wait "/name sessionv1")
+    (pimacs-send-command-and-wait "/name sessionv1")
     (pimacs-send-prompt-and-wait "h1")
     (pimacs-send-prompt-and-wait "h2")
-    (pimacs-send-prompt-and-wait "!ls -1 | LC_ALL=C sort")
-    (pimacs-send-prompt-and-wait "/new")
-    (pimacs-send-prompt-and-wait "/name sessionv2")
+    (pimacs-send-command-and-wait "!ls -1 | LC_ALL=C sort")
+    (pimacs-send-command-and-wait "/new")
+    (pimacs-send-command-and-wait "/name sessionv2")
     (pimacs-with-minibuffer-input (kbd "sessionv1 TAB RET")
-      (pimacs-send-prompt-and-wait "/resume"))
+      (pimacs-send-command-and-wait "/resume"))
     (pimacs-send-prompt-and-wait "h3")
     (pimacs-search-session-and-wait
      "h1"
@@ -772,7 +1083,7 @@
   (pimacs-with-integration-project "resume-standalone"
     (let ((pimacs-session-directory
            (expand-file-name "sessions" pimacs-project-agent-directory)))
-      (pimacs-send-prompt-and-wait "/name standalone-resume")
+      (pimacs-send-command-and-wait "/name standalone-resume")
       (let (agent-started)
         (pimacs-wait-for-agent-event
             (lambda (event)
@@ -781,6 +1092,7 @@
                 ("agent_settled" agent-started)))
           (pimacs-send-prompt "h1"))
         (should agent-started))
+      (pimacs-assert-search-resume "h1")
       (let* ((closed-chat (pimacs--current-chat))
              (project-key (buffer-local-value 'pimacs--project-key closed-chat)))
         (should (buffer-live-p closed-chat))
@@ -814,7 +1126,7 @@
                 '("tokens=" :total_tokens " model=" :model))
     (pimacs-send-prompt-and-wait "hello")
     (pimacs-send-prompt-and-wait "tell me a story, 100 words")
-    (pimacs-send-prompt-and-wait "/compact")
+    (pimacs-send-command-and-wait "/compact")
     (pimacs-send-prompt-and-wait "hello again")
     (pimacs-search-session-and-wait
      "story"
@@ -1025,19 +1337,23 @@
 
 (ert-deftest pimacs-send-selects-enclosing-chat ()
   (pimacs-with-silenced-integration-messages
-    (let* ((parent-root (file-name-as-directory (make-temp-file "pimacs-parent-" t)))
+    (let* ((default-directory pimacs-project-directory)
+           (parent-root (file-name-as-directory (make-nearby-temp-file "pimacs-parent-space λ-" t)))
            (child-root (file-name-as-directory (expand-file-name "child" parent-root)))
            (child-file (expand-file-name "child-file.el" child-root))
            (parent-file (expand-file-name "parent-file.el" parent-root))
-           (outside-file (make-temp-file "pimacs-outside-"))
+           (outside-file (make-nearby-temp-file "pimacs-outside-"))
            (default-directory parent-root)
            (pimacs-process-environment
             (list (concat "FIXTURE_SCENARIO=insert-region")
-                  (concat "PI_CODING_AGENT_DIR=" pimacs-project-agent-directory)
+                  (concat "PI_CODING_AGENT_DIR=" (file-local-name pimacs-project-agent-directory))
                   (concat "FIXTURE_MODE=" (pimacs-fixture-mode))))
            (pimacs-flags
             (list "--tools" "read,bash,edit,write,grep,find,ls"
-                  "--extension" (expand-file-name "fixture" pimacs-integration-directory)))
+                  "--extension"
+                  (file-local-name
+                   (expand-file-name "fixture" (or pimacs-integration-remote-directory
+                                                   pimacs-integration-directory)))))
            (pimacs-send-pop-to-chat nil)
            parent-chat child-chat child-source parent-source outside-source chats-list)
       (unwind-protect
@@ -1134,12 +1450,12 @@
 
 (ert-deftest pimacs-reload-preserves-directory-local-variables ()
   (pimacs-with-integration-project "reload-dir-locals"
-    (pimacs-send-prompt-and-wait "!!echo $PIMACS_DIRECTORY_LOCAL")
+    (pimacs-send-command-and-wait "!!echo $PIMACS_DIRECTORY_LOCAL")
     (pimacs-send-prompt-and-wait "hello")
     (pimacs--with-chat-buffer
       (pimacs-reload))
     (sleep-for 3)
-    (pimacs-send-prompt-and-wait "!!echo $PIMACS_DIRECTORY_LOCAL")
+    (pimacs-send-command-and-wait "!!echo $PIMACS_DIRECTORY_LOCAL")
     (pimacs-send-prompt-and-wait "hello")))
 
 (ert-deftest pimacs-extension-ui ()
@@ -1148,27 +1464,27 @@
                 '("cost=" :cost
                   :spacer
                   "model=" (:model face font-lock-function-name-face)))
-    (pimacs-send-prompt-and-wait "/rpc-notify")
+    (pimacs-send-command-and-wait "/rpc-notify")
 
     (pimacs-with-minibuffer-input "test value"
-      (pimacs-send-prompt-and-wait "/rpc-input"))
+      (pimacs-send-command-and-wait "/rpc-input"))
 
     (pimacs-with-minibuffer-input "y"
-      (pimacs-send-prompt-and-wait "/rpc-confirm"))
+      (pimacs-send-command-and-wait "/rpc-confirm"))
 
     (pimacs-with-minibuffer-input "n"
-      (pimacs-send-prompt-and-wait "/rpc-confirm"))
+      (pimacs-send-command-and-wait "/rpc-confirm"))
 
     (pimacs-with-minibuffer-input (kbd "C-g")
-      (pimacs-send-prompt-and-wait "/rpc-confirm"))
+      (pimacs-send-command-and-wait "/rpc-confirm"))
 
     (pimacs-with-minibuffer-input "Option B"
-      (pimacs-send-prompt-and-wait "/rpc-select"))
+      (pimacs-send-command-and-wait "/rpc-select"))
 
     (pimacs-with-minibuffer-input (kbd "C-g")
-      (pimacs-send-prompt-and-wait "/rpc-select"))
+      (pimacs-send-command-and-wait "/rpc-select"))
 
-    (pimacs-send-prompt-and-wait "/rpc-set-editor-text")
+    (pimacs-send-command-and-wait "/rpc-set-editor-text")
 
     (pimacs-send-prompt-and-wait (widget-value pimacs--prompt-widget))
 
@@ -1182,17 +1498,17 @@
     (pimacs-with-editor-buffer
       (pimacs-edit-cancel))
 
-    (pimacs-send-prompt-and-wait "/rpc-set-widget")
+    (pimacs-send-command-and-wait "/rpc-set-widget")
 
-    (pimacs-send-prompt-and-wait "/rpc-set-status")
+    (pimacs-send-command-and-wait "/rpc-set-status")
 
-    (pimacs-send-prompt-and-wait "/rpc-set-title")))
+    (pimacs-send-command-and-wait "/rpc-set-title")))
 
 (ert-deftest pimacs-bash-ansi-colors ()
   (pimacs-with-integration-project "bash-ansi-colors"
-    (pimacs-send-prompt-and-wait
+    (pimacs-send-command-and-wait
      "!printf '\\033[31mred\\033[0m\\n'")
-    (pimacs-send-prompt-and-wait
+    (pimacs-send-command-and-wait
      "!!printf '\\033[31mred\\033[0m\\n'")
     (pimacs-send-prompt-and-wait
      "Run exactly this bash command: printf '\\033[31mred\\033[0m\\n'")

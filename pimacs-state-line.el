@@ -411,24 +411,25 @@ Unlike `replace-regexp-in-string', this preserves TEXT's properties."
   (force-mode-line-update))
 
 (defun pimacs--update-header-line ()
-  (let* ((state-result nil)
-         (stats-result nil)
-         (try-update
-          (lambda ()
-            (when (and state-result stats-result)
-              (pimacs--set-header-line-state state-result stats-result)))))
-    (pimacs--send-command
-     "get_state" '()
-     (lambda (resp)
-       (when (pimacs--response-success-p resp)
-         (setq state-result (pimacs--json-get resp :data))
-         (funcall try-update))))
-    (pimacs--send-command
-     "get_session_stats" '()
-     (lambda (resp)
-       (when (pimacs--response-success-p resp)
-         (setq stats-result (pimacs--json-get resp :data))
-         (funcall try-update))))))
+  (when (pimacs--current-agent)
+    (let* ((state-result nil)
+           (stats-result nil)
+           (try-update
+            (lambda ()
+              (when (and state-result stats-result)
+                (pimacs--set-header-line-state state-result stats-result)))))
+      (pimacs--send-command
+       "get_state" '()
+       (lambda (resp)
+         (when (pimacs--response-success-p resp)
+           (setq state-result (pimacs--json-get resp :data))
+           (funcall try-update))))
+      (pimacs--send-command
+       "get_session_stats" '()
+       (lambda (resp)
+         (when (pimacs--response-success-p resp)
+           (setq stats-result (pimacs--json-get resp :data))
+           (funcall try-update)))))))
 
 (timeout-debounce 'pimacs--update-header-line 1)
 
