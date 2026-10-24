@@ -531,7 +531,7 @@
       (let ((default-directory (file-name-as-directory
                                 (expand-file-name "agent" pimacs-project-directory))))
         (erase-buffer)
-        (insert "utils.py")
+        (insert "../utils.py")
         (goto-char (point-min))
         (should (equal (pimacs--file-at-point) file)))
       (pimacs-assert-visited-file
