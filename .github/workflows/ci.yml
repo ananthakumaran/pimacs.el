@@ -52,11 +52,11 @@ jobs:
             (setq treesit-language-source-alist
                   '((markdown
                      \"https://github.com/tree-sitter-grammars/tree-sitter-markdown\"
-                     \"split_parser\"
+                     \"v0.5.3\"
                      \"tree-sitter-markdown/src\")
                     (markdown-inline
                      \"https://github.com/tree-sitter-grammars/tree-sitter-markdown\"
-                     \"split_parser\"
+                     \"v0.5.3\"
                      \"tree-sitter-markdown-inline/src\")))
             (setq user-emacs-directory
                   (file-name-as-directory (expand-file-name \".cask\")))
