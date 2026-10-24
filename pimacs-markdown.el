@@ -235,12 +235,12 @@
   :group 'pimacs)
 
 (defface pimacs-markdown-superscript-face
-  '((t :height 0.8 :raise 0.3))
+  '((t :height 0.8))
   "Face used for Markdown superscript text."
   :group 'pimacs)
 
 (defface pimacs-markdown-subscript-face
-  '((t :height 0.8 :raise -0.2))
+  '((t :height 0.8))
   "Face used for Markdown subscript text."
   :group 'pimacs)
 
@@ -361,7 +361,7 @@ When non-nil, diagnostics are appended to the temporary buffer
         (set-marker marker nil)))))
 
 (defun pimacs--markdown-cleanup-session (session)
-  (when-let ((state (pimacs--markdown-render-session-inline-parser-state session)))
+  (when-let* ((state (pimacs--markdown-render-session-inline-parser-state session)))
     (pimacs--markdown-delete-inline-parser-pool state)
     (setf (pimacs--markdown-render-session-inline-parser-state session) nil))
   (when pimacs-markdown-incremental-render-debug
@@ -377,12 +377,12 @@ When non-nil, diagnostics are appended to the temporary buffer
         (pimacs--markdown-render-session-debug-output session) nil
         (pimacs--markdown-render-session-leading-newline-eligible session) nil
         (pimacs--markdown-render-session-leading-newline-rendered session) nil)
-  (when-let ((parser (pimacs--markdown-render-session-parser session)))
+  (when-let* ((parser (pimacs--markdown-render-session-parser session)))
     (ignore-errors
       (treesit-parser-remove-notifier parser #'pimacs--markdown-parser-notifier))
     (ignore-errors (treesit-parser-delete parser))
     (setf (pimacs--markdown-render-session-parser session) nil))
-  (when-let ((buffer (pimacs--markdown-render-session-buffer session)))
+  (when-let* ((buffer (pimacs--markdown-render-session-buffer session)))
     (when (buffer-live-p buffer)
       (with-current-buffer buffer
         (setq pimacs--markdown-render-session nil))
@@ -565,7 +565,7 @@ When non-nil, diagnostics are appended to the temporary buffer
 
 (defun pimacs--markdown-leading-newline-needed-p (root eligible)
   (and eligible
-       (when-let ((node (pimacs--markdown-first-block-node root)))
+       (when-let* ((node (pimacs--markdown-first-block-node root)))
          (and (not (string-match-p
                     "\\n"
                     (buffer-substring-no-properties
@@ -985,7 +985,7 @@ When non-nil, diagnostics are appended to the temporary buffer
                 (append tree-sitter-modes aliases regular-modes))))
 
 (defun pimacs--markdown-fontify-code (code language)
-  (if-let ((mode (pimacs--markdown-resolve-language-mode language)))
+  (if-let* ((mode (pimacs--markdown-resolve-language-mode language)))
       (pimacs--render-content nil code mode)
     (pimacs--markdown-propertize-face
      code 'pimacs-markdown-code-block-face)))
@@ -1152,15 +1152,20 @@ When non-nil, diagnostics are appended to the temporary buffer
               (setq closing-node (car remaining)))
             (setq remaining (cdr remaining)))
           (if closing-node
-              (list
-               (pimacs--markdown-propertize-face
-                (pimacs--markdown-render-inline-range
-                 (treesit-node-end node)
-                 (treesit-node-start closing-node)
-                 context)
-                face)
-               (treesit-node-end closing-node)
-               remaining)
+              (let ((text (pimacs--markdown-render-inline-range
+                           (treesit-node-end node)
+                           (treesit-node-start closing-node)
+                           context)))
+                ;; Raising text is a display property, not a face attribute.
+                (put-text-property
+                 0 (length text) 'display
+                 (if (eq face 'pimacs-markdown-superscript-face)
+                     '(raise 0.3)
+                   '(raise -0.2))
+                 text)
+                (list (pimacs--markdown-propertize-face text face)
+                      (treesit-node-end closing-node)
+                      remaining))
             (list (pimacs--markdown-render-inline-node node context)
                   (treesit-node-end node)
                   nodes)))
@@ -1506,7 +1511,7 @@ When non-nil, diagnostics are appended to the temporary buffer
        (not (string-prefix-p "#" url))))
 
 (defun pimacs--markdown-file-link-path (url)
-  (when-let
+  (when-let*
       ((path
         (cond
          ((pimacs--markdown-relative-link-p url) url)
@@ -1522,7 +1527,7 @@ When non-nil, diagnostics are appended to the temporary buffer
     (while (< position end)
       (let ((next (next-single-property-change
                    position 'pimacs-markdown-link-url nil end)))
-        (when-let ((url (get-text-property position 'pimacs-markdown-link-url)))
+        (when-let* ((url (get-text-property position 'pimacs-markdown-link-url)))
           (let ((file (pimacs--markdown-file-link-path url)))
             (widget-convert-button (if file 'file-link 'url-link) position next
                                    :value (if file

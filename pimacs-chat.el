@@ -67,7 +67,7 @@ in descending order."
   (let (candidates)
     (maphash
      (lambda (key agent)
-       (when-let ((chat (gethash key pimacs--chats)))
+       (when-let* ((chat (gethash key pimacs--chats)))
          (when (and (process-live-p agent)
                     (buffer-live-p chat))
            (push (cons key chat) candidates))))
@@ -126,8 +126,8 @@ in descending order."
       (cdr (assoc selected choices))))))
 
 (defun pimacs--select-relevant-chat ()
-  (when-let ((candidate (pimacs--select-chat (pimacs--relevant-chat-candidates)
-                                             "Pimacs chat: ")))
+  (when-let* ((candidate (pimacs--select-chat (pimacs--relevant-chat-candidates)
+                                              "Pimacs chat: ")))
     (setq-local pimacs--project-key (car candidate))
     (cdr candidate)))
 
@@ -193,21 +193,21 @@ in descending order."
 (defun pimacs-list-chats-visit ()
   "Visit the Pimacs chat on the current line."
   (interactive)
-  (when-let ((candidate (tabulated-list-get-id)))
+  (when-let* ((candidate (tabulated-list-get-id)))
     (pop-to-buffer (cdr candidate))))
 
 (defun pimacs-quit-chat ()
   "Quit the current chat window."
   (interactive)
-  (if-let (agent (pimacs--current-agent))
+  (if-let* ((agent (pimacs--current-agent)))
       (pimacs--kill-agent)
-    (when-let (buffer (pimacs--current-chat))
+    (when-let* ((buffer (pimacs--current-chat)))
       (kill-buffer buffer))))
 
 (defun pimacs-list-chats-quit ()
   "Quit the Pimacs chat on the current line and refresh the list."
   (interactive)
-  (when-let ((candidate (tabulated-list-get-id)))
+  (when-let* ((candidate (tabulated-list-get-id)))
     (when (buffer-live-p (cdr candidate))
       (with-current-buffer (cdr candidate)
         (pimacs-quit-chat)))
@@ -225,8 +225,8 @@ in descending order."
 (defun pimacs-switch-chat ()
   "Switch to another active Pimacs chat."
   (interactive)
-  (if-let ((candidate (pimacs--select-chat (pimacs--active-chat-candidates)
-                                           "Switch to Pimacs chat: ")))
+  (if-let* ((candidate (pimacs--select-chat (pimacs--active-chat-candidates)
+                                            "Switch to Pimacs chat: ")))
       (pop-to-buffer (cdr candidate))
     (user-error "No active Pimacs chats")))
 

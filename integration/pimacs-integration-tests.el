@@ -65,10 +65,11 @@
          (cl-letf (((symbol-function 'message)
                     (lambda (format-string &rest args)
                       (let ((text (apply #'format-message format-string args)))
-                        (unless (cl-some (lambda (pattern)
-                                           (string-match-p pattern text))
-                                         pimacs-silenced-integration-message-patterns)
-                          (funcall message-fn "%s" text))))))
+                        (unless (or (string-empty-p text)
+                                    (cl-some (lambda (pattern)
+                                               (string-match-p pattern text))
+                                             pimacs-silenced-integration-message-patterns))
+                          (apply message-fn format-string args))))))
            ,@body)
        ;; Restore settings file to original content
        (write-region original-settings nil settings-file nil 'silent))))
@@ -397,7 +398,7 @@
                 (pimacs-check-tape
                  (or tape-scenario "session-search") ".txt"
                  (buffer-substring (point-min) (point-max))))))
-        (when-let ((buffer (get-buffer pimacs-search--buffer-name)))
+        (when-let* ((buffer (get-buffer pimacs-search--buffer-name)))
           (unwind-protect
               (with-current-buffer buffer
                 (pimacs-search--cancel-pipeline))
@@ -456,7 +457,7 @@
             (should (file-exists-p buffer-file-name))
             (should (> (buffer-size) 0))))
       (unless existing
-        (when-let ((buffer (get-file-buffer file)))
+        (when-let* ((buffer (get-file-buffer file)))
           (kill-buffer buffer))))))
 
 (defun pimacs-assert-search-resume (query)
@@ -680,7 +681,7 @@
                 (when pimacs-integration-remote-directory
                   (should (string-match-p "/opt/pimacs-test/bin/pi" (buffer-string))))))))
       (unless existing
-        (when-let ((buffer (get-buffer "*Pimacs Doctor*")))
+        (when-let* ((buffer (get-buffer "*Pimacs Doctor*")))
           (kill-buffer buffer))))))
 
 (ert-deftest pimacs-custom-tool ()

@@ -376,7 +376,7 @@ with the message plist to insert the custom message content."
   (when (and (<= (widget-get widget :from) (point))
              (<= (point) (widget-get widget :to)))
     (goto-char (widget-field-text-end widget))
-    (when-let (window (get-buffer-window (current-buffer) t))
+    (when-let* ((window (get-buffer-window (current-buffer) t)))
       (set-window-point window (widget-field-text-end widget)))))
 
 (defmacro pimacs--on-response-success (response &rest body)
@@ -385,7 +385,7 @@ with the message plist to insert the custom message content."
     `(let ((,resp-sym ,response))
        (if (pimacs--response-success-p ,resp-sym)
            (progn ,@body)
-         (when-let (err (pimacs--json-get ,resp-sym :error))
+         (when-let* ((err (pimacs--json-get ,resp-sym :error)))
            (pimacs--widget-save-excursion
              (pimacs-section--create-section 'error pimacs-section--root-section
                (pimacs--insert-error (format "%s" err))))
@@ -661,8 +661,8 @@ their changed tail.  Other batches align against their final result."
       (rename-buffer (pimacs--chat-buffer-name title) t))))
 
 (defun pimacs--recenter-chat ()
-  (when-let ((window (and pimacs-chat-keep-input-at-bottom
-                          (get-buffer-window (current-buffer) t))))
+  (when-let* ((window (and pimacs-chat-keep-input-at-bottom
+                           (get-buffer-window (current-buffer) t))))
     (with-selected-window window
       (recenter (min -2
                      (- -1 scroll-margin
@@ -670,7 +670,7 @@ their changed tail.  Other batches align against their final result."
                         (pimacs--extra-widget-lines)))))))
 
 (defun pimacs--point-in-prompt-p ()
-  (when-let (window (get-buffer-window (current-buffer) t))
+  (when-let* ((window (get-buffer-window (current-buffer) t)))
     (>= (window-point window)
         (widget-get pimacs--prompt-widget :from))))
 
@@ -810,16 +810,16 @@ the tail again, move point back to the prompt and resume following."
                     (cond
                      ((member c slash-names) "(emacs)")
                      (pimacs--commands
-                      (when-let ((cmd (assoc c pimacs--commands #'string=)))
+                      (when-let* ((cmd (assoc c pimacs--commands #'string=)))
                         (format "(%s)" (plist-get (cdr cmd) :source))))))
                   :company-docsig
                   (lambda (c)
                     (cond
                      ((member c slash-names)
-                      (when-let ((command (assoc c pimacs-slash-commands #'string=)))
+                      (when-let* ((command (assoc c pimacs-slash-commands #'string=)))
                         (nth 3 command)))
                      (pimacs--commands
-                      (when-let ((cmd (assoc c pimacs--commands #'string=)))
+                      (when-let* ((cmd (assoc c pimacs--commands #'string=)))
                         (plist-get (cdr cmd) :description))))))))))))
 
 ;;; Chat
@@ -852,26 +852,26 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--content-header (content)
   (let ((content (pimacs--content-normalize content)))
-    (when-let ((item (cl-find-if (lambda (i)
-                                   (member (plist-get i :type) '("text" "thinking")))
-                                 content)))
+    (when-let* ((item (cl-find-if (lambda (i)
+                                    (member (plist-get i :type) '("text" "thinking")))
+                                  content)))
       (pimacs--section-header (or (pimacs--json-get item :text)
                                   (pimacs--json-get item :thinking))))))
 
 (defun pimacs--insert-content-item (item &optional markdown-p)
   (pcase (plist-get item :type)
     ("text"
-     (when-let ((text (pimacs--json-get item :text)))
+     (when-let* ((text (pimacs--json-get item :text)))
        (if markdown-p
            (pimacs--render-insert pimacs-markdown-renderer text nil)
          (insert text))))
     ("image"
-     (when-let ((image (pimacs--create-image item)))
+     (when-let* ((image (pimacs--create-image item)))
        (insert "\n")
        (insert-image image)
        (insert "\n")))
     ("thinking"
-     (when-let ((thinking (pimacs--json-get item :thinking)))
+     (when-let* ((thinking (pimacs--json-get item :thinking)))
        (pimacs--thinking-insert thinking nil)))
     (_
      (insert (prin1-to-string item)))))
@@ -897,12 +897,12 @@ the tail again, move point back to the prompt and resume following."
 
 (defun pimacs--create-image (item)
   (when (display-images-p)
-    (when-let ((data (pimacs--json-get item :data))
-               (mime-type (pimacs--json-get item :mimeType))
-               (image-type (pimacs--alist-get-equal mime-type pimacs--image-type-alist))
-               (raw-data (base64-decode-string data))
-               (max-width (floor (* 0.9 (window-pixel-width))))
-               (max-height (floor (* 0.9 (window-pixel-height)))))
+    (when-let* ((data (pimacs--json-get item :data))
+                (mime-type (pimacs--json-get item :mimeType))
+                (image-type (pimacs--alist-get-equal mime-type pimacs--image-type-alist))
+                (raw-data (base64-decode-string data))
+                (max-width (floor (* 0.9 (window-pixel-width))))
+                (max-height (floor (* 0.9 (window-pixel-height)))))
       (create-image raw-data image-type t
                     :max-width max-width
                     :max-height max-height))))
@@ -937,7 +937,7 @@ the tail again, move point back to the prompt and resume following."
   (let ((display (plist-get message :display))
         (custom-type (pimacs--json-get message :customType)))
     (unless (pimacs--json-false-p display)
-      (if-let ((inserter (pimacs--alist-get-equal custom-type pimacs-insert-custom-message-functions)))
+      (if-let* ((inserter (pimacs--alist-get-equal custom-type pimacs-insert-custom-message-functions)))
           (funcall inserter message)
         ;; Default rendering: use customType as role, render content
         (pimacs--widget-save-excursion
@@ -1006,7 +1006,7 @@ the tail again, move point back to the prompt and resume following."
              (content (pimacs--content-normalize (plist-get message :content)))
              (is-error (plist-get message :isError))
              (details (plist-get message :details)))
-         (when-let ((entry (gethash tool-call-id pimacs--tool-calls)))
+         (when-let* ((entry (gethash tool-call-id pimacs--tool-calls)))
            (let ((result-section (pimacs-tool-call-result-section entry))
                  (args (pimacs-tool-call-args entry)))
              (pimacs--widget-save-excursion
@@ -1041,7 +1041,7 @@ the tail again, move point back to the prompt and resume following."
       ("thinking_delta"
        (unless (string-empty-p delta)
          (pimacs--widget-save-excursion
-           (if-let ((content-section (gethash content-index pimacs--content-sections)))
+           (if-let* ((content-section (gethash content-index pimacs--content-sections)))
                (pimacs-section--append-section (pimacs-content-section-section content-section)
                  (let ((content (pimacs-content-section-content content-section)))
                    (pimacs--render-apply-operations
@@ -1060,7 +1060,7 @@ the tail again, move point back to the prompt and resume following."
       ("text_delta"
        (unless (string-empty-p delta)
          (pimacs--widget-save-excursion
-           (if-let ((content-section (gethash content-index pimacs--content-sections)))
+           (if-let* ((content-section (gethash content-index pimacs--content-sections)))
                (pimacs-section--append-section (pimacs-content-section-section content-section)
                  (let ((content (pimacs-content-section-content content-section)))
                    (pimacs--render-apply-operations
@@ -1210,7 +1210,7 @@ the tail again, move point back to the prompt and resume following."
 
 ;; read
 (defun pimacs--insert-read-args (args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (let* ((offset (pimacs--json-get args :offset))
            (limit (pimacs--json-get args :limit))
            (start-line (or offset 1))
@@ -1222,7 +1222,7 @@ the tail again, move point back to the prompt and resume following."
       (pimacs--insert-file-link path (pimacs--project-root) suffix))))
 
 (defun pimacs--insert-read-result (content _details args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (dolist (item content)
       (pcase (plist-get item :type)
         ("text"
@@ -1233,27 +1233,27 @@ the tail again, move point back to the prompt and resume following."
                (when truncated-line
                  (insert truncated-line))))))
         ("image"
-         (when-let ((image (pimacs--create-image item)))
+         (when-let* ((image (pimacs--create-image item)))
            (insert "\n")
            (insert-image image)
            (insert "\n")))))))
 
 (defun pimacs--visit-read-result (_details args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (let ((section-line (pimacs-section--section-line)))
       (list :file (pimacs--expand-file-name path (pimacs--project-root))
             :line (+ (or (pimacs--json-get args :offset) 1) section-line)
             :column (- (point) (line-beginning-position))))))
 
 (defun pimacs--visit-read-call (args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (list :file (pimacs--expand-file-name path (pimacs--project-root))
           :line (or (pimacs--json-get args :offset) 1))))
 
 ;; write
 (defun pimacs--insert-write-args (args)
-  (when-let ((path (pimacs--json-get args :path))
-             (content (pimacs--json-get args :content)))
+  (when-let* ((path (pimacs--json-get args :path))
+              (content (pimacs--json-get args :content)))
     (pimacs--insert-file-link path (pimacs--project-root))
     (when (not (string-empty-p content))
       (insert "\n")
@@ -1263,11 +1263,11 @@ the tail again, move point back to the prompt and resume following."
   (pimacs--insert-content content))
 
 (defun pimacs--visit-write-result (_details args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (list :file (pimacs--expand-file-name path (pimacs--project-root)))))
 
 (defun pimacs--visit-write-call (args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (let ((section-line (pimacs-section--section-line)))
       (list :file (pimacs--expand-file-name path (pimacs--project-root))
             :line (max 1 section-line)
@@ -1277,23 +1277,23 @@ the tail again, move point back to the prompt and resume following."
 
 ;; edit
 (defun pimacs--insert-edit-args (args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (pimacs--insert-file-link path (pimacs--project-root))))
 
 (defun pimacs--insert-edit-result (content details _args)
-  (when-let ((patch (or (pimacs--json-get details :patch)
-                        (pimacs--json-get details :diff))))
+  (when-let* ((patch (or (pimacs--json-get details :patch)
+                         (pimacs--json-get details :diff))))
     (insert (pimacs--render-diff patch)))
   (let ((text (pimacs--content-text content)))
     (when (not (string-empty-p text))
       (insert (format "\n\n%s" text)))))
 
 (defun pimacs--visit-edit-call (args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (list :file (pimacs--expand-file-name path (pimacs--project-root)) :line 1)))
 
 (defun pimacs--visit-edit-result (_details args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (let* ((section (pimacs-section--current-section))
            (location
             (save-restriction
@@ -1305,8 +1305,8 @@ the tail again, move point back to the prompt and resume following."
             :column (plist-get location :column)))))
 
 (defun pimacs--insert-tool-output (text full-output-path)
-  (if-let ((path-start (and full-output-path
-                            (string-match (regexp-quote full-output-path) text))))
+  (if-let* ((path-start (and full-output-path
+                             (string-match (regexp-quote full-output-path) text))))
       (progn
         (insert (substring text 0 path-start))
         (pimacs--insert-file-link full-output-path (pimacs--project-root))
@@ -1315,7 +1315,7 @@ the tail again, move point back to the prompt and resume following."
 
 ;; codemode
 (defun pimacs--insert-codemode-args (args)
-  (when-let ((code (pimacs--json-get args :code)))
+  (when-let* ((code (pimacs--json-get args :code)))
     (insert (pimacs--render-content "codemode.js" code))))
 
 (defun pimacs--insert-codemode-result (content details _args)
@@ -1342,7 +1342,7 @@ the tail again, move point back to the prompt and resume following."
      (propertize (format "⏱%s " duration)
                  'help-echo (format "Timeout: %s seconds" timeout))
      'shadow))
-  (when-let ((command (pimacs--json-get args :command)))
+  (when-let* ((command (pimacs--json-get args :command)))
     (insert (pimacs--render-content "tmp.sh" command))))
 
 (defun pimacs--insert-bash-result (content details _args)
@@ -1427,7 +1427,7 @@ the tail again, move point back to the prompt and resume following."
               (forward-line 1))))))))
 
 (defun pimacs--normalize-grep-file (file args)
-  (if-let ((path (pimacs--json-get args :path)))
+  (if-let* ((path (pimacs--json-get args :path)))
       (let ((path (pimacs--expand-file-name path (pimacs--project-root))))
         (if (file-directory-p path)
             (pimacs--expand-file-name file path)
@@ -1471,9 +1471,9 @@ the tail again, move point back to the prompt and resume following."
 
 ;; ls
 (defun pimacs--insert-ls-args (args)
-  (when-let ((path (pimacs--json-get args :path)))
+  (when-let* ((path (pimacs--json-get args :path)))
     (insert (abbreviate-file-name path)))
-  (when-let ((limit (pimacs--json-get args :limit)))
+  (when-let* ((limit (pimacs--json-get args :limit)))
     (insert (format " limit %d" limit))))
 
 (defun pimacs--insert-ls-result (content _details _args)
@@ -1489,7 +1489,7 @@ the tail again, move point back to the prompt and resume following."
       (list :file path))))
 
 (defun pimacs--insert-tool-args (tool-name args)
-  (if-let ((inserter (pimacs--alist-get-equal tool-name pimacs-insert-tool-args-functions)))
+  (if-let* ((inserter (pimacs--alist-get-equal tool-name pimacs-insert-tool-args-functions)))
       (funcall inserter args)
     (when args
       (insert (pimacs--render-content nil (format "%S" args)
@@ -1519,7 +1519,7 @@ is non-nil, insert an ellipsis instead of ARGS."
             (funcall insert-content)))))
     (pimacs-section--set-info section (make-pimacs-section-tool-call-info
                                        :tool-name tool-name
-                                       :id (when-let ((info (pimacs-section-info section)))
+                                       :id (when-let* ((info (pimacs-section-info section)))
                                              (pimacs-section-tool-call-info-id info))
                                        :args args
                                        :header (pimacs--section-header
@@ -1566,7 +1566,7 @@ is non-nil, insert an ellipsis instead of ARGS."
                     (section (seq-find
                               (lambda (section)
                                 (and (eq (pimacs-section-type section) 'tool-call)
-                                     (when-let ((info (pimacs-section-info section)))
+                                     (when-let* ((info (pimacs-section-info section)))
                                        (equal id (pimacs-section-tool-call-info-id info)))))
                               sections)))
           (pimacs--set-tool-call-duration section (pimacs--json-get call :durationMs)))))))
@@ -1598,7 +1598,7 @@ Pi persists child metadata, not results."
               (insert "Some nested calls or arguments were not retained."))))))))
 
 (defun pimacs--handle-tool-execution-start (event)
-  (when-let ((parent-id (plist-get event :parentToolCallId)))
+  (when-let* ((parent-id (plist-get event :parentToolCallId)))
     (puthash (plist-get event :toolCallId)
              (pimacs--create-child-tool-call
               (gethash parent-id pimacs--tool-calls)
@@ -1613,7 +1613,7 @@ Pi persists child metadata, not results."
       (let ((text (pimacs--content-text content)))
         (when (not (string-empty-p text))
           (pimacs--insert-error (format "%s" text))))
-    (if-let ((inserter (pimacs--alist-get-equal tool-name pimacs-insert-tool-result-functions)))
+    (if-let* ((inserter (pimacs--alist-get-equal tool-name pimacs-insert-tool-result-functions)))
         (funcall inserter content details args)
       (pimacs--insert-content content))))
 
@@ -1948,7 +1948,7 @@ Pi persists child metadata, not results."
 
 (defun pimacs--register-agent-cleanup ()
   "Register a cleanup callback on the agent to kill the chat buffer on exit."
-  (when-let (agent (pimacs--current-agent))
+  (when-let* ((agent (pimacs--current-agent)))
     (let* ((buf (current-buffer))
            (fn (lambda ()
                  (when (buffer-live-p buf)
@@ -2026,7 +2026,7 @@ do nothing.  The killed text can be restored with `yank'."
     (message_update
      (let ((assistant-message-event (plist-get event :assistantMessageEvent)))
        (when (equal (plist-get assistant-message-event :type) "toolcall_start")
-         (when-let ((tool-name (plist-get assistant-message-event :toolName)))
+         (when-let* ((tool-name (plist-get assistant-message-event :toolName)))
            (pimacs--update-agent-state
             (pimacs--agent-state-add-tool tool-name))))))
     (tool_execution_start
@@ -2132,7 +2132,7 @@ do nothing.  The killed text can be restored with `yank'."
           (pimacs--clear-prompt prompt))
          (t
           (let ((args (list :message prompt
-                            :streamingBehavior (when-let (behavior (or streaming-behavior pimacs-prompt-streaming-behavior))
+                            :streamingBehavior (when-let* ((behavior (or streaming-behavior pimacs-prompt-streaming-behavior)))
                                                  (symbol-name behavior)))))
             (unless (seq-empty-p pimacs--attached-images)
               (setq args (nconc args (list :images pimacs--attached-images))))
@@ -2220,7 +2220,7 @@ If `pimacs-prompt-streaming-behavior' is `followUp', use `steer' and vice versa.
     (user-error "Unsupported image type: %s" mime-type)))
 
 (defun pimacs--dnd-handler (url _action)
-  (when-let ((file (dnd-get-local-file-name url t)))
+  (when-let* ((file (dnd-get-local-file-name url t)))
     (let* ((mime-string (or (mailcap-extension-to-mime (file-name-extension file t))
                             (user-error "Can't determine MIME type for %s" file)))
            (mime-type (intern mime-string))
@@ -2288,7 +2288,7 @@ If `pimacs-prompt-streaming-behavior' is `followUp', use `steer' and vice versa.
 (defun pimacs-send-filename ()
   "Append the current buffer's filename to the pimacs prompt input."
   (interactive)
-  (when-let ((filename buffer-file-name))
+  (when-let* ((filename buffer-file-name))
     (pimacs--with-chat-buffer
       (pimacs--prompt-append
        (format "@%s" (pimacs--project-relative-name filename))))
@@ -2624,7 +2624,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
               (records (when session-dir
                          (pimacs-session-recent-records
                           session-dir nil pimacs-resume-max-sessions))))
-         (if-let ((record (pimacs-session-read-resume-record records)))
+         (if-let* ((record (pimacs-session-read-resume-record records)))
              (pimacs--switch-session (pimacs-session-record-path record)
                                      "Resumed session")
            (message "No session files found in %s"
@@ -2649,7 +2649,7 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
            (seq-filter #'pimacs-session-resumable-record-p
                        (pimacs-session-recent-records
                         directory (eq scope 'all) pimacs-resume-max-sessions))))
-      (if-let ((record (pimacs-session-read-resume-record records t)))
+      (if-let* ((record (pimacs-session-read-resume-record records t)))
           (pimacs-resume-session-file (pimacs-session-record-path record)
                                       (pimacs-session-record-cwd record)
                                       new-buffer)
@@ -2663,8 +2663,8 @@ SCOPE, when non-nil, searches resumable sessions across all projects."
   (interactive (list (when current-prefix-arg 'all)))
   (if scope
       (pimacs--resume-standalone scope)
-    (if-let ((chat (or (pimacs--current-chat)
-                       (pimacs--select-relevant-chat))))
+    (if-let* ((chat (or (pimacs--current-chat)
+                        (pimacs--select-relevant-chat))))
         (with-current-buffer chat
           (pimacs--resume-chat))
       (pimacs--resume-standalone pimacs-resume-default-scope))))
@@ -2712,7 +2712,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
       ("custom_message"
        (pimacs--insert-custom-message entry))
       ("session_info"
-       (when-let ((name (pimacs--json-get entry :name)))
+       (when-let* ((name (pimacs--json-get entry :name)))
          (pimacs--insert-session-info name)))
       (_ nil))))
 
@@ -2725,7 +2725,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
     (let ((message (plist-get entry :message)))
       (pcase (pimacs--message-role message)
         ("toolResult"
-         (when-let ((id (plist-get message :toolCallId)))
+         (when-let* ((id (plist-get message :toolCallId)))
            (remhash id pending)))
         (_
          ;; A new assistant or user message starts after the previous tool
@@ -2734,7 +2734,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
          (when (equal (pimacs--message-role message) "assistant")
            (dolist (item (pimacs--content-normalize (plist-get message :content)))
              (when (equal (plist-get item :type) "toolCall")
-               (when-let ((id (plist-get item :id)))
+               (when-let* ((id (plist-get item :id)))
                  (puthash id t pending))))))))))
 
 (defun pimacs--history-split-entries (entries)
@@ -2808,7 +2808,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
     (with-current-buffer buffer
       (when (= generation pimacs--history-render-generation)
         (setq pimacs--history-render-timer nil)
-        (if-let ((chunk (pop pimacs--history-render-pending)))
+        (if-let* ((chunk (pop pimacs--history-render-pending)))
             (progn
               (pimacs--history-render-chunk chunk)
               (pimacs--history-schedule-idle-render buffer generation))
@@ -3031,7 +3031,7 @@ summarization."
                 "bash" args
                 (lambda (resp)
                   (let ((request-id (plist-get resp :id)))
-                    (when-let ((entry (gethash request-id pimacs--bash-executions)))
+                    (when-let* ((entry (gethash request-id pimacs--bash-executions)))
                       (pimacs--on-response-success resp
                         (pimacs--update-header-line)
                         (let* ((data (plist-get resp :data))
@@ -3081,12 +3081,12 @@ summarization."
     (buffer-substring-no-properties beginning content-end)))
 
 (defun pimacs--copy-assistant-section (section)
-  (when-let ((info (pimacs-section-info section)))
+  (when-let* ((info (pimacs-section-info section)))
     (pimacs--copy-content-text
      (pimacs-section-assistant-info-content info))))
 
 (defun pimacs--copy-user-section (section)
-  (when-let ((info (pimacs-section-info section)))
+  (when-let* ((info (pimacs-section-info section)))
     (pimacs--copy-content-text
      (pimacs-section-user-info-content info))))
 
@@ -3116,24 +3116,24 @@ summarization."
              (pimacs-section-tool-result-info-args info))))
 
 (defun pimacs--copy-tool-call-section (section)
-  (when-let ((info (pimacs-section-info section)))
+  (when-let* ((info (pimacs-section-info section)))
     (let ((args (pimacs-section-tool-call-info-args info)))
-      (if-let ((copier (pimacs--alist-get-equal
-                        (pimacs-section-tool-call-info-tool-name info)
-                        pimacs-copy-tool-call-functions)))
+      (if-let* ((copier (pimacs--alist-get-equal
+                         (pimacs-section-tool-call-info-tool-name info)
+                         pimacs-copy-tool-call-functions)))
           (funcall copier args)
         (and args (prin1-to-string args))))))
 
 (defun pimacs--copy-section-text (section)
-  (or (when-let ((copier (alist-get (pimacs-section-type section)
-                                    pimacs-copy-section-functions)))
+  (or (when-let* ((copier (alist-get (pimacs-section-type section)
+                                     pimacs-copy-section-functions)))
         (funcall copier section))
       (pimacs--copy-section-body section)))
 
 (defun pimacs-copy-section ()
   "Copy the current section's content to the kill ring."
   (interactive)
-  (if-let ((section (pimacs-section--current-section)))
+  (if-let* ((section (pimacs-section--current-section)))
       (let ((text (pimacs--copy-section-text section)))
         (kill-new text)
         (message "Copied section content."))
@@ -3240,17 +3240,17 @@ With a prefix argument OTHER-WINDOW, visit in other window."
   (let ((groups (make-hash-table :test 'equal))
         result)
     (dolist (section (pimacs-section-children pimacs-section--root-section))
-      (when-let ((pair (pcase (pimacs-section-type section)
-                         ('user
-                          (when-let ((info (pimacs-section-info section)))
-                            (cons "user" (pimacs-section-user-info-header info))))
-                         ((or 'assistant 'thinking)
-                          (when-let ((info (pimacs-section-info section)))
-                            (cons "assistant" (pimacs-section-assistant-info-header info))))
-                         ('tool-call
-                          (when-let ((info (pimacs-section-info section)))
-                            (cons (pimacs-section-tool-call-info-tool-name info)
-                                  (pimacs-section-tool-call-info-header info)))))))
+      (when-let* ((pair (pcase (pimacs-section-type section)
+                          ('user
+                           (when-let* ((info (pimacs-section-info section)))
+                             (cons "user" (pimacs-section-user-info-header info))))
+                          ((or 'assistant 'thinking)
+                           (when-let* ((info (pimacs-section-info section)))
+                             (cons "assistant" (pimacs-section-assistant-info-header info))))
+                          ('tool-call
+                           (when-let* ((info (pimacs-section-info section)))
+                             (cons (pimacs-section-tool-call-info-tool-name info)
+                                   (pimacs-section-tool-call-info-header info)))))))
         (push (cons (cdr pair) (marker-position (pimacs-section-beginning section)))
               (gethash (car pair) groups))))
     (maphash (lambda (name entries)
@@ -3260,7 +3260,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
 
 (defun pimacs--section-eldoc (callback &rest _)
   (when pimacs-eldoc-enabled
-    (when-let ((section (pimacs-section--current-section)))
+    (when-let* ((section (pimacs-section--current-section)))
       (let ((timestamp (pimacs-section-timestamp section))
             (duration (pimacs-section-duration section)))
         (when (or timestamp duration)
@@ -3379,7 +3379,7 @@ With a prefix argument OTHER-WINDOW, visit in other window."
                    (file-name-as-directory (expand-file-name explicit-root))
                  (pimacs--project-root)))
          (key (if new-buffer
-                  (symbol-name (cl-gensym "pimacs-chat-"))
+                  (symbol-name (gensym "pimacs-chat-"))
                 (md5 (concat root (or name ""))))))
     (let ((pimacs--project-root root)
           (pimacs--project-key key))

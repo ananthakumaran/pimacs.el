@@ -334,7 +334,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
        (next-single-property-change position 'pimacs-section nil end)))
 
 (defun pimacs-section--apply-face (section beginning end)
-  (when-let ((face (pimacs-section-face section)))
+  (when-let* ((face (pimacs-section-face section)))
     (let ((position beginning))
       (while (< position end)
         (let* ((next (pimacs-section--next-face-change position end))
@@ -405,7 +405,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
     s))
 
 (defun pimacs-section--section-body-end (section)
-  (if-let ((child (car (pimacs-section-children section))))
+  (if-let* ((child (car (pimacs-section-children section))))
       (pimacs-section-beginning child)
     (pimacs-section-end section)))
 
@@ -441,7 +441,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
                 (with-current-buffer new-buffer (insert new))
                 (with-current-buffer old-buffer
                   (let* ((marker (copy-marker (+ (point-min) old-offset)))
-                         (aligned (replace-buffer-contents
+                         (aligned (pimacs--replace-buffer-contents
                                    new-buffer pimacs--point-alignment-max-seconds))
                          (new-offset (- (marker-position marker) (point-min))))
                     (if (and aligned
@@ -809,15 +809,15 @@ Return the first matching section, or nil if there is none."
 (defun pimacs-goto-next-section ()
   "Go to the next pimacs section."
   (interactive)
-  (if-let ((next (pimacs-section--next-target-at-point)))
+  (if-let* ((next (pimacs-section--next-target-at-point)))
       (goto-char (pimacs-section-beginning next))
     (message "No next section")))
 
 (defun pimacs-section--prev-section-step (section)
   "Return the section immediately before SECTION in tree order."
-  (when-let ((parent (pimacs-section-parent section)))
-    (if-let ((prev (cadr (memq section
-                               (reverse (pimacs-section-children parent))))))
+  (when-let* ((parent (pimacs-section-parent section)))
+    (if-let* ((prev (cadr (memq section
+                                (reverse (pimacs-section-children parent))))))
         (progn
           (while (pimacs-section--navigable-children prev)
             (setq prev (car (last (pimacs-section--navigable-children prev)))))
@@ -851,7 +851,7 @@ Return the first matching section, or nil if there is none."
 (defun pimacs-goto-previous-section ()
   "Goto the previous pimacs section."
   (interactive)
-  (if-let ((prev (pimacs-section--previous-target-at-point)))
+  (if-let* ((prev (pimacs-section--previous-target-at-point)))
       (goto-char (pimacs-section-beginning prev))
     (message "No previous section")))
 
@@ -876,9 +876,9 @@ Return the first matching section, or nil if there is none."
     (message "No sections")))
 
 (defun pimacs-section--isearch-open (ov)
-  (when-let ((section
-              (get-text-property (overlay-start ov) 'pimacs-section))
-             (parent (pimacs-section-parent section)))
+  (when-let* ((section
+               (get-text-property (overlay-start ov) 'pimacs-section))
+              (parent (pimacs-section-parent section)))
     (while (and parent (not (eq parent pimacs-section--root-section)))
       (setq section (pimacs-section-parent section))
       (setq parent (pimacs-section-parent section)))
@@ -920,7 +920,7 @@ Return the first matching section, or nil if there is none."
         (when (overlay-get ov 'pimacs-section-visibility-indicator)
           (delete-overlay ov)))
       (when (pimacs-section--ancestors-visible-p section)
-        (when-let ((indicator (pimacs-section--visibility-indicator)))
+        (when-let* ((indicator (pimacs-section--visibility-indicator)))
           (let ((ov (make-overlay beg eol nil t))
                 (bitmap (if (pimacs-section--hidden-p section)
                             (car indicator)
@@ -978,7 +978,7 @@ VISIBILITY can be one of:
 (defun pimacs-toggle-section ()
   "Toggle visibility of current section."
   (interactive)
-  (when-let (section (pimacs-section--current-section))
+  (when-let* ((section (pimacs-section--current-section)))
     (when (pimacs-section-parent section)
       (goto-char (pimacs-section-beginning section))
       (if (pimacs-section--visible-p section)
@@ -996,7 +996,7 @@ EVENT is the mouse event that triggered the toggle."
       (pimacs-toggle-section))))
 
 (defun pimacs-section--tool-name (section)
-  (when-let ((info (pimacs-section-info section)))
+  (when-let* ((info (pimacs-section-info section)))
     (pcase (pimacs-section-type section)
       ('tool-call (pimacs-section-tool-call-info-tool-name info))
       ('tool-result (pimacs-section-tool-result-info-tool-name info)))))
@@ -1107,8 +1107,8 @@ EVENT is the mouse event that triggered the toggle."
     level))
 
 (defun pimacs-section--cycle-global ()
-  (when-let ((children (and pimacs-section--root-section
-                            (pimacs-section-children pimacs-section--root-section))))
+  (when-let* ((children (and pimacs-section--root-section
+                             (pimacs-section-children pimacs-section--root-section))))
     (let* ((sections (apply #'append
                             (mapcar #'pimacs-section--all-sections children)))
            (all-visible (not (cl-some #'pimacs-section--hidden-p sections)))
@@ -1118,8 +1118,8 @@ EVENT is the mouse event that triggered the toggle."
       (pimacs-section--set-visibility-level children 1 level))))
 
 (defun pimacs-section--show-level-all (level)
-  (when-let ((children (and pimacs-section--root-section
-                            (pimacs-section-children pimacs-section--root-section))))
+  (when-let* ((children (and pimacs-section--root-section
+                             (pimacs-section-children pimacs-section--root-section))))
     (pimacs-section--set-visibility-level children 1 level)))
 
 (defun pimacs-section-show-level-1-all ()
@@ -1153,19 +1153,19 @@ EVENT is the mouse event that triggered the toggle."
 (defun pimacs-section-show-level-1 ()
   "Show surrounding sections on the first level."
   (interactive)
-  (when-let ((section (pimacs-section--current-section)))
+  (when-let* ((section (pimacs-section--current-section)))
     (pimacs-section--show-level section 1)))
 
 (defun pimacs-section-show-level-2 ()
   "Show surrounding sections through the second level."
   (interactive)
-  (when-let ((section (pimacs-section--current-section)))
+  (when-let* ((section (pimacs-section--current-section)))
     (pimacs-section--show-level section 2)))
 
 (defun pimacs-section-show-level-3 ()
   "Show surrounding sections through the third level."
   (interactive)
-  (when-let ((section (pimacs-section--current-section)))
+  (when-let* ((section (pimacs-section--current-section)))
     (pimacs-section--show-level section 3)))
 
 (defmacro pimacs-section--section-case (&rest clauses)
@@ -1340,13 +1340,13 @@ otherwise it return t."
         (insert (format " %s\n" autohide-eligible))
         (pimacs-section--insert-description-field "face:")
         (insert (format " %s\n" (pimacs-section-face section)))
-        (when-let ((children (pimacs-section-children section)))
+        (when-let* ((children (pimacs-section-children section)))
           (pimacs-section--insert-description-field "Children:")
           (dolist (child children)
             (insert " ")
             (pimacs-section--insert-description-link child))
           (insert "\n"))
-        (when-let ((info (pimacs-section-info section)))
+        (when-let* ((info (pimacs-section-info section)))
           (pimacs-section--insert-description-field "info:")
           (insert "\n")
           (insert (pimacs-section--fontify-info info)))))))
@@ -1355,7 +1355,7 @@ otherwise it return t."
   "Return the 0-based line number of point within the current section.
 Returns 0 if point is on the first line of the section or if there is
 no current section."
-  (if-let ((section (pimacs-section--current-section)))
+  (if-let* ((section (pimacs-section--current-section)))
       (- (line-number-at-pos (point))
          (line-number-at-pos (pimacs-section-beginning section)))
     0))

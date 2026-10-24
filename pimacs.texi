@@ -1440,12 +1440,12 @@ Face used for italic text.
 Face used for Markdown strike-through text.
 @end deffn
 
-@deffn Face pimacs-markdown-superscript-face @code{'((t :height 0.8 :raise 0.3))}
+@deffn Face pimacs-markdown-superscript-face @code{'((t :height 0.8))}
 
 Face used for Markdown superscript text.
 @end deffn
 
-@deffn Face pimacs-markdown-subscript-face @code{'((t :height 0.8 :raise -0.2))}
+@deffn Face pimacs-markdown-subscript-face @code{'((t :height 0.8))}
 
 Face used for Markdown subscript text.
 @end deffn

@@ -42,9 +42,12 @@ compile: cask
 	  (ret=$$? ; cask clean-elc && exit $$ret)
 
 .PHONY: package-lint
+# timeout is built into Emacs 31 but remains an external dependency on 29/30.
+# Register its backport until package-lint includes it in its own list.
 package-lint: cask
-	@$(CASK_EMACS) -Q \
+	@$(CASK_EMACS) -Q -l package-lint \
 	  --eval "(setq package-lint-main-file \"pimacs.el\")" \
+	  --eval "(add-to-list 'package-lint-backport-libraries '(timeout \"^timeout-\"))" \
 	  -f package-lint-batch-and-exit \
 	  pimacs-utils.el pimacs-markdown-table.el pimacs-markdown.el pimacs-state-line.el pimacs-core.el pimacs-section.el pimacs-ui.el pimacs-edit.el pimacs-agent.el pimacs-doctor.el pimacs-session.el pimacs-chat.el pimacs-search.el pimacs.el
 

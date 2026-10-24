@@ -215,7 +215,7 @@ See `pimacs-header-line-format' for available components."
   (pimacs--format-state-line-value (pimacs--session-name-or-id state)))
 
 (defun pimacs--format-state-line-last-message (state)
-  (if-let ((time (plist-get state :lastMessageTime)))
+  (if-let* ((time (plist-get state :lastMessageTime)))
       (propertize (pimacs--format-relative-time time)
                   'help-echo (pimacs--format-timestamp time))
     "?"))
@@ -304,14 +304,14 @@ See `pimacs-header-line-format' for available components."
 
 (defun pimacs--format-state-line-spinner (state)
   "Return the spinner from STATE, prefixed with a space when active."
-  (if-let ((spinner (plist-get state :spinner))
-           (spinner-str (and (plist-get state :agentState)
-                             (spinner-print spinner))))
+  (if-let* ((spinner (plist-get state :spinner))
+            (spinner-str (and (plist-get state :agentState)
+                              (spinner-print spinner))))
       (concat " " spinner-str)
     ""))
 
 (defun pimacs--format-state-line-timer (state)
-  (if-let ((seconds (plist-get state :turnDuration)))
+  (if-let* ((seconds (plist-get state :turnDuration)))
       (pimacs--format-duration (floor seconds) 0)
     ""))
 
@@ -368,7 +368,7 @@ See `pimacs-header-line-format' for available components."
            (pimacs--format-state-line-component state (car component))
            (cdr component)))
    ((keywordp component)
-    (if-let ((formatter (alist-get component pimacs--state-line-formatters)))
+    (if-let* ((formatter (alist-get component pimacs--state-line-formatters)))
         (funcall formatter state)
       (error "Unknown Pimacs state-line component: %S" component)))
    ((functionp component) (funcall component state))

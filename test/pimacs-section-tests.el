@@ -266,7 +266,7 @@
       (should (= (point) (pimacs-section-end section))))))
 
 (ert-deftest pimacs--align-point-falls-back-when-diff-times-out ()
-  (cl-letf (((symbol-function 'replace-buffer-contents)
+  (cl-letf (((symbol-function 'pimacs--replace-buffer-contents)
              (lambda (&rest _) nil)))
     (should (= (pimacs--align-point "abcXYZdef" "abcdef" 5) 5))))
 

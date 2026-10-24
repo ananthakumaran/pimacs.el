@@ -214,7 +214,7 @@
     (let ((annotated
            (pimacs-markdown-table-tests--append-cell-widths visible)))
       (insert rendered)
-      (when-let ((start (string-search "\n@" annotated)))
+      (when-let* ((start (string-search "\n@" annotated)))
         (insert (substring annotated (1+ start)))))
     (unless (bolp)
       (insert "\n"))

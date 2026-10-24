@@ -53,6 +53,22 @@
         (pimacs--render-markdown :final state input)
       (pimacs--render-markdown :destroy state))))
 
+(ert-deftest pimacs-markdown-script-display-properties ()
+  (skip-unless (pimacs--markdown-available-p))
+  (let ((text (plist-get
+               (car (pimacs-markdown-tests--render-final
+                     "x<sup>2</sup> H<sub>2</sub>O"))
+               :append)))
+    (should (equal (substring-no-properties text) "x2 H2O"))
+    (should (eq (get-text-property 1 'face text)
+                'pimacs-markdown-superscript-face))
+    (should (equal (get-text-property 1 'display text) '(raise 0.3)))
+    (should (eq (get-text-property 4 'face text)
+                'pimacs-markdown-subscript-face))
+    (should (equal (get-text-property 4 'display text) '(raise -0.2)))
+    (dolist (position '(0 2 3 5))
+      (should-not (get-text-property position 'display text)))))
+
 (defun pimacs-markdown-tests--render-final-at (prefix input)
   (with-temp-buffer
     (insert prefix)

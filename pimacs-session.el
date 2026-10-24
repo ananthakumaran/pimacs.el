@@ -100,13 +100,13 @@ Native paths are resolved on the project host."
   (let ((items (if (stringp content)
                    (list (list :type "text" :text content))
                  content)))
-    (when-let ((item (cl-find-if (lambda (entry)
-                                   (member (plist-get entry :type)
-                                           '("text" "thinking")))
-                                 items)))
-      (when-let ((header (car (split-string (or (pimacs--json-get item :text)
-                                                (pimacs--json-get item :thinking))
-                                            "\n" t))))
+    (when-let* ((item (cl-find-if (lambda (entry)
+                                    (member (plist-get entry :type)
+                                            '("text" "thinking")))
+                                  items)))
+      (when-let* ((header (car (split-string (or (pimacs--json-get item :text)
+                                                 (pimacs--json-get item :thinking))
+                                             "\n" t))))
         (string-trim header)))))
 
 (defun pimacs-session-read-record (file)
@@ -135,7 +135,7 @@ Native paths are resolved on the project host."
                            (setq id (pimacs--json-get record :id)
                                  timestamp (pimacs--json-get record :timestamp)
                                  cwd (pimacs--json-get record :cwd)
-                                 parent-path (when-let ((parent (pimacs--json-get record :parentSession)))
+                                 parent-path (when-let* ((parent (pimacs--json-get record :parentSession)))
                                                (expand-file-name parent (file-name-directory file)))
                                  parent-id (pimacs-session--parent-id parent-path)))
                           ('session_info
@@ -171,10 +171,10 @@ Native paths are resolved on the project host."
     (dolist (record records)
       (puthash (pimacs-session-record-path record) t seen))
     (while pending
-      (when-let ((parent (pimacs-session-record-parent-path (pop pending))))
+      (when-let* ((parent (pimacs-session-record-parent-path (pop pending))))
         (unless (gethash parent seen)
           (puthash parent t seen)
-          (when-let ((record (pimacs-session-read-record parent)))
+          (when-let* ((record (pimacs-session-read-record parent)))
             (push record ancestors)
             (push record pending)))))
     (append records (nreverse ancestors))))
@@ -238,7 +238,7 @@ Native paths are resolved on the project host."
 
 
 (defun pimacs-session-resumable-record-p (record)
-  (when-let ((cwd (pimacs-session-record-cwd record)))
+  (when-let* ((cwd (pimacs-session-record-cwd record)))
     (file-directory-p cwd)))
 
 (defun pimacs-session--resume-annotation-suffix (record include-cwd)
@@ -263,9 +263,9 @@ Native paths are resolved on the project host."
                                    (pimacs-session-record-id record))
                                   "unknown")
                               'face 'pimacs-session-name-face))
-              (date (when-let ((date (pimacs-session-format-timestamp modified)))
+              (date (when-let* ((date (pimacs-session-format-timestamp modified)))
                       (propertize date 'face 'shadow)))
-              (session-name (when-let ((name (pimacs-session-record-name record)))
+              (session-name (when-let* ((name (pimacs-session-record-name record)))
                               (propertize (format "[%s]" name)
                                           'face 'pimacs-session-name-face)))
               (text (string-join
@@ -274,8 +274,8 @@ Native paths are resolved on the project host."
                                  (pimacs-session-record-preview record)
                                  (when missing
                                    (concat "(parent unavailable"
-                                           (when-let ((parent-id (pimacs--short-uuid
-                                                                  (pimacs-session-record-parent-id record))))
+                                           (when-let* ((parent-id (pimacs--short-uuid
+                                                                   (pimacs-session-record-parent-id record))))
                                              (concat ": " (propertize parent-id
                                                                       'face 'pimacs-session-name-face)))
                                            ")"))))
@@ -295,7 +295,7 @@ Native paths are resolved on the project host."
 
 (defun pimacs-session--resume-annotation-function (candidates include-cwd)
   (lambda (candidate)
-    (when-let ((record (pimacs--alist-get-equal candidate candidates)))
+    (when-let* ((record (pimacs--alist-get-equal candidate candidates)))
       (let ((suffix (pimacs-session--resume-annotation-suffix record include-cwd)))
         (unless (string-empty-p suffix)
           (concat (propertize " "

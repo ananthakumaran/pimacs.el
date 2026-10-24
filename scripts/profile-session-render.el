@@ -35,7 +35,7 @@
 
 (defun pimacs-render-profile--print-report ()
   (profiler-report)
-  (when-let ((buffer (seq-find (lambda (buffer)
+  (when-let* ((buffer (seq-find (lambda (buffer)
                                  (string-prefix-p "*CPU-Profiler-Report" (buffer-name buffer)))
                                (buffer-list))))
     (let (report)
@@ -145,7 +145,7 @@
     (error "Not a session file or directory: %s" session-path))))
 
 (defun pimacs-render-profile--command-line ()
-  (if-let ((session-path (getenv "PIMACS_RENDER_PROFILE_SESSION_FILE")))
+  (if-let* ((session-path (getenv "PIMACS_RENDER_PROFILE_SESSION_FILE")))
       (let ((pimacs-markdown-renderer #'pimacs--render-markdown))
         (unless (pimacs--markdown-available-p)
           (error "Tree-sitter Markdown and Markdown Inline grammars are required"))

@@ -50,7 +50,7 @@
       value)))
 
 (defun pimacs--remote-paths (object directory &rest key-paths)
-  (when-let ((remote (file-remote-p directory)))
+  (when-let* ((remote (file-remote-p directory)))
     (dolist (key-path key-paths)
       (let ((keys (if (listp key-path) key-path (list key-path)))
             (parent object))
@@ -134,6 +134,19 @@
                 (cl-incf buffer-position run-length)
                 (cl-incf string-position run-length)))
             string-position))))))
+
+(defun pimacs--replace-buffer-contents (source-buffer &optional max-secs max-costs)
+  "Replace the accessible current buffer contents from SOURCE-BUFFER.
+Preserve markers where possible, using `replace-region-contents'.
+MAX-SECS and MAX-COSTS bound the diff computation.  Return non-nil
+when replacement preserved existing text, or nil on timeout."
+  (replace-region-contents
+   (point-min) (point-max)
+   ;; Emacs 29/30 require a callback; Emacs 31 accepts the buffer directly.
+   (if (>= emacs-major-version 31)
+       source-buffer
+     (lambda () source-buffer))
+   max-secs max-costs))
 
 (defun pimacs--make-temp-buffer (&optional name)
   "Create a temporary buffer named NAME with undo disabled."
@@ -241,7 +254,7 @@ BODY must not modify the input field; retained undo entries must belong to it."
         (forward-char (min column (- (line-end-position) (point))))))))
 
 (defun pimacs--visit-file-at-point (other-window)
-  (when-let (file (pimacs--file-at-point))
+  (when-let* ((file (pimacs--file-at-point)))
     (pimacs--visit-file (list :file file) other-window)))
 
 (defun pimacs--file-link-action (widget &optional event)
@@ -280,13 +293,13 @@ BODY must not modify the input field; retained undo entries must belong to it."
     timestamp))
 
 (defun pimacs--format-timestamp (timestamp)
-  (when-let ((time (pimacs--timestamp-time timestamp)))
+  (when-let* ((time (pimacs--timestamp-time timestamp)))
     (condition-case nil
         (format-time-string "%d %b %Y, %R" time)
       (error nil))))
 
 (defun pimacs--format-relative-time (timestamp)
-  (when-let ((time (pimacs--timestamp-time timestamp)))
+  (when-let* ((time (pimacs--timestamp-time timestamp)))
     (condition-case nil
         (let ((seconds (max 0 (floor (pimacs--seconds-elapsed-since time)))))
           (if (< seconds 60)
@@ -321,7 +334,7 @@ PRED is called with KEY VALUE."
                               (file-name-absolute-p (ffap-string-at-point)))
                          (remove '("" . ffap-in-project) ffap-alist)
                        ffap-alist)))
-    (when-let ((file (ffap-file-at-point)))
+    (when-let* ((file (ffap-file-at-point)))
       (setq file (pimacs--expand-file-name file default-directory))
       (when (file-exists-p file)
         file))))
@@ -398,7 +411,7 @@ PRED is called with KEY VALUE."
        buffer-file-name
        (expand-file-name
         (concat "pimacs-fontify"
-                (when-let ((ext (file-name-extension filename t)))
+                (when-let* ((ext (file-name-extension filename t)))
                   ext))
         temporary-file-directory)))
 
@@ -423,7 +436,7 @@ PRED is called with KEY VALUE."
 
 (defun pimacs--section-header (text)
   "Extract a short header from TEXT for use as section info."
-  (when-let ((header (car (split-string text "\n" t))))
+  (when-let* ((header (car (split-string text "\n" t))))
     (truncate-string-to-width (string-trim header) 80 nil nil t)))
 
 (defun pimacs--diff-overlay-to-text-properties ()

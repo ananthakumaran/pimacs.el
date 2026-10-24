@@ -385,10 +385,10 @@ select(.type == \"match\")
     (pimacs-section--with-point-restoration
       (pimacs-section--replace-section pimacs-search--controls-section
         (pimacs-search--insert-controls)))
-    (when-let ((position (and control
-                              (text-property-any
-                               (point-min) (point-max)
-                               'pimacs-search-focus control))))
+    (when-let* ((position (and control
+                               (text-property-any
+                                (point-min) (point-max)
+                                'pimacs-search-focus control))))
       (goto-char position))))
 
 (defun pimacs-search--refresh-after-control-change (control)
@@ -597,7 +597,7 @@ select(.type == \"match\")
   (let ((default-directory
          (file-name-as-directory (pimacs-search-request-directory request))))
     (with-connection-local-variables
-      (if-let ((message (pimacs-search--startup-error request)))
+      (if-let* ((message (pimacs-search--startup-error request)))
           (progn
             (pimacs-search--set-status message)
             nil)
@@ -646,7 +646,7 @@ select(.type == \"match\")
         pimacs-search--parse-error nil))
 
 (defun pimacs-search--cancel-pipeline ()
-  (when-let ((process pimacs-search--pipeline-process))
+  (when-let* ((process pimacs-search--pipeline-process))
     (setq pimacs-search--pipeline-process nil)
     (set-process-filter process #'ignore)
     (set-process-sentinel process #'ignore)
@@ -704,7 +704,7 @@ select(.type == \"match\")
       ("session-info"
        (setq metadata (plist-put metadata :name (pimacs--json-get record :name)))))
     (puthash path metadata pimacs-search--session-metadata)
-    (when-let ((section (gethash path pimacs-search--session-sections)))
+    (when-let* ((section (gethash path pimacs-search--session-sections)))
       (pimacs-search--render-session-heading path section))))
 
 (defun pimacs-search--session-section (path)
@@ -794,7 +794,7 @@ If NEW-BUFFER is non-nil, create a separate chat."
 
 (defun pimacs-search--preview-ranges (lines render-context)
   (let (ranges)
-    (when-let ((regexp (pimacs-search-render-context-regexp render-context)))
+    (when-let* ((regexp (pimacs-search-render-context-regexp render-context)))
       (let ((case-fold-search
              (pimacs-search-render-context-ignore-case render-context)))
         (dotimes (index (length lines))
@@ -881,7 +881,7 @@ If NEW-BUFFER is non-nil, create a separate chat."
                 rendered)))
     (when (memq 'thinking filters)
       (dolist (item (pimacs-search--message-content-items message "thinking"))
-        (when-let ((thinking (pimacs--json-get item :thinking)))
+        (when-let* ((thinking (pimacs--json-get item :thinking)))
           (setq rendered
                 (or (pimacs-search--render-text-entry
                      result "assistant" thinking render-context)

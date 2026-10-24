@@ -59,7 +59,7 @@
 
 (defun pimacs-doctor--insert-pi-status ()
   (insert (propertize "Pi\n" 'face 'bold))
-  (if-let ((executable (pimacs-doctor--find-executable pimacs-executable)))
+  (if-let* ((executable (pimacs-doctor--find-executable pimacs-executable)))
       (let ((display-executable (abbreviate-file-name executable)))
         (condition-case err
             (let* ((version (pimacs--agent-version))
@@ -90,7 +90,7 @@
   (insert (propertize "Session Search\n" 'face 'bold))
   (dolist (executable (list pimacs-search-rg-executable
                             pimacs-search-jq-executable))
-    (if-let ((path (pimacs-doctor--find-executable executable)))
+    (if-let* ((path (pimacs-doctor--find-executable executable)))
         (pimacs-doctor--insert-status
          t (format "%s is available" (abbreviate-file-name path)))
       (pimacs-doctor--insert-status

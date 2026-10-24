@@ -365,7 +365,7 @@ Cleanup callbacks are run when the agent process exits."
   "Kill the agent process.
 When SKIP-CLEANUP-FN is non-nil, that cleanup callback is
 removed before killing, so it won't run when the process exits."
-  (when-let (agent (pimacs--current-agent))
+  (when-let* ((agent (pimacs--current-agent)))
     (when skip-cleanup-fn
       (pimacs--agent-remove-cleanup agent skip-cleanup-fn))
     (delete-process agent)))

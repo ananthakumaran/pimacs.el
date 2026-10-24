@@ -1281,11 +1281,11 @@ File: pimacs.info,  Node: Custom Faces,  Prev: Custom Variables,  Up: Top
 
      Face used for Markdown strike-through text.
 
- -- Face: pimacs-markdown-superscript-face '((t :height 0.8 :raise 0.3))
+ -- Face: pimacs-markdown-superscript-face '((t :height 0.8))
 
      Face used for Markdown superscript text.
 
- -- Face: pimacs-markdown-subscript-face '((t :height 0.8 :raise -0.2))
+ -- Face: pimacs-markdown-subscript-face '((t :height 0.8))
 
      Face used for Markdown subscript text.
 

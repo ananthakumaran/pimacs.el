@@ -17,6 +17,39 @@
 (defconst pimacs-tests--directory
   (file-name-directory (or load-file-name buffer-file-name)))
 
+(ert-deftest pimacs--replace-buffer-contents-adapts-source-api ()
+  (with-temp-buffer
+    (let ((source (current-buffer)))
+      (dolist (version '(29 30 31))
+        (dolist (result '(t nil))
+          (let ((emacs-major-version version))
+            (with-temp-buffer
+              (insert "old")
+              (cl-letf (((symbol-function 'replace-region-contents)
+                         (lambda (begin end replacement max-secs max-costs)
+                           (should (= begin (point-min)))
+                           (should (= end (point-max)))
+                           (should (= max-secs 0.01))
+                           (should (= max-costs 1000))
+                           (if (>= version 31)
+                               (should (eq replacement source))
+                             (should (functionp replacement))
+                             (should (eq (funcall replacement) source)))
+                           result)))
+                (should (eq (pimacs--replace-buffer-contents source 0.01 1000)
+                            result))))))))))
+
+(ert-deftest pimacs--replace-buffer-contents-preserves-markers ()
+  (with-temp-buffer
+    (insert "abcNEWdef")
+    (let ((source (current-buffer)))
+      (with-temp-buffer
+        (insert "abcdef")
+        (let ((marker (copy-marker 5)))
+          (should (pimacs--replace-buffer-contents source))
+          (should (equal (buffer-string) "abcNEWdef"))
+          (should (= (marker-position marker) 8)))))))
+
 (ert-deftest pimacs-chat-buffer-name-follows-session-name-or-short-id ()
   (with-temp-buffer
     (setq-local pimacs--project-root "/tmp/pimacs-buffer-name-test/")
@@ -660,10 +693,10 @@
                    'tool-result pimacs-section--root-section)))
       (pimacs-section--insert-section result
         (insert (plist-get fixture :result)))
-      (when-let ((adjacent (plist-get fixture :adjacent)))
+      (when-let* ((adjacent (plist-get fixture :adjacent)))
         (pimacs-section--create-section 'example pimacs-section--root-section
           (insert adjacent)))
-      (when-let ((prompt (plist-get fixture :prompt)))
+      (when-let* ((prompt (plist-get fixture :prompt)))
         (setq pimacs--prompt-widget
               (widget-create 'editable-field :format "%v" :value prompt))
         (widget-setup))
