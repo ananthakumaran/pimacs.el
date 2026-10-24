@@ -263,31 +263,31 @@
 (defun pimacs--agent-version ()
   (pimacs--with-temp-buffer
     (with-connection-local-variables
-     (let* ((process-arguments (append pimacs-flags '("--version")))
-            (command-line (mapconcat #'shell-quote-argument (cons pimacs-executable process-arguments) " "))
-            (stderr-file (make-temp-file "pimacs-version-stderr-")))
-       (unwind-protect
-           (let ((exit-code (apply #'process-file pimacs-executable nil
-                                   (list (current-buffer) stderr-file) nil
-                                   process-arguments)))
-             (if (zerop exit-code)
-                 (string-trim (buffer-string))
-               (let ((output (buffer-string))
-                     (stderr (pimacs--with-temp-buffer
-                               (insert-file-contents stderr-file)
-                               (buffer-string))))
-                 (with-current-buffer (get-buffer-create "*pimacs-version-error*")
-                   (let ((inhibit-read-only t))
-                     (erase-buffer)
-                     (insert (format "Failed to run `%s`.\n" command-line))
-                     (insert (format "\nExit code: %d\n" exit-code))
-                     (insert (format "\nOutput:\n%s" output))
-                     (insert (format "\nStderr:\n%s" stderr)))
-                   (special-mode)
-                   (goto-char (point-min))
-                   (pop-to-buffer (current-buffer)))
-                 (error "Failed to run `%s' (exit code %d)" command-line exit-code))))
-         (delete-file stderr-file))))))
+      (let* ((process-arguments (append pimacs-flags '("--version")))
+             (command-line (mapconcat #'shell-quote-argument (cons pimacs-executable process-arguments) " "))
+             (stderr-file (make-temp-file "pimacs-version-stderr-")))
+        (unwind-protect
+            (let ((exit-code (apply #'process-file pimacs-executable nil
+                                    (list (current-buffer) stderr-file) nil
+                                    process-arguments)))
+              (if (zerop exit-code)
+                  (string-trim (buffer-string))
+                (let ((output (buffer-string))
+                      (stderr (pimacs--with-temp-buffer
+                                (insert-file-contents stderr-file)
+                                (buffer-string))))
+                  (with-current-buffer (get-buffer-create "*pimacs-version-error*")
+                    (let ((inhibit-read-only t))
+                      (erase-buffer)
+                      (insert (format "Failed to run `%s`.\n" command-line))
+                      (insert (format "\nExit code: %d\n" exit-code))
+                      (insert (format "\nOutput:\n%s" output))
+                      (insert (format "\nStderr:\n%s" stderr)))
+                    (special-mode)
+                    (goto-char (point-min))
+                    (pop-to-buffer (current-buffer)))
+                  (error "Failed to run `%s' (exit code %d)" command-line exit-code))))
+          (delete-file stderr-file))))))
 
 (defun pimacs--agent-version-compatible-p (version)
   (condition-case nil
@@ -306,34 +306,34 @@
 
   (let ((default-directory (pimacs--project-root)))
     (with-connection-local-variables
-     (let ((version (pimacs--agent-version)))
-       (pimacs--check-agent-version version)
-       (message "(%s) Starting pimacs version %s..." (pimacs--project-name) version)
-       (let* ((process-environment (append pimacs-process-environment process-environment))
-              (buf (generate-new-buffer (pimacs--agent-buffer-name)))
-              (process-arguments (append pimacs-flags '("--mode" "rpc")))
-              (process
-               (make-process :name "pi"
-                             :buffer buf
-                             :command (cons pimacs-executable process-arguments)
-                             ;; Use a pipe to communicate with the subprocess. This fixes a hang
-                             ;; when a >1k message is sent on macOS.
-                             :connection-type 'pipe
-                             :coding 'utf-8-unix
-                             :noquery t
-                             :stderr (get-buffer-create "*pimacs-stderr*")
-                             :file-handler t)))
-         (set-process-coding-system process 'utf-8-unix 'utf-8-unix)
-         (set-process-filter process #'pimacs--net-filter)
-         (set-process-sentinel process #'pimacs--net-sentinel)
-         (with-current-buffer (process-buffer process)
-           (buffer-disable-undo)
-           (setq-local pimacs--project-key key))
-         (process-put process 'project-key key)
-         (process-put process 'project-root default-directory)
-         (process-put process 'project-name (pimacs--project-name))
-         (puthash key process pimacs--agents)
-         (message "(%s) pimacs agent started successfully." (pimacs--project-name)))))))
+      (let ((version (pimacs--agent-version)))
+        (pimacs--check-agent-version version)
+        (message "(%s) Starting pimacs version %s..." (pimacs--project-name) version)
+        (let* ((process-environment (append pimacs-process-environment process-environment))
+               (buf (generate-new-buffer (pimacs--agent-buffer-name)))
+               (process-arguments (append pimacs-flags '("--mode" "rpc")))
+               (process
+                (make-process :name "pi"
+                              :buffer buf
+                              :command (cons pimacs-executable process-arguments)
+                              ;; Use a pipe to communicate with the subprocess. This fixes a hang
+                              ;; when a >1k message is sent on macOS.
+                              :connection-type 'pipe
+                              :coding 'utf-8-unix
+                              :noquery t
+                              :stderr (get-buffer-create "*pimacs-stderr*")
+                              :file-handler t)))
+          (set-process-coding-system process 'utf-8-unix 'utf-8-unix)
+          (set-process-filter process #'pimacs--net-filter)
+          (set-process-sentinel process #'pimacs--net-sentinel)
+          (with-current-buffer (process-buffer process)
+            (buffer-disable-undo)
+            (setq-local pimacs--project-key key))
+          (process-put process 'project-key key)
+          (process-put process 'project-root default-directory)
+          (process-put process 'project-name (pimacs--project-name))
+          (puthash key process pimacs--agents)
+          (message "(%s) pimacs agent started successfully." (pimacs--project-name)))))))
 
 (defun pimacs--agent-add-cleanup (process fn)
   "Register FN as a cleanup callback for PROCESS.

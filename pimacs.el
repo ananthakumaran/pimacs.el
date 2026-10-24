@@ -1146,6 +1146,7 @@ the tail again, move point back to the prompt and resume following."
          (pimacs-section--timestamp
           (or (pimacs--parse-section-timestamp (pimacs--json-get message :timestamp))
               (current-time))))
+    (setq pimacs--last-message-time pimacs-section--timestamp)
     (pcase role
       ("assistant"
        (let ((index 0))
@@ -2631,12 +2632,12 @@ FIELDS is a list of (LABEL . KEY) where KEY is a plist key."
 
 (defun pimacs--resume-standalone-directory (scope)
   (with-connection-local-variables
-   (pcase scope
-     ('current-project
-      (pimacs-session-project-directory pimacs-session-directory
-                                        (pimacs--project-root)))
-     ('all (pimacs--expand-file-name pimacs-session-directory default-directory))
-     (_ (error "Unknown resume scope: %S" scope)))))
+    (pcase scope
+      ('current-project
+       (pimacs-session-project-directory pimacs-session-directory
+                                         (pimacs--project-root)))
+      ('all (pimacs--expand-file-name pimacs-session-directory default-directory))
+      (_ (error "Unknown resume scope: %S" scope)))))
 
 
 (defun pimacs--resume-standalone (scope &optional new-buffer)
@@ -2679,6 +2680,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
 
 (defun pimacs--clear-sections ()
   (pimacs--history-render-reset)
+  (setq pimacs--last-message-time nil)
   (dolist (child (copy-sequence (pimacs-section-children pimacs-section--root-section)))
     (pimacs-section--delete-section child))
   (clrhash pimacs--content-sections)
@@ -2820,6 +2822,14 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
 
 (defun pimacs--render-session-history (entries)
   (pimacs--history-render-reset)
+  ;; Seed from received messages, independently of lazy history rendering.
+  (setq pimacs--last-message-time
+        (cl-loop for entry in (reverse entries)
+                 when (member (plist-get entry :type) '("message" "custom_message"))
+                 thereis (or (pimacs--parse-section-timestamp
+                              (pimacs--json-get (plist-get entry :message) :timestamp))
+                             (pimacs--parse-section-timestamp
+                              (pimacs--json-get entry :timestamp)))))
   (let* ((chunks (pimacs--history-split-entries entries))
          (eager (car (last chunks)))
          (pending (butlast chunks)))
@@ -3409,14 +3419,6 @@ With a prefix argument, show a transient for setting NAME and ROOT."
             (bury-buffer)
           (delete-window chat-window)))
     (pimacs-chat--create nil nil)))
-
-(defun pimacs-quit-chat ()
-  "Quit the current chat window."
-  (interactive)
-  (if-let (agent (pimacs--current-agent))
-      (pimacs--kill-agent)
-    (when-let (buffer (pimacs--current-chat))
-      (kill-buffer buffer))))
 
 (defun pimacs--switch-session (session-file message &optional cb)
   "Switch to an existing session file and refresh.

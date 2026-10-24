@@ -38,6 +38,7 @@
     ("Context" . (:context_usage face shadow))
     ("Messages" . :total_messages)
     ("Cost" . (:cost face shadow))
+    ("Last message" . (:last_message face shadow))
     ("Project" . (:project_root face pimacs-session-directory-face)))
   "Columns displayed by `pimacs-list-chats'.
 
@@ -134,6 +135,7 @@ in descending order."
   :doc "Keymap for `pimacs-list-chats-mode'."
   :parent tabulated-list-mode-map
   "RET" #'pimacs-list-chats-visit
+  "k" #'pimacs-list-chats-quit
   "g" #'pimacs-list-chats-refresh)
 
 (define-derived-mode pimacs-list-chats-mode tabulated-list-mode "Pimacs Chats"
@@ -154,6 +156,18 @@ in descending order."
                pimacs-list-chats-table)))))
    (pimacs--active-chat-candidates)))
 
+(defun pimacs--list-chats-last-message-less-p (left right)
+  (time-less-p
+   (or (buffer-local-value 'pimacs--last-message-time (cdar left)) 0)
+   (or (buffer-local-value 'pimacs--last-message-time (cdar right)) 0)))
+
+(defun pimacs--list-chats-column-sorter (column)
+  (let* ((component (cdr column))
+         (key (if (consp component) (car component) component)))
+    (if (eq key :last_message)
+        #'pimacs--list-chats-last-message-less-p
+      t)))
+
 (defun pimacs--list-chats-format (entries)
   (vconcat
    (cl-loop for column in pimacs-list-chats-table
@@ -165,7 +179,7 @@ in descending order."
                                     maximize (string-width
                                               (aref (cadr entry) index)))
                            0))
-                  t))))
+                  (pimacs--list-chats-column-sorter column)))))
 
 (defun pimacs-list-chats-refresh ()
   "Refresh the Pimacs chats list."
@@ -181,6 +195,23 @@ in descending order."
   (interactive)
   (when-let ((candidate (tabulated-list-get-id)))
     (pop-to-buffer (cdr candidate))))
+
+(defun pimacs-quit-chat ()
+  "Quit the current chat window."
+  (interactive)
+  (if-let (agent (pimacs--current-agent))
+      (pimacs--kill-agent)
+    (when-let (buffer (pimacs--current-chat))
+      (kill-buffer buffer))))
+
+(defun pimacs-list-chats-quit ()
+  "Quit the Pimacs chat on the current line and refresh the list."
+  (interactive)
+  (when-let ((candidate (tabulated-list-get-id)))
+    (when (buffer-live-p (cdr candidate))
+      (with-current-buffer (cdr candidate)
+        (pimacs-quit-chat)))
+    (pimacs-list-chats-refresh)))
 
 (defun pimacs-list-chats ()
   "List active Pimacs chats in a tabulated buffer."

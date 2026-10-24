@@ -886,6 +886,7 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
             ("Context" . (:context_usage face shadow))
             ("Messages" . :total_messages)
             ("Cost" . (:cost face shadow))
+            ("Last message" . (:last_message face shadow))
             ("Project" . (:project_root face pimacs-session-directory-face)))
 
      Columns displayed by ‘pimacs-list-chats’.
@@ -964,6 +965,8 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
           Thinking level.
      ‘:session_name’
           Session name.
+     ‘:last_message’
+          Latest message time, relative to now.
      ‘:project_root’
           Project root directory.
      ‘:compaction_mode’
@@ -1420,7 +1423,7 @@ Node: TRAMP18800
 Node: How It Works19647
 Node: Keybindings20797
 Node: Custom Variables25575
-Node: Custom Faces46307
+Node: Custom Faces46439
 
 End Tag Table
 

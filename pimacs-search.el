@@ -513,15 +513,15 @@ select(.type == \"match\")
 
 (defun pimacs-search--default-request ()
   (with-connection-local-variables
-   (make-pimacs-search-request
-    :directory (pimacs--expand-file-name pimacs-session-directory default-directory)
-    :scope pimacs-search-default-scope
-    :query ""
-    :search-type pimacs-search-default-search-type
-    :case pimacs-search-default-case
-    :context (copy-tree pimacs-search-default-context)
-    :filters (copy-sequence pimacs-search-default-filters)
-    :project-root (pimacs--project-root))))
+    (make-pimacs-search-request
+     :directory (pimacs--expand-file-name pimacs-session-directory default-directory)
+     :scope pimacs-search-default-scope
+     :query ""
+     :search-type pimacs-search-default-search-type
+     :case pimacs-search-default-case
+     :context (copy-tree pimacs-search-default-context)
+     :filters (copy-sequence pimacs-search-default-filters)
+     :project-root (pimacs--project-root))))
 
 (defun pimacs-search--request-directory (request)
   (pcase (pimacs-search-request-scope request)
@@ -597,33 +597,33 @@ select(.type == \"match\")
   (let ((default-directory
          (file-name-as-directory (pimacs-search-request-directory request))))
     (with-connection-local-variables
-     (if-let ((message (pimacs-search--startup-error request)))
-         (progn
-           (pimacs-search--set-status message)
-           nil)
-       (let (process)
-         (condition-case-unless-debug error-data
-             (progn
-               (setq process
-                     (make-process
-                      :name "pimacs-search-pipeline"
-                      :buffer nil
-                      :command (list shell-file-name shell-command-switch
-                                     (pimacs-search--pipeline-command request))
-                      :connection-type 'pipe
-                      :coding 'utf-8-unix
-                      :filter output-filter
-                      :sentinel sentinel
-                      :noquery t
-                      :file-handler t))
-               (setq pimacs-search--pipeline-process process)
-               (pimacs-search--set-status "Searching…")
-               process)
-           (error
-            (when (and process (process-live-p process))
-              (delete-process process))
-            (pimacs-search--set-status (error-message-string error-data))
-            nil)))))))
+      (if-let ((message (pimacs-search--startup-error request)))
+          (progn
+            (pimacs-search--set-status message)
+            nil)
+        (let (process)
+          (condition-case-unless-debug error-data
+              (progn
+                (setq process
+                      (make-process
+                       :name "pimacs-search-pipeline"
+                       :buffer nil
+                       :command (list shell-file-name shell-command-switch
+                                      (pimacs-search--pipeline-command request))
+                       :connection-type 'pipe
+                       :coding 'utf-8-unix
+                       :filter output-filter
+                       :sentinel sentinel
+                       :noquery t
+                       :file-handler t))
+                (setq pimacs-search--pipeline-process process)
+                (pimacs-search--set-status "Searching…")
+                process)
+            (error
+             (when (and process (process-live-p process))
+               (delete-process process))
+             (pimacs-search--set-status (error-message-string error-data))
+             nil)))))))
 
 (defun pimacs-search--reset-results ()
   (let ((inhibit-read-only t))

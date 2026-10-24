@@ -37,6 +37,7 @@
                    (const :tag "Provider" :provider)
                    (const :tag "Thinking level" :thinking_level)
                    (const :tag "Session name" :session_name)
+                   (const :tag "Last message" :last_message)
                    (const :tag "Project root" :project_root)
                    (const :tag "Compaction mode" :compaction_mode)
                    (const :tag "Message count" :message_count)
@@ -81,6 +82,7 @@ Session state keywords:
 `:provider'                 Model provider.
 `:thinking_level'           Thinking level.
 `:session_name'             Session name.
+`:last_message'             Latest message time, relative to now.
 `:project_root'             Project root directory.
 `:compaction_mode'          `auto' or `manual'.
 `:message_count'            Message count.
@@ -133,6 +135,7 @@ See `pimacs-header-line-format' for available components."
   :group 'pimacs)
 
 (pimacs--def-permanent-buffer-local pimacs--header-line-state nil)
+(pimacs--def-permanent-buffer-local pimacs--last-message-time nil)
 (pimacs--def-permanent-buffer-local pimacs--agent-state nil)
 (pimacs--def-permanent-buffer-local pimacs--spinner nil)
 (pimacs--def-permanent-buffer-local pimacs--turn-start-time nil)
@@ -189,6 +192,7 @@ See `pimacs-header-line-format' for available components."
   (append (list :spinner pimacs--spinner
                 :agentState pimacs--agent-state
                 :turnDuration pimacs--turn-duration
+                :lastMessageTime pimacs--last-message-time
                 :projectRoot pimacs--project-root
                 :statusTexts pimacs--status-texts)
           pimacs--header-line-state))
@@ -209,6 +213,12 @@ See `pimacs-header-line-format' for available components."
 
 (defun pimacs--format-state-line-session-name (state)
   (pimacs--format-state-line-value (pimacs--session-name-or-id state)))
+
+(defun pimacs--format-state-line-last-message (state)
+  (if-let ((time (plist-get state :lastMessageTime)))
+      (propertize (pimacs--format-relative-time time)
+                  'help-echo (pimacs--format-timestamp time))
+    "?"))
 
 (defun pimacs--format-state-line-project-root (state)
   (let ((project-root (plist-get state :projectRoot)))
@@ -318,6 +328,7 @@ See `pimacs-header-line-format' for available components."
     (:provider . pimacs--format-state-line-provider)
     (:thinking_level . pimacs--format-state-line-thinking-level)
     (:session_name . pimacs--format-state-line-session-name)
+    (:last_message . pimacs--format-state-line-last-message)
     (:project_root . pimacs--format-state-line-project-root)
     (:compaction_mode . pimacs--format-state-line-compaction-mode)
     (:message_count . pimacs--format-state-line-message-count)

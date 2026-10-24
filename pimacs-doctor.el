@@ -123,8 +123,8 @@
     (pimacs-doctor-mode)
     (insert (propertize "Pimacs Doctor\n\n" 'face 'bold))
     (with-connection-local-variables
-     (pimacs-doctor--insert-pi-status)
-     (pimacs-doctor--insert-search-status))
+      (pimacs-doctor--insert-pi-status)
+      (pimacs-doctor--insert-search-status))
     (pimacs-doctor--insert-treesit-status)
     (insert "Press g to refresh this report.\n")
     (goto-char (point-min))))

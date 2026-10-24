@@ -1003,6 +1003,7 @@ Result types enabled for new session searches.
   ("Context" . (:context_usage face shadow))
   ("Messages" . :total_messages)
   ("Cost" . (:cost face shadow))
+  ("Last message" . (:last_message face shadow))
   ("Project" . (:project_root face pimacs-session-directory-face)))
 @end lisp
 
@@ -1090,6 +1091,8 @@ Model provider.
 Thinking level.
 @item :session_name
 Session name.
+@item :last_message
+Latest message time, relative to now.
 @item :project_root
 Project root directory.
 @item :compaction_mode
