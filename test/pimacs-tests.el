@@ -1998,5 +1998,30 @@
           (should (< (point) (widget-field-start pimacs--prompt-widget)))
           (should (equal "draft" (widget-value pimacs--prompt-widget))))))))
 
+(ert-deftest pimacs-clear-prompt-preserves-cursor-context ()
+  (save-window-excursion
+    (dolist (context '(input history))
+      (ert-info ((format "Clearing prompt while point is in %s" context))
+        (with-temp-buffer
+          (switch-to-buffer (current-buffer))
+          (pimacs-section--create-root-section)
+          (pimacs-section--create-section 'info pimacs-section--root-section
+            (insert "Earlier history\nKeep this reading position.\n"))
+          (setq pimacs--attached-images-widget
+                (widget-create 'pimacs-item pimacs--empty-widget-text)
+                pimacs--prompt-history (make-ring 10))
+          (pimacs-tests--setup-chat-widgets)
+          (widget-value-set pimacs--prompt-widget "sent draft")
+          (goto-char (if (eq context 'history)
+                         (+ (point-min) 3)
+                       (+ (widget-field-start pimacs--prompt-widget) 3)))
+          (let ((before (point)))
+            (pimacs--clear-prompt "sent draft" t)
+            (should (equal "" (widget-value pimacs--prompt-widget)))
+            (should (= (point) (if (eq context 'history)
+                                   before
+                                 (widget-field-start pimacs--prompt-widget))))
+            (should (equal "sent draft" (ring-ref pimacs--prompt-history 0)))))))))
+
 ;;; pimacs-tests.el ends here
 

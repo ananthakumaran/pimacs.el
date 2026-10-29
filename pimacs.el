@@ -2116,7 +2116,8 @@ do nothing.  The killed text can be restored with `yank'."
 (defun pimacs--clear-prompt (prompt &optional discard-undo)
   (let ((current (widget-value pimacs--prompt-widget)))
     (when (string= current prompt)
-      (widget-value-set pimacs--prompt-widget "")))
+      (save-excursion
+        (widget-value-set pimacs--prompt-widget ""))))
   (when discard-undo
     (setq buffer-undo-list nil))
   (unless (and (> (ring-length pimacs--prompt-history) 0)
