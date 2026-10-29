@@ -660,13 +660,20 @@ their changed tail.  Other batches align against their final result."
       (setq pimacs--chat-buffer-title title)
       (rename-buffer (pimacs--chat-buffer-name title) t))))
 
+(defun pimacs--prompt-lines-below-point ()
+  "Count prompt lines below point, or the whole draft when outside input."
+  (if (pimacs--position-in-input-p (point))
+      (cl-count ?\n (buffer-substring-no-properties
+                     (point) (widget-field-text-end pimacs--prompt-widget)))
+    (pimacs--widget-lines pimacs--prompt-widget)))
+
 (defun pimacs--recenter-chat ()
   (when-let* ((window (and pimacs-chat-keep-input-at-bottom
                            (get-buffer-window (current-buffer) t))))
     (with-selected-window window
       (recenter (min -2
                      (- -1 scroll-margin
-                        (pimacs--widget-lines pimacs--prompt-widget)
+                        (pimacs--prompt-lines-below-point)
                         (pimacs--extra-widget-lines)))))))
 
 (defun pimacs--point-in-prompt-p ()

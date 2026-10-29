@@ -2023,5 +2023,27 @@
                                  (widget-field-start pimacs--prompt-widget))))
             (should (equal "sent draft" (ring-ref pimacs--prompt-history 0)))))))))
 
+(ert-deftest pimacs-recenter-reserves-only-lines-below-editing-caret ()
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (pimacs-tests--setup-chat-widgets)
+      (let ((pimacs-chat-keep-input-at-bottom t)
+            (scroll-margin 0)
+            (tall (mapconcat #'identity
+                             (make-list (+ 5 (window-body-height)) "draft line") "\n")))
+        (dolist (case (list (list "first\nsecond\nthird" :start -3)
+                            (list tall :end -2)))
+          (ert-info ((format "Caret %s; expected recenter row %s" (nth 1 case) (nth 2 case)))
+            (widget-value-set pimacs--prompt-widget (car case))
+            (goto-char (if (eq (nth 1 case) :end)
+                           (widget-field-text-end pimacs--prompt-widget)
+                         (widget-field-start pimacs--prompt-widget)))
+            (let (row)
+              (cl-letf (((symbol-function 'recenter)
+                         (lambda (argument &rest _) (setq row argument))))
+                (pimacs--recenter-chat))
+              (should (= row (nth 2 case))))))))))
+
 ;;; pimacs-tests.el ends here
 
