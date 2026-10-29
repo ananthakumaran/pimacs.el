@@ -667,14 +667,19 @@ their changed tail.  Other batches align against their final result."
                      (point) (widget-field-text-end pimacs--prompt-widget)))
     (pimacs--widget-lines pimacs--prompt-widget)))
 
+(defun pimacs--recenter-row (window)
+  "Return a recenter row that fits WINDOW."
+  (let ((row (min -2
+                  (- -1 scroll-margin
+                     (pimacs--prompt-lines-below-point)
+                     (pimacs--extra-widget-lines)))))
+    (if (< row (- (window-body-height window))) 0 row)))
+
 (defun pimacs--recenter-chat ()
   (when-let* ((window (and pimacs-chat-keep-input-at-bottom
                            (get-buffer-window (current-buffer) t))))
     (with-selected-window window
-      (recenter (min -2
-                     (- -1 scroll-margin
-                        (pimacs--prompt-lines-below-point)
-                        (pimacs--extra-widget-lines)))))))
+      (recenter (pimacs--recenter-row window)))))
 
 (defun pimacs--point-in-prompt-p ()
   (when-let* ((window (get-buffer-window (current-buffer) t)))

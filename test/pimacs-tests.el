@@ -2045,5 +2045,26 @@
                 (pimacs--recenter-chat))
               (should (= row (nth 2 case))))))))))
 
+(ert-deftest pimacs-recenter-caps-requests-beyond-window-height ()
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (pimacs-tests--setup-chat-widgets)
+      (let ((pimacs-chat-keep-input-at-bottom t)
+            (scroll-margin 0)
+            (height (window-body-height)))
+        (should (>= height 2))
+        (dolist (case (list (cons height (- height))
+                           (cons (1+ height) 0)))
+          (ert-info ((format "Draft lines=%s; expected row=%s" (car case) (cdr case)))
+            (widget-value-set pimacs--prompt-widget
+                              (mapconcat #'identity (make-list (car case) "draft line") "\n"))
+            (goto-char (widget-field-start pimacs--prompt-widget))
+            (let (row)
+              (cl-letf (((symbol-function 'recenter)
+                         (lambda (argument &rest _) (setq row argument))))
+                (pimacs--recenter-chat))
+              (should (= row (cdr case))))))))))
+
 ;;; pimacs-tests.el ends here
 
