@@ -1916,5 +1916,87 @@
         (should (cl-every #'pimacs-section--visible-p roots))))))
 
 
+(ert-deftest pimacs-visible-caret-predicate-requires-visible-editable-text ()
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (insert "Earlier history\n")
+      (pimacs-tests--setup-chat-widgets)
+      (widget-value-set pimacs--prompt-widget "draft")
+      (let ((window (selected-window)) (visible t))
+        (cl-letf (((symbol-function 'pos-visible-in-window-p) (lambda (&rest _) visible)))
+          (dolist (case (list (cons (point-min) nil)
+                              (cons (widget-get pimacs--prompt-widget :from) nil)
+                              (cons (widget-field-start pimacs--prompt-widget) t)
+                              (cons (widget-field-text-end pimacs--prompt-widget) t)
+                              (cons (1+ (widget-field-text-end pimacs--prompt-widget)) nil)))
+            (goto-char (car case))
+            (should (eq (not (null (pimacs--prompt-point-visible-p window))) (cdr case))))
+          (setq visible nil)
+          (goto-char (widget-field-start pimacs--prompt-widget))
+          (should-not (pimacs--prompt-point-visible-p window))
+          (cl-letf (((symbol-function 'pimacs--window-at-tail-p) (lambda (_window) t))
+                    ((symbol-function 'pimacs--prompt-point-visible-p)
+                     (lambda (_window) (ert-fail "Visible tail must short-circuit caret checks"))))
+            (should (pimacs--tail-or-prompt-visible-p window))
+            (should-not (pimacs--tail-or-prompt-visible-p nil))))))))
+
+(ert-deftest pimacs-visible-caret-follows-when-buffer-tail-is-clipped ()
+  "Test the follow policy with controlled visibility, not native redisplay."
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (pimacs-section--create-root-section)
+      (pimacs-tests--setup-chat-widgets)
+      (widget-value-set pimacs--prompt-widget "draft")
+      (goto-char (+ (widget-field-start pimacs--prompt-widget) 2))
+      (let ((visible-end (1+ (point))) (recenters 0))
+        (cl-letf (((symbol-function 'pimacs--window-at-tail-p) (lambda (&rest _) nil))
+                  ((symbol-function 'pos-visible-in-window-p) (lambda (&rest _) t))
+                  ((symbol-function 'window-end) (lambda (&rest _) visible-end))
+                  ((symbol-function 'pimacs--recenter-chat) (lambda () (cl-incf recenters))))
+          (pimacs--widget-save-excursion-preserving-undo (insert (make-string 36 ?x)))
+          (should (= 2 (- (point) (widget-field-start pimacs--prompt-widget))))
+          (should (= recenters 1))
+          (should-not pimacs--prompt-detached)
+          (should (equal "draft" (widget-value pimacs--prompt-widget)))
+          (should (pimacs--follow-tail-p)))))))
+
+(ert-deftest pimacs-visible-caret-reattachment-keeps-editing-offset ()
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (pimacs-section--create-root-section)
+      (pimacs-tests--setup-chat-widgets)
+      (widget-value-set pimacs--prompt-widget "editing draft")
+      (goto-char (+ (widget-field-start pimacs--prompt-widget) 3))
+      (setq pimacs--prompt-detached t)
+      (cl-letf (((symbol-function 'pimacs--window-at-tail-p) (lambda (&rest _) t))
+                ((symbol-function 'pimacs--recenter-chat) #'ignore))
+        (pimacs--widget-save-excursion-preserving-undo (insert "output\n"))
+        (should-not pimacs--prompt-detached)
+        (should (= 3 (- (point) (widget-field-start pimacs--prompt-widget))))
+        (should (equal "editing draft" (widget-value pimacs--prompt-widget)))))))
+
+(ert-deftest pimacs-visible-caret-does-not-follow-an-offscreen-input ()
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (pimacs-section--create-root-section)
+      (pimacs-tests--setup-chat-widgets)
+      (widget-value-set pimacs--prompt-widget "draft")
+      (goto-char (+ (widget-field-start pimacs--prompt-widget) 2))
+      (let ((visible-end (1+ (point))))
+        (cl-letf (((symbol-function 'pimacs--window-at-tail-p) (lambda (&rest _) nil))
+                  ((symbol-function 'pos-visible-in-window-p) (lambda (&rest _) nil))
+                  ((symbol-function 'window-end) (lambda (&rest _) visible-end))
+                  ((symbol-function 'pimacs--recenter-chat)
+                   (lambda () (ert-fail "An off-screen input must not follow"))))
+          (should-not (pimacs--follow-tail-p))
+          (pimacs--widget-save-excursion-preserving-undo (insert (make-string 36 ?x)))
+          (should pimacs--prompt-detached)
+          (should (< (point) (widget-field-start pimacs--prompt-widget)))
+          (should (equal "draft" (widget-value pimacs--prompt-widget))))))))
+
 ;;; pimacs-tests.el ends here
 

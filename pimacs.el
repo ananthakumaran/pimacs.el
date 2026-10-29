@@ -674,22 +674,39 @@ their changed tail.  Other batches align against their final result."
     (>= (window-point window)
         (widget-get pimacs--prompt-widget :from))))
 
-(defun pimacs--window-at-tail-p (&optional window)
-  "Non-nil when WINDOW is showing the end of the current buffer."
-  (let ((window (or window (get-buffer-window (current-buffer) t))))
-    (and (window-live-p window)
-         (with-current-buffer (window-buffer window)
-           (or (>= (or (window-end window t) 0) (point-max))
-               ;; Last line may be partially visible.
-               (pos-visible-in-window-p (point-max) window t))))))
+(defun pimacs--position-in-input-p (position)
+  "Non-nil when POSITION is inside the editable prompt text."
+  (<= (widget-field-start pimacs--prompt-widget)
+      position (widget-field-text-end pimacs--prompt-widget)))
+
+(defun pimacs--prompt-point-visible-p (window)
+  "Non-nil when WINDOW's caret is visible inside the editable input."
+  (let ((position (window-point window)))
+    (and (pimacs--position-in-input-p position)
+         (pos-visible-in-window-p position window t))))
+
+(defun pimacs--window-at-tail-p (window)
+  "Non-nil when WINDOW shows the end of the current chat buffer."
+  (or (>= (or (window-end window t) 0) (point-max))
+      ;; Last line may be partially visible.
+      (pos-visible-in-window-p (point-max) window t)))
+
+(defun pimacs--tail-or-prompt-visible-p (window)
+  "Non-nil when WINDOW shows the buffer tail or a visible editing caret.
+WINDOW is the current chat's window, or nil when it is not displayed."
+  (and window
+       (or (pimacs--window-at-tail-p window)
+           (pimacs--prompt-point-visible-p window))))
 
 (defun pimacs--follow-tail-p ()
   "Non-nil when the selected chat view is following new output.
 
 Point can sit in the prompt while the window is scrolled up, so
-prompt membership alone is not enough."
+prompt membership alone is not enough.  A visible editing caret also
+qualifies when the draft tail or widget suffix is clipped."
   (and (pimacs--point-in-prompt-p)
-       (pimacs--window-at-tail-p)))
+       (let ((window (get-buffer-window (current-buffer) t)))
+         (pimacs--tail-or-prompt-visible-p window))))
 
 (defvar pimacs--view-update-buffer nil)
 
@@ -698,6 +715,7 @@ prompt membership alone is not enough."
 
 If the window is following the tail, recenter onto the prompt after
 BODY.  If the user has scrolled away, keep that view still.
+A visible editing caret also keeps following when the buffer tail is clipped.
 
 Inserts happen before the prompt.  Point often remains in the prompt,
 so the insert can push it past `window-end' and redisplay jumps to the
@@ -706,7 +724,8 @@ point restoration has placed point back into buffer content (the user
 is reading the text being re-rendered), leave it there.
 
 If a previous pin set `pimacs--prompt-detached' and the window shows
-the tail again, move point back to the prompt and resume following."
+the tail again, resume following.  Refocus the prompt only when point is
+not already inside the editable input."
   (declare (indent 0))
   (let ((insert-body
          `(let ((inhibit-read-only t))
@@ -725,9 +744,11 @@ the tail again, move point back to the prompt and resume following."
               (,at-tail
                (and (or pimacs--prompt-detached
                         (pimacs--point-in-prompt-p))
-                    (pimacs--window-at-tail-p ,window))))
+                    (pimacs--tail-or-prompt-visible-p ,window))))
          (when (and pimacs--prompt-detached ,at-tail)
-           (pimacs-focus-prompt)
+           ;; Reattaching must not move an existing editing caret to draft end.
+           (unless (pimacs--position-in-input-p (window-point ,window))
+             (pimacs-focus-prompt))
            (setq pimacs--prompt-detached nil))
          (let* ((,follow-p (and ,at-tail (pimacs--point-in-prompt-p)))
                 ;; Snapshot before BODY; nested inserts must not refresh it.
