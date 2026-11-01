@@ -845,6 +845,41 @@
       (should (string-prefix-p "bash ⏱2m " (buffer-string)))
       (should (equal (pimacs--copy-tool-call-section section) command)))))
 
+(ert-deftest pimacs--handle-input-ignores-invalid-placeholders ()
+  (dolist (placeholder '(nil json-null json-false 42 (:defaultValue "purifiedbytes")
+                             "purifiedbytes" ""))
+    (dolist (answer '("entered-name" "" :quit))
+      (with-temp-buffer
+        (pimacs-section--create-root-section)
+        (setq pimacs--prompt-widget
+              (widget-create 'editable-field :format "%v" :value ""))
+        (widget-setup)
+        (let* ((hint (and (stringp placeholder) placeholder))
+               (expected-prompt (concat "Agent name"
+                                        (if hint (format " (%s) " hint) ": ")))
+               responses)
+          (cl-letf (((symbol-function 'read-from-minibuffer)
+                     (lambda (prompt &rest _)
+                       (should (equal prompt expected-prompt))
+                       (if (eq answer :quit)
+                           (signal 'quit nil)
+                         answer)))
+                    ((symbol-function 'pimacs--send-command)
+                     (lambda (type args &rest _)
+                       (push (list type args) responses))))
+            (pimacs--handle-extension-ui-request
+             (list :type "extension_ui_request" :method "input" :id "input-1"
+                   :title "Agent name" :placeholder placeholder)))
+          (should (string-prefix-p
+                   (concat "Agent name:" (when hint (concat "\n" hint)))
+                   (buffer-substring-no-properties
+                    (point-min) (widget-get pimacs--prompt-widget :from))))
+          (should (equal responses
+                         (list (list "extension_ui_response"
+                                     (if (eq answer :quit)
+                                         '(:id "input-1" :cancelled t)
+                                       (list :id "input-1" :value answer)))))))))))
+
 (ert-deftest pimacs--handle-bash-execution-update-appends-deltas-by-request-id ()
   (with-temp-buffer
     (pimacs-section--create-root-section)

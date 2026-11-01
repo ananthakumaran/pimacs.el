@@ -1918,7 +1918,8 @@ Pi persists child metadata, not results."
 (defun pimacs--handle-input (event)
   (let* ((id (plist-get event :id))
          (title (plist-get event :title))
-         (placeholder (pimacs--json-get event :placeholder)))
+         (placeholder (let ((value (pimacs--json-get event :placeholder)))
+                        (and (stringp value) value))))
     (pimacs--widget-save-excursion
       (pimacs-section--create-section 'input pimacs-section--root-section
         (insert (propertize (format "%s:" title) 'face 'pimacs-chat-title-face))
