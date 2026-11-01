@@ -1735,6 +1735,145 @@
           (should (= (- (point) (pimacs-section-beginning section))
                      (+ (length "prefix\n") reading-offset))))))))
 
+(ert-deftest pimacs--history-limit-entries-selects-recent-suffix ()
+  (let* ((entries (cl-loop for index below 10
+                           collect (list :type "session_info" :name (number-to-string index))))
+         (original (copy-tree entries)))
+    (dolist (limit '(nil 10 20))
+      (should (eq (pimacs--history-limit-entries entries limit) entries)))
+    (dolist (limit '(1 4 9))
+      (should (eq (pimacs--history-limit-entries entries limit)
+                  (nthcdr (- 10 limit) entries))))
+    (should (equal entries original))
+    (should-not (pimacs--history-limit-entries nil nil))
+    (should-not (pimacs--history-limit-entries nil 1))))
+
+(ert-deftest pimacs--history-limit-entries-keeps-entire-tool-phase ()
+  (let* ((prefix '(:type "message" :message (:role "user" :content "old")))
+         (call '(:type "message"
+                       :message (:role "assistant"
+                                       :content ((:type "toolCall" :id "one")
+                                                 (:type "toolCall" :id "two")))))
+         (first-result '(:type "message" :message (:role "toolResult" :toolCallId "one")))
+         (metadata '(:type "model_change" :provider "test" :modelId "test"))
+         (last-result '(:type "message" :message (:role "toolResult" :toolCallId "two")))
+         (last '(:type "message" :message (:role "assistant" :content "done")))
+         (entries (list prefix call first-result metadata last-result last)))
+    (dolist (limit '(2 3 4 5))
+      (should (eq (pimacs--history-limit-entries entries limit) (cdr entries))))
+    (should (eq (pimacs--history-limit-entries entries 1) (last entries)))))
+
+(ert-deftest pimacs--history-limit-entries-does-not-retain-orphaned-tool-phase ()
+  (let ((entries '((:type "message" :message (:role "user" :content "old"))
+                   (:type "message" :message (:role "assistant"
+                                                    :content ((:type "toolCall" :id "orphan"))))
+                   (:type "message" :message (:role "user" :content "new turn"))
+                   (:type "message" :message (:role "assistant" :content "done")))))
+    (should (eq (pimacs--history-limit-entries entries 2) (nthcdr 2 entries)))))
+
+(ert-deftest pimacs--render-session-history-limits-idle-rendering-and-preserves-live-messages ()
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (setq pimacs--tool-calls (make-hash-table :test 'equal)
+          pimacs--bash-executions (make-hash-table :test 'equal)
+          pimacs--content-sections (make-hash-table :test 'eql))
+    (pimacs-tests--setup-chat-widgets)
+    (let ((entries (cl-loop for index below 30
+                            collect (list :type "message"
+                                          :message (list :role "user"
+                                                         :content (format "message-%02d" index)))))
+          (pimacs-section-padding "|")
+          (pimacs-section-autohide-count nil))
+      (cl-letf (((symbol-function 'pimacs--history-schedule-idle-render) #'ignore))
+        (pimacs--widget-save-excursion
+          (pimacs--render-session-history entries 17))
+        (should (= (pimacs--history-pending-entry-count) 15))
+        (should (string-match-p "13 older entries not displayed" (buffer-string)))
+        (should (string-match-p "Loading history: 15 entries pending" (buffer-string)))
+        (should-not (string-match-p "message-27" (buffer-string)))
+        (pimacs--widget-save-excursion
+          (pimacs--insert-message '(:role "user" :content "live-message")))
+        (dolist (remaining '(10 5 0))
+          (pimacs--history-render-idle (current-buffer) pimacs--history-render-generation)
+          (should (= (pimacs--history-pending-entry-count) remaining)))
+        (should-not pimacs--history-render-pending)
+        (should-not pimacs--history-loading-section)
+        (should-not (string-match-p "Loading history" (buffer-string)))
+        (should-not (string-match-p "message-12" (buffer-string)))
+        (should (string-match-p
+                 (regexp-quote
+                  (concat "13 older entries not displayed.  M-x pimacs-load-full-history to show all.|"
+                          (mapconcat (lambda (index) (format "user> message-%02d|" index))
+                                     (number-sequence 13 29) "")
+                          "user> live-message|"))
+                 (buffer-string)))
+        (should (= (length (pimacs-section-children pimacs-section--root-section)) 19))))))
+
+(ert-deftest pimacs--render-session-history-refresh-discards-stale-idle-work ()
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (setq pimacs--tool-calls (make-hash-table :test 'equal)
+          pimacs--bash-executions (make-hash-table :test 'equal)
+          pimacs--content-sections (make-hash-table :test 'eql))
+    (pimacs-tests--setup-chat-widgets)
+    (let ((entries (cl-loop for index below 12
+                            collect (list :type "message"
+                                          :message (list :role "user"
+                                                         :content (format "message-%d" index))))))
+      (cl-letf (((symbol-function 'pimacs--history-schedule-idle-render) #'ignore))
+        (pimacs--widget-save-excursion
+          (pimacs--render-session-history entries))
+        (should pimacs--history-render-pending)
+        (let ((generation pimacs--history-render-generation))
+          (pimacs--widget-save-excursion
+            (pimacs--clear-sections)
+            (pimacs--render-session-history entries 1))
+          (let ((before (buffer-string)))
+            (pimacs--history-render-idle (current-buffer) generation)
+            (should (equal (buffer-string) before)))
+          (should-not pimacs--history-render-pending)
+          (should (string-match-p "11 older entries not displayed" (buffer-string)))
+          (should-not (string-match-p "user> message-0" (buffer-string))))))))
+
+(ert-deftest pimacs-refresh-session-captures-limit-and-full-history-override-is-one-off ()
+  (with-temp-buffer
+    (pimacs-section--create-root-section)
+    (setq pimacs--tool-calls (make-hash-table :test 'equal)
+          pimacs--bash-executions (make-hash-table :test 'equal)
+          pimacs--content-sections (make-hash-table :test 'eql))
+    (pimacs-tests--setup-chat-widgets)
+    (let* ((pimacs-history-limit 2)
+           (entries '((:type "message" :message (:role "user" :content "first"))
+                      (:type "message" :message (:role "user" :content "second"))
+                      (:type "message" :message (:role "user" :content "third"))))
+           (response (list :success t :data (list :entries entries)))
+           (called 0)
+           pending)
+      (cl-letf (((symbol-function 'pimacs--current-chat) #'current-buffer)
+                ((symbol-function 'pimacs--send-command)
+                 (lambda (command args callback)
+                   (should (equal command "get_entries"))
+                   (should-not args)
+                   (setq pending callback))))
+        (pimacs-refresh-session (lambda () (cl-incf called)))
+        (should (= called 0))
+        (setq pimacs-history-limit 1)
+        (funcall pending response)
+        (should (= called 1))
+        (should (string-match-p "1 older entries not displayed" (buffer-string)))
+        (should-not (string-match-p "user> first" (buffer-string)))
+        (should (string-match-p "user> second" (buffer-string)))
+        (pimacs-load-full-history)
+        (funcall pending response)
+        (should (= pimacs-history-limit 1))
+        (should-not (string-match-p "older entries not displayed" (buffer-string)))
+        (should (string-match-p "user> first" (buffer-string)))
+        (pimacs-refresh-session)
+        (funcall pending response)
+        (should (string-match-p "2 older entries not displayed" (buffer-string)))
+        (should-not (string-match-p "user> second" (buffer-string)))
+        (should (string-match-p "user> third" (buffer-string)))))))
+
 (ert-deftest pimacs--history-split-entries-keeps-tool-call-with-result ()
   (let* ((prefix (cl-loop for index below 9
                           collect (list :type "session_info"
@@ -2055,7 +2194,7 @@
             (height (window-body-height)))
         (should (>= height 2))
         (dolist (case (list (cons height (- height))
-                           (cons (1+ height) 0)))
+                            (cons (1+ height) 0)))
           (ert-info ((format "Draft lines=%s; expected row=%s" (car case) (cdr case)))
             (widget-value-set pimacs--prompt-widget
                               (mapconcat #'identity (make-list (car case) "draft line") "\n"))

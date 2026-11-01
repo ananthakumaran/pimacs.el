@@ -733,6 +733,13 @@ timing information in existing chat buffers.
 Maximum number of prompt history entries to keep.
 @end defopt
 
+@defopt pimacs-history-limit @code{nil}
+
+Maximum number of recent session entries to render on refresh.
+Nil means unlimited.
+Use @code{pimacs-load-full-history} to show all history for one refresh.
+@end defopt
+
 @defopt pimacs-resume-max-sessions @code{100}
 
 Maximum number of recent sessions to list when resuming a session.

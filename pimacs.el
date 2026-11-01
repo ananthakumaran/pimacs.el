@@ -148,6 +148,14 @@ timing information in existing chat buffers."
   :type 'integer
   :group 'pimacs)
 
+(defcustom pimacs-history-limit nil
+  "Maximum number of recent session entries to render on refresh.
+Nil means unlimited.
+Use `pimacs-load-full-history' to show all history for one refresh."
+  :type '(choice (const :tag "Unlimited" nil)
+                 (integer :tag "Positive entry limit"))
+  :group 'pimacs)
+
 (defcustom pimacs-resume-max-sessions 100
   "Maximum number of recent sessions to list when resuming a session."
   :type 'integer
@@ -2771,6 +2779,26 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
                (when-let* ((id (plist-get item :id)))
                  (puthash id t pending))))))))))
 
+(defun pimacs--history-limit-entries (entries limit)
+  (if (or (null limit) (<= (length entries) limit))
+      entries
+    (let ((pending (make-hash-table :test 'equal))
+          (tail entries)
+          (remaining (- (length entries) limit))
+          (start entries))
+      (while (>= remaining 0)
+        ;; A non-result message closes the previous tool phase, even with missing results.
+        (when (or (zerop (hash-table-count pending))
+                  (and (equal (plist-get (car tail) :type) "message")
+                       (not (equal (pimacs--message-role
+                                    (plist-get (car tail) :message))
+                                   "toolResult"))))
+          (setq start tail))
+        (pimacs--history-track-tool-calls (car tail) pending)
+        (setq tail (cdr tail)
+              remaining (1- remaining)))
+      start)))
+
 (defun pimacs--history-split-entries (entries)
   (let ((pending (make-hash-table :test 'equal))
         current
@@ -2810,6 +2838,11 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
       (setq pimacs--history-loading-section nil
             pimacs--history-render-boundary nil))))
 
+(defun pimacs--history-update-render-boundary ()
+  (setq pimacs--history-render-boundary
+        (cadr (memq pimacs--history-loading-section
+                    (pimacs-section-children pimacs-section--root-section)))))
+
 (defun pimacs--history-render-chunk (chunk)
   (let ((pimacs--tool-calls (make-hash-table :test 'equal)))
     (pimacs-section--with-insertion-before
@@ -2817,8 +2850,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
       (pimacs--widget-save-excursion
         (pimacs--render-session-entries chunk)))
     (pimacs-section-autohide)
-    (setq pimacs--history-render-boundary
-          (cadr (pimacs-section-children pimacs-section--root-section)))
+    (pimacs--history-update-render-boundary)
     (pimacs--history-update-loading-section)))
 
 (defun pimacs--history-render-reset ()
@@ -2854,7 +2886,7 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
   (pimacs--history-schedule-idle-render
    (current-buffer) pimacs--history-render-generation))
 
-(defun pimacs--render-session-history (entries)
+(defun pimacs--render-session-history (entries &optional limit)
   (pimacs--history-render-reset)
   ;; Seed from received messages, independently of lazy history rendering.
   (setq pimacs--last-message-time
@@ -2864,34 +2896,49 @@ With a prefix argument, or non-nil SCOPE, search across all projects."
                               (pimacs--json-get (plist-get entry :message) :timestamp))
                              (pimacs--parse-section-timestamp
                               (pimacs--json-get entry :timestamp)))))
-  (let* ((chunks (pimacs--history-split-entries entries))
+  (let* ((visible (pimacs--history-limit-entries entries limit))
+         (omitted (- (length entries) (length visible)))
+         (chunks (pimacs--history-split-entries visible))
          (eager (car (last chunks)))
          (pending (butlast chunks)))
+    (when (> omitted 0)
+      (let ((section (pimacs-section--new-section
+                      'history pimacs-section--root-section :face nil :timestamp nil)))
+        (pimacs-section--insert-section section
+          (insert (format "%d older entries not displayed.  M-x pimacs-load-full-history to show all."
+                          omitted)))))
     (if (null pending)
-        (pimacs--render-session-entries entries)
+        (pimacs--render-session-entries visible)
       (pimacs--history-create-loading-section
        (pimacs--history-pending-entry-count pending))
       (pimacs--render-session-entries eager)
-      (setq pimacs--history-render-boundary
-            (cadr (pimacs-section-children pimacs-section--root-section)))
+      (pimacs--history-update-render-boundary)
       (pimacs--history-start-idle-render pending))))
 
 
-(defun pimacs-refresh-session (&optional callback)
-  "Refresh the current session state.
-CALLBACK is called after a successful refresh."
+(defun pimacs-refresh-session (&optional callback full-history)
+  "Refresh the current session state using `pimacs-history-limit'.
+CALLBACK is called after a successful refresh.
+If FULL-HISTORY is non-nil, bypass the rendering limit for this refresh only."
   (interactive)
   (pimacs--with-chat-buffer
-    (pimacs--send-command
-     "get_entries" '()
-     (pimacs--on-response-success-callback resp
-       (let ((entries (plist-get (plist-get resp :data) :entries)))
-         (pimacs--widget-save-excursion
-           (pimacs--clear-sections)
-           (pimacs--render-session-history entries)))
-       (pimacs-section-autohide)
-       (when callback
-         (funcall callback))))))
+    (let ((limit (unless full-history pimacs-history-limit)))
+      (pimacs--send-command
+       "get_entries" '()
+       (pimacs--on-response-success-callback resp
+         (let ((entries (plist-get (plist-get resp :data) :entries)))
+           (pimacs--widget-save-excursion
+             (pimacs--clear-sections)
+             (pimacs--render-session-history entries limit)))
+         (pimacs-section-autohide)
+         (when callback
+           (funcall callback)))))))
+
+(defun pimacs-load-full-history ()
+  "Render all history for the current session, ignoring `pimacs-history-limit'.
+This is a one-off override; subsequent refreshes use the configured limit."
+  (interactive)
+  (pimacs-refresh-session nil t))
 
 (defun pimacs-clone ()
   "Clone the current session."

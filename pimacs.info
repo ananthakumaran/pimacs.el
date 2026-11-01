@@ -651,6 +651,12 @@ File: pimacs.info,  Node: Custom Variables,  Next: Custom Faces,  Prev: Keybindi
 
      Maximum number of prompt history entries to keep.
 
+ -- User Option: pimacs-history-limit nil
+
+     Maximum number of recent session entries to render on refresh.  Nil
+     means unlimited.  Use ‘pimacs-load-full-history’ to show all
+     history for one refresh.
+
  -- User Option: pimacs-resume-max-sessions 100
 
      Maximum number of recent sessions to list when resuming a session.
@@ -1423,7 +1429,7 @@ Node: TRAMP18800
 Node: How It Works19647
 Node: Keybindings20797
 Node: Custom Variables25575
-Node: Custom Faces46439
+Node: Custom Faces46656
 
 End Tag Table
 
