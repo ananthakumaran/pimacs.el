@@ -941,6 +941,7 @@ When non-nil, diagnostics are appended to the temporary buffer
 (defvar pimacs-markdown-language-aliases
   '(("ocaml" . tuareg-mode)
     ("elisp" . emacs-lisp-mode)
+    ("ts" . typescript-mode)
     ("ditaa" . artist-mode)
     ("asymptote" . asy-mode)
     ("dot" . fundamental-mode)
@@ -970,15 +971,18 @@ When non-nil, diagnostics are appended to the temporary buffer
          (downcased (downcase language))
          (aliases (list (cdr (assoc language pimacs-markdown-language-aliases))
                         (cdr (assoc downcased pimacs-markdown-language-aliases))))
+         (languages
+          (delete-dups
+           (append (list language downcased)
+                   (mapcar (lambda (mode)
+                             (string-remove-suffix "-mode" (symbol-name mode)))
+                           (delq nil (copy-sequence aliases))))))
          (tree-sitter-modes
-          (when (and (fboundp 'treesit-language-available-p)
-                     (not (string-empty-p downcased)))
-            (delq nil
-                  (list
-                   (and (treesit-language-available-p (intern language))
-                        (intern (concat language "-ts-mode")))
-                   (and (treesit-language-available-p (intern downcased))
-                        (intern (concat downcased "-ts-mode")))))))
+          (when (fboundp 'treesit-language-available-p)
+            (cl-loop for name in languages
+                     when (and (not (string-empty-p name))
+                               (treesit-language-available-p (intern name)))
+                     collect (intern (concat name "-ts-mode")))))
          (regular-modes (list (intern (concat language "-mode"))
                               (intern (concat downcased "-mode")))))
     (cl-find-if #'pimacs--markdown-language-mode-p
