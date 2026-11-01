@@ -1808,7 +1808,7 @@ Pi persists child metadata, not results."
                      empty-text)))
 
 (defun pimacs--update-prompt-widgets ()
-  (pimacs--without-undo-before (widget-field-start pimacs--prompt-widget)
+  (pimacs--widget-save-excursion
     (let ((above '())
           (below '()))
       (when pimacs--prompt-widget-lines
