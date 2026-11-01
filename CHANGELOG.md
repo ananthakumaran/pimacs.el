@@ -2,14 +2,30 @@
 
 ## Unreleased
 
+## v0.10.0 - 2026-11-01
+
 ### Added
 
+- TRAMP support for running Pi in remote projects, with connection-local configuration.
+- `pimacs-history-limit` limits rendered session history; `pimacs-load-full-history` shows the full history for one refresh.
 - Optional ElDoc displays section timestamps and Pi-provided nested tool-call durations, controlled by `pimacs-eldoc-enabled`.
 - `M-RET` (Alt+Enter) resumes a session search result in a separate chat and agent, leaving existing chats unchanged.
+- The `:timer` header-line and mode-line component shows elapsed turn duration.
+- The chat list shows the last message time, also available through the `:last_message` state-line component.
+- Bash tool calls display their configured timeout.
+
+### Changed
+
+- Improve streaming Markdown rendering performance, including tables.
+- Improve resume performance for large sessions.
 
 ### Fixed
 
-- Autohide counts eligible leaves across the whole buffer, keeping recent or excluded sections and their ancestors expanded without counting parents or initially hidden leaves toward the limit, regardless of manual folding. Filters apply at every nesting depth, and manual visibility choices are preserved.
+- Autohide respects nested sections and manual folding, keeping recent and excluded sections expanded.
+- Preserve prompt and reading positions during output updates, extension widget updates, and prompt clearing.
+- Recenter relative to the editing caret and handle requests larger than the window height.
+- Markdown language aliases prefer configured Tree-sitter modes.
+- Remove deprecated API usage on Emacs 31.
 
 ## v0.9.0 - 2026-10-08
 
