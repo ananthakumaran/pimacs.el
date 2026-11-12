@@ -118,7 +118,7 @@ docs: docs/index.html docs/index.md docs/changelog.html docs/changelog.md
 
 .PHONY: docs-serve
 docs-serve: docs
-	@http-server -p 3333 ./docs
+	@http-server -p 3333 -c-1 ./docs
 
 pimacs.info: Makefile pimacs.texi $(PIMACS_DOC_SOURCES) docs/build.el
 	@PIMACS_DOC_SOURCES="$(PIMACS_DOC_SOURCES)" $(EMACS) -Q --batch -l docs/build.el
@@ -134,7 +134,7 @@ docs/index.md: pimacs.info
 	pandoc --from=docbook --to=gfm --standalone --output=$@ "$$tmp"
 
 docs/changelog.html: CHANGELOG.md docs/changelog-head.html docs/changelog-template.html docs/global.css
-	@pandoc --from=gfm --to=html5 --standalone \
+	@pandoc --from=gfm --to=html5 --standalone --section-divs \
 	  --metadata title="Pimacs Changelog" \
 	  --template=docs/changelog-template.html \
 	  --include-in-header=docs/changelog-head.html --css=global.css \

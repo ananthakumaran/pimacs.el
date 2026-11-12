@@ -10,9 +10,11 @@ $endfor$
 $for(css)$
   <link rel="stylesheet" href="$css$">
 $endfor$
+  <link rel="stylesheet" href="buffer.css">
+  <script src="buffer.js" defer></script>
 </head>
 <body>
-<main class="container">
+<main class="top-level-extent" id="Top" data-buffer="changelog">
 $body$
 </main>
 </body>
