@@ -20,7 +20,7 @@ tools.bash({command: 'sleep 2', timeout: 0.05})
 text(results.map(r => r.status));
 write 
 Validation failed for tool "write":
-  - content: must have required properties content
+  - content: missing
 
 Received arguments:
 {
