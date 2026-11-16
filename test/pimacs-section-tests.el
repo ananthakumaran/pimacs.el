@@ -169,6 +169,25 @@
       (should (>= (pimacs-section-end build) (pimacs-section-end compile)))
       (should (>= (pimacs-section-end pimacs-section--root-section) (pimacs-section-end build))))))
 
+(ert-deftest pimacs-section-insert-finalizes-after-error ()
+  (pimacs-with-root-section
+    (let* ((pimacs-section-padding "\n\n")
+           (section (pimacs-section--new-section 'example pimacs-section--root-section)))
+      (should (equal (should-error
+                      (pimacs-section--insert-section section
+                        (insert "partial")
+                        (error "Render failed")))
+                     '(error "Render failed")))
+      (should (equal (buffer-string) "partial\n\n"))
+      (should (= (pimacs-section-end section) (point-max)))
+      (should (= (pimacs-section-end pimacs-section--root-section) (point-max)))
+      (should (eq (pimacs-section--section-at (point-min)) section))
+      (let ((next (pimacs-section--create-section 'example pimacs-section--root-section
+                    (insert "next"))))
+        (should (= (pimacs-section-end section) (pimacs-section-beginning next)))
+        (should (equal (buffer-string) "partial\n\nnext\n\n"))
+        (should (= (pimacs-section-end pimacs-section--root-section) (point-max)))))))
+
 ;; ─── pimacs-section--append-section ─────────────────────────────────────────────────
 
 (ert-deftest pimacs-section-append-extends-existing ()
@@ -190,6 +209,26 @@
         (insert "extra line\n"))
       (goto-char (point-max))
       (should (eq (get-text-property (1- (point)) 'pimacs-section) log)))))
+
+(ert-deftest pimacs-section-append-finalizes-after-error ()
+  (pimacs-with-root-section
+    (let* ((pimacs-section-padding "\n\n")
+           (section (pimacs-section--create-section 'example pimacs-section--root-section
+                      (insert "old"))))
+      (should (equal (should-error
+                      (pimacs-section--append-section section
+                        (insert "partial")
+                        (error "Render failed")))
+                     '(error "Render failed")))
+      (should (equal (buffer-string) "oldpartial\n\n"))
+      (should (marker-insertion-type (pimacs-section-beginning section)))
+      (should (= (pimacs-section-end section) (point-max)))
+      (should (eq (pimacs-section--section-at (+ (point-min) 3)) section))
+      (let ((next (pimacs-section--create-section 'example pimacs-section--root-section
+                    (insert "next"))))
+        (should (= (pimacs-section-end section) (pimacs-section-beginning next)))
+        (should (equal (buffer-string) "oldpartial\n\nnext\n\n"))
+        (should (= (pimacs-section-end pimacs-section--root-section) (point-max)))))))
 
 ;; ─── pimacs-section--replace-section ────────────────────────────────────────────────
 
@@ -264,6 +303,30 @@
       (pimacs-section--replace-section section
         (insert "hi"))
       (should (= (point) (pimacs-section-end section))))))
+
+(ert-deftest pimacs-section-replace-finalizes-after-error ()
+  (pimacs-with-root-section
+    (let* ((pimacs-section-padding "\n\n")
+           (section (pimacs-section--create-section 'example pimacs-section--root-section
+                      (insert "old output")))
+           (child (pimacs-section--create-section 'example section
+                    (insert "old child")))
+           (following (pimacs-section--create-section 'example pimacs-section--root-section
+                        (insert "following"))))
+      (should (memq child (pimacs-section-children section)))
+      (should (equal (should-error
+                      (pimacs-section--replace-section section
+                        (insert "partial")
+                        (error "Render failed")))
+                     '(error "Render failed")))
+      (should (null (pimacs-section-children section)))
+      (should (equal (buffer-string) "partial\n\nfollowing\n\n"))
+      (should (= (pimacs-section-end section) (pimacs-section-beginning following)))
+      (should (eq (pimacs-section--section-at (point-min)) section))
+      (pimacs-section--create-section 'example pimacs-section--root-section
+        (insert "next"))
+      (should (equal (buffer-string) "partial\n\nfollowing\n\nnext\n\n"))
+      (should (= (pimacs-section-end pimacs-section--root-section) (point-max))))))
 
 (ert-deftest pimacs--align-point-falls-back-when-diff-times-out ()
   (cl-letf (((symbol-function 'pimacs--replace-buffer-contents)
@@ -357,6 +420,35 @@
       (pimacs-section--replace-section-body parent
         (insert "new title"))
       (should (= (point) (+ (pimacs-section-beginning parent) 4))))))
+
+(ert-deftest pimacs-section-replace-body-finalizes-after-error ()
+  (dolist (with-child '(nil t))
+    (pimacs-with-root-section
+      (let* ((pimacs-section-padding "\n\n")
+             (section (pimacs-section--create-section 'example pimacs-section--root-section
+                        (insert "old")))
+             (child (when with-child
+                      (pimacs-section--create-section 'example section
+                        (insert "child")))))
+        (should (equal (should-error
+                        (pimacs-section--replace-section-body section
+                          (insert "partial")
+                          (error "Render failed")))
+                       '(error "Render failed")))
+        (should (equal (pimacs-section-children section) (and child (list child))))
+        (should (equal (buffer-string) (if child "partial\n\nchild\n\n" "partial\n\n")))
+        (should (marker-insertion-type (pimacs-section-beginning section)))
+        (should (= (pimacs-section-end section) (point-max)))
+        (should (eq (pimacs-section--section-at (point-min)) section))
+        (when child
+          (should (= (pimacs-section--section-body-end section) (+ (point-min) 9)))
+          (should (eq (pimacs-section--section-at (pimacs-section-beginning child)) child)))
+        (let ((next (pimacs-section--create-section 'example pimacs-section--root-section
+                      (insert "next"))))
+          (should (= (pimacs-section-end section) (pimacs-section-beginning next)))
+          (should (equal (buffer-string)
+                         (if child "partial\n\nchild\n\nnext\n\n" "partial\n\nnext\n\n")))
+          (should (= (pimacs-section-end pimacs-section--root-section) (point-max))))))))
 
 ;; ─── pimacs-section--current-section / pimacs-section--section-at ────────────────────────────────
 
