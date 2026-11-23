@@ -227,7 +227,7 @@ in descending order."
   (interactive)
   (if-let* ((candidate (pimacs--select-chat (pimacs--active-chat-candidates)
                                             "Switch to Pimacs chat: ")))
-      (pop-to-buffer (cdr candidate))
+      (switch-to-buffer (cdr candidate))
     (user-error "No active Pimacs chats")))
 
 (provide 'pimacs-chat)
