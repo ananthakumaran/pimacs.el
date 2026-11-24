@@ -1157,8 +1157,15 @@
     (pimacs-drain-process-output)
     (pimacs-send-prompt-and-wait "hello again")))
 
+;; Aborted turns can leave only a prompt-based token estimate, which varies
+;; between the local checkout and the TRAMP fixture.
+(defconst pimacs-abort-test-header-line-format
+  '("window=" :context_window " (" :compaction_mode ")"
+    :spacer "(" :provider ") " :model " • " :thinking_level))
+
 (ert-deftest pimacs-abort-restores-queue ()
   (pimacs-with-integration-project "abort-queue"
+    (setq-local pimacs-header-line-format pimacs-abort-test-header-line-format)
     (let (agent-started queue-confirmed queue-cleared agent-settled)
       (unwind-protect
           (progn
@@ -1199,6 +1206,7 @@
 
 (ert-deftest pimacs-abort-empty-queue-preserves-prompt ()
   (pimacs-with-integration-project "abort-empty-queue"
+    (setq-local pimacs-header-line-format pimacs-abort-test-header-line-format)
     (pimacs-wait-for-agent-event
         (lambda (event) (equal (plist-get event :type) "agent_start"))
       (pimacs-send-prompt "start request"))
@@ -1214,6 +1222,7 @@
 
 (ert-deftest pimacs-abort-retry ()
   (pimacs-with-integration-project "abort-retry"
+    (setq-local pimacs-header-line-format pimacs-abort-test-header-line-format)
     (pimacs-wait-for-agent-event
         (lambda (event) (equal (plist-get event :type) "auto_retry_start"))
       (pimacs-send-prompt "start retry"))

@@ -685,7 +685,7 @@ their changed tail.  Other batches align against their final result."
 
 (defun pimacs--recenter-chat ()
   (when-let* ((window (and pimacs-chat-keep-input-at-bottom
-                          (get-buffer-window (current-buffer) t))))
+                           (get-buffer-window (current-buffer) t))))
     (with-selected-window window
       (let ((row (pimacs--recenter-row window)))
         ;; With long-line optimizations, `recenter' counts rows instead of
@@ -697,7 +697,7 @@ their changed tail.  Other batches align against their final result."
               (if (<= budget 0)
                   (recenter 0)
                 (let* ((size (window-text-pixel-size window (cons (point) (- budget))
-                                                    (point) nil (1+ budget) nil t))
+                                                     (point) nil (1+ budget) nil t))
                        (start (nth 2 size)))
                   ;; Backward pixel measurement can overshoot by one screen line.
                   (when (> (cadr size) budget)
