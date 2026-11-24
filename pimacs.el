@@ -685,9 +685,29 @@ their changed tail.  Other batches align against their final result."
 
 (defun pimacs--recenter-chat ()
   (when-let* ((window (and pimacs-chat-keep-input-at-bottom
-                           (get-buffer-window (current-buffer) t))))
+                          (get-buffer-window (current-buffer) t))))
     (with-selected-window window
-      (recenter (pimacs--recenter-row window)))))
+      (let ((row (pimacs--recenter-row window)))
+        ;; With long-line optimizations, `recenter' counts rows instead of
+        ;; pixels. Unequal line heights can then push the editor offscreen.
+        (if (and (display-graphic-p) (long-line-optimizations-p) (< row 0))
+            (let ((budget (+ (window-body-height window t)
+                             (* row (frame-char-height)))))
+              ;; A full-window offset is top alignment, not a backward measure.
+              (if (<= budget 0)
+                  (recenter 0)
+                (let* ((size (window-text-pixel-size window (cons (point) (- budget))
+                                                    (point) nil (1+ budget) nil t))
+                       (start (nth 2 size)))
+                  ;; Backward pixel measurement can overshoot by one screen line.
+                  (when (> (cadr size) budget)
+                    (setq start (save-excursion
+                                  (goto-char start)
+                                  (vertical-motion 1 window)
+                                  (point))))
+                  (set-window-vscroll window 0)
+                  (set-window-start window start t))))
+          (recenter row))))))
 
 (defun pimacs--point-in-prompt-p ()
   (when-let* ((window (get-buffer-window (current-buffer) t)))
