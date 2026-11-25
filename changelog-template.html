@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>$pagetitle$</title>
+$for(header-includes)$
+  $header-includes$
+$endfor$
+$for(css)$
+  <link rel="stylesheet" href="$css$">
+$endfor$
+  <link rel="stylesheet" href="buffer.css">
+  <script src="buffer.js" defer></script>
+</head>
+<body>
+<main class="top-level-extent" id="Top" data-buffer="changelog">
+$body$
+</main>
+</body>
+</html>
