@@ -2240,5 +2240,115 @@
                 (pimacs--recenter-chat))
               (should (= row (cdr case))))))))))
 
+(ert-deftest pimacs-recenter-long-lines-measures-pixels-without-moving-point ()
+  "Check pixel budgets and fallback dispatch; native layout is tested separately."
+  (save-window-excursion
+    (with-temp-buffer
+      (switch-to-buffer (current-buffer))
+      (pimacs-tests--setup-chat-widgets)
+      (pimacs-focus-prompt)
+      (dolist (case '((t t -2 nil 200 172)
+                      (t t -4 t 200 144)
+                      (t t -14 nil 200 4)
+                      (t t -15 nil 200 nil)
+                      (t t -15 nil 210 nil)
+                      (t t 0 nil 200 nil)
+                      (t nil -2 nil 200 nil)
+                      (nil t -2 nil 200 nil)))
+        (pcase-let* ((`(,graphical ,optimized ,row ,overshoot ,body-pixels ,budget) case)
+                     (position (point))
+                     (measurement nil) (recentered nil) (start nil) (vscroll nil) (moved nil))
+          (ert-info ((format "Recenter case: %S" case))
+            (cl-letf (((symbol-function 'display-graphic-p) (lambda (&optional _) graphical))
+                      ((symbol-function 'long-line-optimizations-p) (lambda () optimized))
+                      ((symbol-function 'pimacs--recenter-row) (lambda (_) row))
+                      ((symbol-function 'window-body-height)
+                       (lambda (&optional _ pixelwise) (if pixelwise body-pixels 15)))
+                      ((symbol-function 'frame-char-height) (lambda (&optional _) 14))
+                      ((symbol-function 'window-text-pixel-size)
+                       (lambda (_ from to x-limit y-limit mode-lines ignore-last)
+                         (setq measurement (list from to x-limit y-limit mode-lines ignore-last))
+                         (list 0 (if overshoot (1+ budget) budget) (point-min))))
+                      ((symbol-function 'vertical-motion)
+                       (lambda (lines &optional _window _cur-col)
+                         (setq moved lines)
+                         (forward-char 1)))
+                      ((symbol-function 'set-window-vscroll)
+                       (lambda (_ value &optional _pixels) (setq vscroll (list value))))
+                      ((symbol-function 'set-window-start)
+                       (lambda (_ value &optional noforce) (setq start (list value noforce))))
+                      ((symbol-function 'recenter)
+                       (lambda (value &optional _) (setq recentered (list value)))))
+              (pimacs--recenter-chat))
+            (should (= (point) position))
+            (if budget
+                (progn
+                  (should (equal measurement
+                                 (list (cons position (- budget)) position nil (1+ budget) nil t)))
+                  (should (equal start (list (+ (point-min) (if overshoot 1 0)) t)))
+                  (should (equal vscroll '(0)))
+                  (should (eq moved (and overshoot 1)))
+                  (should-not recentered))
+              (should (equal recentered (list (if (and graphical optimized (< row 0)) 0 row))))
+              (should-not measurement)
+              (should-not start)
+              (should-not vscroll))))))))
+
+(ert-deftest pimacs-tool-updates-skip-unchanged-text-before-view-work ()
+  "Ignore progress-only updates, but retain appends, replacements and clears."
+  (dolist (reading '(nil t))
+    (dolist (case '(("" "" nil)
+                    ("same\n" "same\n" nil)
+                    ("old\n" "old\nmore\n" t)
+                    ("old\n" "replacement\n" t)
+                    ("old\n" "" t)))
+      (ert-info ((format "Reading=%S; text transition=%S" reading case))
+        (save-window-excursion
+          (with-temp-buffer
+            (switch-to-buffer (current-buffer))
+            ;; The section-only suite sets global padding to an empty string.
+            (setq-local pimacs-section-padding "\n\n")
+            (pimacs-section--create-root-section)
+            (let* ((history (pimacs-section--create-section 'info pimacs-section--root-section
+                              (insert "Reader position\n")))
+                   (call (pimacs-section--create-section 'tool-call pimacs-section--root-section
+                           (insert "generated parent\n")))
+                   (result (pimacs-section--create-section 'tool-result call
+                             (insert (car case))))
+                   (entry (make-pimacs-tool-call :call-section call :result-section result
+                                                :tool-name "codemode" :prev-text (car case)))
+                   (event (list :toolCallId "progress" :partialResult
+                                (list :content (unless (string-empty-p (cadr case))
+                                                 (list (list :type "text" :text (cadr case))))
+                                      :details '(:calls ((:name "child" :status "running"))))))
+                   (tail-checks 0) (recenters 0))
+              (setq pimacs--tool-calls (make-hash-table :test 'equal))
+              (puthash "progress" entry pimacs--tool-calls)
+              (pimacs-tests--setup-chat-widgets)
+              (widget-value-set pimacs--prompt-widget "draft")
+              (goto-char (if reading (pimacs-section-beginning history)
+                           (+ 2 (widget-field-start pimacs--prompt-widget))))
+              (let ((reader-position (point)))
+                (cl-letf (((symbol-function 'pimacs--tail-or-prompt-visible-p)
+                           (lambda (_) (cl-incf tail-checks) t))
+                          ((symbol-function 'pimacs--recenter-chat)
+                           (lambda () (cl-incf recenters))))
+                  (pimacs--handle-tool-execution-update event)
+                  ;; Child progress can keep arriving after the displayed text
+                  ;; stabilizes. None of those repeats needs any view work.
+                  (dotimes (_ 20) (pimacs--handle-tool-execution-update event)))
+                (should (= recenters (if (and (nth 2 case) (not reading)) 1 0)))
+                (should (= tail-checks recenters))
+                (should (equal (pimacs-tool-call-prev-text entry) (cadr case)))
+                (should (equal (buffer-substring-no-properties
+                                (pimacs-section-beginning result)
+                                (- (pimacs-section-end result)
+                                   (length (pimacs-section-padding result))))
+                               (cadr case)))
+                (should (equal (widget-value pimacs--prompt-widget) "draft"))
+                (if reading
+                    (should (= (point) reader-position))
+                  (should (= (- (point) (widget-field-start pimacs--prompt-widget)) 2)))))))))))
+
 ;;; pimacs-tests.el ends here
 

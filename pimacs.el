@@ -1684,17 +1684,18 @@ Pi persists child metadata, not results."
          (new-text (pimacs--content-text (plist-get partial-result :content)))
          (entry (gethash tool-call-id pimacs--tool-calls)))
     (when entry
-      (let ((prev-text (pimacs-tool-call-prev-text entry))
-            (result-section (pimacs-tool-call-result-section entry)))
-        (pimacs--widget-save-excursion
-          (if (string-prefix-p prev-text new-text)
-              (let ((diff (substring new-text (length prev-text))))
-                (unless (string-empty-p diff)
-                  (pimacs-section--append-section result-section
-                    (insert diff))))
-            (pimacs-section--replace-section result-section
-              (insert new-text)))
-          (setf (pimacs-tool-call-prev-text entry) new-text))))))
+      (let* ((prev-text (pimacs-tool-call-prev-text entry))
+             (result-section (pimacs-tool-call-result-section entry))
+             (append-p (string-prefix-p prev-text new-text)))
+        ;; Child progress can change without changing the displayed output.
+        (unless (and append-p (= (length prev-text) (length new-text)))
+          (pimacs--widget-save-excursion
+            (if append-p
+                (pimacs-section--append-section result-section
+                  (insert (substring new-text (length prev-text))))
+              (pimacs-section--replace-section result-section
+                (insert new-text)))
+            (setf (pimacs-tool-call-prev-text entry) new-text)))))))
 
 (defun pimacs--handle-bash-execution-update (event)
   (let* ((request-id (plist-get event :id))
